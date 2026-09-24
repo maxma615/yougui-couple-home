@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+. "$SCRIPT_DIR/pg-common.sh"
+
+require_postgres_runtime
+
+if [ ! -s "$PG_DATA/PG_VERSION" ] || ! postgres_is_running; then
+  printf 'PostgreSQL is already stopped.\n'
+  exit 0
+fi
+
+"$PG_BIN/pg_ctl" -D "$PG_DATA" -m fast -w stop >/dev/null
+printf 'PostgreSQL stopped.\n'

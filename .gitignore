@@ -1,0 +1,13 @@
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/
+docs/progress.md
+.env*
+!.env.example
+!.env.compose.example
+.local/
+*.log
+*.tsbuildinfo
+.DS_Store

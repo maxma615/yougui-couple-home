@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+. "$SCRIPT_DIR/pg-common.sh"
+
+require_postgres_runtime
+if ! postgres_is_running; then
+  echo "PostgreSQL is not running; run $SCRIPT_DIR/pg-start first" >&2
+  exit 1
+fi
+
+port=$(read_recorded_port)
+database_url_for_port "$port"

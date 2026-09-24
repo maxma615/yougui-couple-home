@@ -1,0 +1,50 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+. "$SCRIPT_DIR/pg-common.sh"
+
+require_postgres_runtime
+mkdir -p "$PG_LOG_DIR" "$PG_SOCKET_DIR"
+chmod 700 "$PG_LOG_DIR" "$PG_SOCKET_DIR"
+
+if [ ! -s "$PG_DATA/PG_VERSION" ]; then
+  "$PG_BIN/initdb" \
+    --pgdata="$PG_DATA" \
+    --username="$PG_USER" \
+    --encoding=UTF8 \
+    --locale=C \
+    --auth-local=trust \
+    --auth-host=trust >/dev/null
+fi
+
+if postgres_is_running; then
+  port=$(read_recorded_port)
+  printf 'PostgreSQL is already running.\n'
+  printf 'DATABASE_URL=%s\n' "$(database_url_for_port "$port")"
+  exit 0
+fi
+
+port=$(read_recorded_port 2>/dev/null || true)
+if [ -z "$port" ] || port_is_listening "$port"; then
+  port=$(choose_available_port)
+fi
+
+port_temp="$PG_PORT_FILE.$$"
+printf '%s\n' "$port" >"$port_temp"
+mv -f "$port_temp" "$PG_PORT_FILE"
+
+"$PG_BIN/pg_ctl" \
+  -D "$PG_DATA" \
+  -l "$PG_LOG_DIR/postgresql.log" \
+  -o "-h 127.0.0.1 -p $port -k $PG_SOCKET_DIR -c timezone=UTC" \
+  -w start >/dev/null
+
+maintenance_url=$(maintenance_url_for_port "$port")
+if ! "$PG_BIN/psql" "$maintenance_url" -Atqc \
+  "select 1 from pg_database where datname = '$PG_DATABASE'" | grep -qx 1; then
+  "$PG_BIN/createdb" --maintenance-db="$maintenance_url" "$PG_DATABASE"
+fi
+
+printf 'PostgreSQL started on 127.0.0.1:%s.\n' "$port"
+printf 'DATABASE_URL=%s\n' "$(database_url_for_port "$port")"

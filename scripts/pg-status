@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+. "$SCRIPT_DIR/pg-common.sh"
+
+require_postgres_runtime
+
+printf 'binary_dir=%s\n' "$PG_BIN"
+printf 'data_dir=%s\n' "$PG_DATA"
+
+if postgres_is_running; then
+  port=$(read_recorded_port)
+  printf 'status=running\n'
+  printf 'port=%s\n' "$port"
+  printf 'database_url=%s\n' "$(database_url_for_port "$port")"
+  exit 0
+fi
+
+printf 'status=stopped\n'
+exit 1

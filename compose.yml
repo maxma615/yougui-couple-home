@@ -1,0 +1,99 @@
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: couple_home
+      POSTGRES_USER: couple_home
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - database_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U couple_home -d couple_home"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://couple_home:${POSTGRES_PASSWORD}@db:5432/couple_home
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
+      ATTACHMENTS_DIR: /data/attachments
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-40000000}
+      TZ: Asia/Shanghai
+    volumes:
+      - attachments_data:/data/attachments
+    expose:
+      - "3000"
+
+  photo-cleanup:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://couple_home:${POSTGRES_PASSWORD}@db:5432/couple_home
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
+      ATTACHMENTS_DIR: /data/attachments
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-40000000}
+      TZ: Asia/Shanghai
+    volumes:
+      - attachments_data:/data/attachments
+    command:
+      - sh
+      - -c
+      - npm run migrate && while true; do npm run photo-cleanup; sleep 60; done
+
+  maintenance:
+    profiles: ["maintenance"]
+    build: .
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://couple_home:${POSTGRES_PASSWORD}@db:5432/couple_home
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
+      ATTACHMENTS_DIR: /data/attachments
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-40000000}
+      TZ: Asia/Shanghai
+    volumes:
+      - attachments_data:/data/attachments
+      - ${MAINTENANCE_HOST_DIR:-./backups}:/backups
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?set APP_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  database_data:
+  attachments_data:
+  caddy_data:
+  caddy_config:
