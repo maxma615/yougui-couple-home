@@ -1,28 +1,88 @@
-# 有归 · 情侣小屋
+<div align="center">
 
-有归是两个人共用的私密生活网页：独立账号、一次性邀请、纪念日、共同待办、点滴照片、共同日历、自动更新和版本冲突处理。数据库和照片独立保存，不依赖研笺学术工作台。
+<h1>有归</h1>
 
-日历支持全天跨日事项与按上海时间显示的定时事项，首页会显示近期共同安排。
+<h3>两个人的日常，记在有归。</h3>
 
-完整首版本地验收见 [docs/m2-acceptance.md](docs/m2-acceptance.md)：120项单元/集成测试、30项浏览器测试、生产重启和空环境恢复通过。生产部署、备份和恢复见 [docs/operations.md](docs/operations.md)。当前开发机上的 PostgreSQL 运行方式见 [docs/postgres-runtime.md](docs/postgres-runtime.md)。
+<p>私密、轻松、一起维护的线上生活空间。每个小屋只属于两位成员，资料由你们自己掌握。</p>
 
-## 本地运行
+<p>
+  <a href="https://github.com/maxma615/yougui-couple-home/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/maxma615/yougui-couple-home?style=for-the-badge&amp;logo=github" /></a>
+  <a href="https://github.com/maxma615/yougui-couple-home/network/members"><img alt="GitHub forks" src="https://img.shields.io/github/forks/maxma615/yougui-couple-home?style=for-the-badge&amp;logo=github" /></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-B75B72?style=for-the-badge" /></a>
+  <a href="https://nodejs.org/"><img alt="Node.js 24+" src="https://img.shields.io/badge/Node.js-24%2B-43853D?style=for-the-badge&amp;logo=node.js&amp;logoColor=white" /></a>
+</p>
 
-要求 Node.js 24 或更新版本、PostgreSQL 18，以及同主版本的 `pg_dump` / `pg_restore`。本机已准备独立的 `.local/postgres`，使用 `npm run pg:start` 启动；数据、日志与附件均位于应用 `.local/` 下。
+<br />
 
-首次在另一台开发机运行：
+<table>
+  <tr>
+    <td><img src="docs/screenshots/calendar-chromium.png" alt="有归共同日历桌面视图，展示跨月旅行安排" width="820" /></td>
+    <td><img src="docs/screenshots/calendar-webkit-mobile.png" alt="有归共同日历手机尺寸视图" width="250" /></td>
+  </tr>
+</table>
 
-1. 在本目录执行 `npm ci --cache .local/npm-cache`。
-2. 复制 `.env.example` 为 `.env.local`，填入自己的数据库地址、绝对附件路径和随机会话密钥。可用 `node -e 'console.log(require("node:crypto").randomBytes(32).toString("hex"))'` 生成密钥。
-3. 执行 `npm run migrate`，创建空表。
-4. 执行 `npm run init-admin -- --email you@example.com --display-name 你的名字`，在终端隐藏输入初始密码。系统已有账号后该命令会拒绝重复初始化。
-5. 执行 `npm run dev`，打开 `http://127.0.0.1:3000`，登录后创建小屋并在设置页邀请另一位成员。
+<sub>界面截图使用隔离测试账号与虚构日程；项目目前提供自托管代码，没有官方托管实例。</sub>
 
-`npm run dev` 和 `npm start` 会先执行迁移与附件目录检查。应用启动不会创建人物或演示内容。生产构建使用 `npm run build`，本地生产运行使用 `npm start`。
+</div>
 
-管理员忘记密码处理：`npm run reset-password -- --email you@example.com`，交互输入新密码后该账号旧会话全部失效。不要把密码写在命令行参数里。
+## 一起把日子过得有迹可循
 
-## 验证
+有归把纪念日、共同待办、点滴照片和日历放进一个双人空间。两位成员使用各自账号，通过一次性邀请加入同一个小屋；新增和修改会同步给对方，发生并发编辑时会保留草稿，方便核对后再处理。
+
+| 💞 两人共用 | 📅 一起安排 | 📷 留下点滴 | 🔒 自己掌握 |
+| --- | --- | --- | --- |
+| 独立账号，一间小屋最多两位成员 | 纪念日、待办、共同日历 | 私密照片和生活记录 | 自托管 PostgreSQL 与照片存储 |
+
+### 让每天的小事都好找
+
+- **共同日历**：全天跨日事项按包含结束日显示；带时刻事项统一按上海时间查看。
+- **及时更新**：对方的修改会自动出现；网络中断时保留编辑内容，版本冲突可比较后重试。
+- **私密邀请**：一次性邀请链接用于加入第二位成员；不开放第三位成员加入。
+- **完整备份**：数据库和照片作为同一备份集校验；恢复只写入空数据库与空附件目录。
+- **独立运行**：与研笺学术工作台分开部署，不共享账号、数据库或资料。
+
+## 本地开发
+
+需要 Node.js 24 或更新版本、PostgreSQL 18，以及同主版本的 `pg_dump` 和 `pg_restore`。
+
+```sh
+npm ci --cache .local/npm-cache
+cp .env.example .env.local
+```
+
+在 `.env.local` 中填写数据库地址、绝对附件目录、`APP_ORIGIN=http://127.0.0.1:3000` 和独立的随机 `SESSION_SECRET`。然后运行：
+
+```sh
+npm run migrate
+npm run init-admin -- --email you@example.com --display-name 你的名字
+npm run dev
+```
+
+初始密码会在终端安全提示中输入，不要把密码写入命令行参数。打开 `http://127.0.0.1:3000` 登录后创建小屋，并在设置页生成邀请链接。
+
+## 自行部署
+
+有归提供 Docker Compose 与 Caddy 配置。准备好指向服务器的域名和 80/443 端口后，在部署主机执行：
+
+```sh
+cp .env.compose.example .env
+# 为 POSTGRES_PASSWORD 和 SESSION_SECRET 分别生成独立的随机十六进制密钥
+docker compose up -d --build
+docker compose exec app npm run init-admin -- --email you@example.com --display-name 你的名字
+```
+
+部署前在 `.env` 中填写 `APP_DOMAIN`、匹配实际访问地址的 `APP_ORIGIN` 和两份不同的随机密钥。不要提交 `.env`；Caddy 会为域名配置 HTTPS。备份、恢复、升级和故障处理步骤见[运维手册](docs/operations.md)。公网部署需要你自己的服务器与域名，本仓库不会创建或托管线上实例。
+
+## 验收记录
+
+当前本地验收包含 **120 项单元/集成测试**、**30 项浏览器测试**、生产进程重启持久化和空环境恢复。测试环境为 macOS、PostgreSQL 18、桌面 Chromium 与 iPhone 尺寸 WebKit；浏览器模拟尺寸不能替代真实手机验收，也不代表已经在公网部署。
+
+- [首版本地验收记录](docs/m2-acceptance.md)
+- [生产部署、备份与恢复](docs/operations.md)
+- [开发机 PostgreSQL 运行方式](docs/postgres-runtime.md)
+
+常用验证命令：
 
 ```sh
 npm test
@@ -35,21 +95,10 @@ npm run test:e2e
 bash tests/scripts/run-empty-restore.sh
 ```
 
-自动测试创建独立 `ch_` 数据库，结束后清理；附件及测试文件位于 `.local/tests/` 或 `.local/e2e/`。E2E 另起随机本地端口，用真实数据库和浏览器，不使用开发账号。先停止正在运行的 Next 开发服务器，再运行 E2E 或生产构建，避免共用 `.next` 目录。
+## Star History
 
-首次安装浏览器：`PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx playwright install chromium webkit`。E2E 同时使用桌面 Chromium 与 iPhone 尺寸的 WebKit；这不能替代真实手机及部署环境验收。
-
-## 维护命令
-
-```sh
-npm run verify-storage
-npm run photo-cleanup
-npm run backup -- /absolute/path/to/backups
-npm run restore -- /absolute/path/to/backups/某个完整备份目录
-```
-
-恢复只接受空数据库和空附件目录。生产维护应使用运维手册中的 Compose 停服脚本，并把完成备份另存至服务器外。公开代码仓库不包含数据库、照片或生产凭据；源代码开放也不代表服务已经部署到公网。
+[![Star History Chart](https://api.star-history.com/svg?repos=maxma615/yougui-couple-home&type=Date)](https://www.star-history.com/#maxma615/yougui-couple-home&Date)
 
 ## License
 
-本项目源码以 MIT License 发布，详见 [LICENSE](LICENSE)。依赖项和其他第三方内容仍受其各自许可证约束。
+[MIT](LICENSE) © 2026 有归 contributors. 第三方依赖及其他第三方内容仍受其各自许可证约束。
