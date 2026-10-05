@@ -1,0 +1,138 @@
+{
+  "kind": "sanma-linux-combined",
+  "node": "v24.21.0",
+  "platform": "linux",
+  "arch": "x64",
+  "baseline": {
+    "cpu.max": "100000 100000",
+    "cpu.stat": "usage_usec 3756453\nuser_usec 3261973\nsystem_usec 494480\ncore_sched.force_idle_usec 0\nnr_periods 43\nnr_throttled 19\nthrottled_usec 628048\nnr_bursts 0\nburst_usec 0",
+    "memory.max": "805306368",
+    "memory.current": "194011136",
+    "memory.peak": "194277376",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "memory.swap.max": "0",
+    "memory.swap.current": "0"
+  },
+  "end": {
+    "cpu.max": "100000 100000",
+    "cpu.stat": "usage_usec 9252347\nuser_usec 8391570\nsystem_usec 860777\ncore_sched.force_idle_usec 0\nnr_periods 126\nnr_throttled 70\nthrottled_usec 3465537\nnr_bursts 0\nburst_usec 0",
+    "memory.max": "805306368",
+    "memory.current": "240656384",
+    "memory.peak": "249073664",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "memory.swap.max": "0",
+    "memory.swap.current": "0"
+  },
+  "games": [
+    {
+      "variant": "sanma",
+      "elapsedMs": 2974.4544530000003,
+      "rankingCount": 3,
+      "states": 72,
+      "completed": 90,
+      "computed": 90,
+      "fallbacks": 0,
+      "failures": 0,
+      "timeouts": 0,
+      "cancellations": 3,
+      "workerStarts": 4,
+      "workerStops": 4,
+      "maxQueue": 2,
+      "peakWorkers": 1,
+      "unexpectedErrors": 0,
+      "heapLimitBytes": 62914560,
+      "rssBytes": 193531904,
+      "decisionMs": {
+        "count": 90,
+        "median": 1.0063790000003792,
+        "p95": 8.800454000000173,
+        "max": 16.148439999999937
+      },
+      "roundTripMs": {
+        "count": 90,
+        "median": 3.2806930000006105,
+        "p95": 15.643403000000035,
+        "max": 49.18674499999997
+      },
+      "workerReleaseMs": 11.11909100000048,
+      "isolatedIdleOverrideMs": 1000,
+      "idleServerClosed": true
+    },
+    {
+      "variant": "yonma",
+      "elapsedMs": 3578.576045999999,
+      "rankingCount": 4,
+      "states": 152,
+      "completed": 206,
+      "computed": 206,
+      "fallbacks": 0,
+      "failures": 0,
+      "timeouts": 0,
+      "cancellations": 4,
+      "workerStarts": 5,
+      "workerStops": 5,
+      "maxQueue": 3,
+      "peakWorkers": 1,
+      "unexpectedErrors": 0,
+      "heapLimitBytes": 62914560,
+      "rssBytes": 198516736,
+      "decisionMs": {
+        "count": 206,
+        "median": 1.1231509999997797,
+        "p95": 22.59345200000007,
+        "max": 76.23417400000108
+      },
+      "roundTripMs": {
+        "count": 206,
+        "median": 2.5356959999990067,
+        "p95": 41.4011419999988,
+        "max": 76.78790399999889
+      },
+      "workerReleaseMs": 10.269897000000128,
+      "isolatedIdleOverrideMs": 1000,
+      "idleServerClosed": true
+    }
+  ],
+  "siteLatency": {
+    "count": 40,
+    "median": 6.277857999999469,
+    "p95": 80.43534999999974,
+    "max": 98.85883599999988
+  },
+  "authenticatedPageLatency": {
+    "count": 8,
+    "median": 54.00347099999999,
+    "p95": 135.38605800000005,
+    "max": 135.38605800000005
+  },
+  "siteFailures": 0,
+  "peakSiteRss": 140693504,
+  "peakGameProcessRssIncludingWorker": 197861376,
+  "peakCombinedCgroupBytes": 248266752,
+  "finalSample": {
+    "at": 1791230035300,
+    "siteRss": 140693504,
+    "gameProcessRss": 189214720,
+    "cgroupBytes": 240439296
+  },
+  "sampleCount": 40,
+  "injectedTimeoutBudgetMs": 200,
+  "injectedTimeoutIncludingStartupMs": 243.62050500000078,
+  "injectedTimeoutMs": 202.6195970000008,
+  "cancellationMs": 10.548877000001085,
+  "ordinaryFallbacks": 0,
+  "provenance": {
+    "sourceRevision": "e4674fcc6a373b77dededed4c18480a2f7f3dfbc",
+    "image": "yougui-app:e4674fc-ecs",
+    "imageId": "sha256:8cfa43e7144034a76f4e975f7bf28b4d351941bf7fedf071f92a2fe648326efa",
+    "buildId": "nwHBFZeYe9pd-JzY4PiZt",
+    "nextManifestSha256": "1a71a987782cf6fdbb5544143c9ed41825dd22aa4d3f8932534bcd69d43eb194",
+    "sourceManifestSha256": "28372acba5f6aff5641206650b96187e1db58cb7f2707e343e01b8dd6bbfb278",
+    "verifiedNextFiles": 431,
+    "verifiedSourceFiles": 316,
+    "prior3735ImageNextBuildId": "dPhrl3Oz2p1nnvKV4hie2",
+    "prior3735LocalNextBuildId": "8ydmEm2zT-SkboGuxaCN-",
+    "priorResourceParentWasOldCompiledNext": true,
+    "freshExactImageTestAfterGuardedPublicationBeforeLivePairQA": true
+  }
+}
