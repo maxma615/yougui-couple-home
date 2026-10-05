@@ -8,6 +8,7 @@ import { Camera, ChevronLeft, ChevronRight, ImageOff, ImagePlus, LoaderCircle, P
 import { ApiError, apiRequest, errorMessage, jsonBody } from "@/components/api-client";
 import { DeleteConfirmButton } from "@/components/delete-confirm";
 import type { Moment, MomentPhoto } from "@/components/home-types";
+import { photoUrl } from "@/components/photo-url";
 import { AuditLine, ErrorState, LoadingState, PageHeader, StatusMessage } from "@/components/ui";
 import { useResource } from "@/hooks/use-resource";
 import { useSession } from "@/hooks/use-session";
@@ -70,10 +71,11 @@ function PhotoFrame({
           <img
             key={`${photo.id}-${attempt}`}
             className="space-memory__lead-photo"
-            src={`/api/photos/${photo.id}${attempt ? `?retry=${attempt}` : ""}`}
+            src={photoUrl(photo.id, { variant: "preview", retry: attempt })}
             alt={`${moment.title}：${photo.filename}`}
-            loading={isLead ? undefined : "lazy"}
-            fetchPriority={isLead ? "high" : undefined}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             onError={() => setFailed(true)}
           />
         </button>
@@ -200,8 +202,10 @@ function PhotoViewer({
               <img
                 key={`${photo.id}-${attempt}`}
                 className="space-photo-viewer__image"
-                src={`/api/photos/${photo.id}${attempt ? `?retry=${attempt}` : ""}`}
+                src={photoUrl(photo.id, { retry: attempt })}
                 alt={`${moment.title}：${photo.filename}`}
+                fetchPriority="high"
+                decoding="async"
                 onError={() => setFailed(true)}
               />
             )}
@@ -372,7 +376,7 @@ export default function MomentDetailPage() {
                     onClick={() => setSelectedPhotoIndex(index)}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/photos/${photo.id}`} alt="" loading={index === 0 ? "eager" : "lazy"} />
+                    <img src={photoUrl(photo.id, { variant: "thumbnail" })} alt="" loading={index === 0 ? "eager" : "lazy"} decoding="async" />
                   </button>
                 ))}
               </div>

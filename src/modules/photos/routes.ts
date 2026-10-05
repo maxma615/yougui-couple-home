@@ -1,13 +1,17 @@
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import type { Pool } from "pg";
+import sharp from "sharp";
 
 import { requireHomeMember } from "@/lib/auth-context";
 import { loadConfig } from "@/lib/config";
 import { pool } from "@/lib/db";
+import { AppError } from "@/lib/errors";
 import { apiRoute, assertJsonMutation, json, readJson } from "@/lib/http";
 import { assertMultipartMutation, readPhotoMultipart } from "@/modules/photos/multipart";
 import { createPhotoService, type PhotoLimits } from "@/modules/photos/store";
+import { photoVariantCache, type PhotoVariantCache } from "@/modules/photos/variants";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -51,6 +55,7 @@ export function createMomentPhotoRoutes(
 export function createPhotoItemRoutes(
   target: Pool = pool,
   attachmentsDirectory?: string,
+  variants: PhotoVariantCache = photoVariantCache,
 ) {
   const service = createPhotoService(target, attachmentsDirectory);
   return {
@@ -58,20 +63,60 @@ export function createPhotoItemRoutes(
       const response = await apiRoute(async () => {
         const ctx = await requireHomeMember(request, target);
         const photo = await service.open(ctx, (await route.params).id);
-        const bytes = await readRegularFileNoFollow(photo.filePath);
-        const extension = photo.mime === "image/jpeg" ? "jpg" : photo.mime.slice("image/".length);
-        return new Response(new Uint8Array(bytes), {
-          status: 200,
-          headers: {
-            "Content-Type": photo.mime,
-            "Content-Length": String(bytes.length),
-            "Content-Disposition": `inline; filename="photo.${extension}"; filename*=UTF-8''${encodeURIComponent(photo.filename)}`,
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "private, no-store",
-          },
+        const url = new URL(request.url);
+        const requestedVariant = url.searchParams.get("variant");
+        const variant = requestedVariant === null ? "original" : requestedVariant;
+        if (variant !== "original" && variant !== "thumbnail" && variant !== "preview") {
+          throw new AppError(400, "INVALID_PHOTO_VARIANT", "照片尺寸参数无效");
+        }
+
+        const recipe = variant === "thumbnail" ? "webp-v1-w640-q76" :
+          variant === "preview" ? "webp-v1-w1280-q80" : "original-v1";
+        const etag = `"${createHash("sha256").update(`${photo.sha256}\0${recipe}`).digest("hex")}"`;
+        const contentType = variant === "original" ? photo.mime : "image/webp";
+        const headers = new Headers({
+          "Content-Type": contentType,
+          "Content-Disposition": variant === "original"
+            ? `inline; filename="photo.${photo.mime === "image/jpeg" ? "jpg" : photo.mime.slice("image/".length)}"; filename*=UTF-8''${encodeURIComponent(photo.filename)}`
+            : `inline; filename="photo-${variant}.webp"`,
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": "private, no-cache, must-revalidate",
+          "Vary": "Cookie",
+          ETag: etag,
         });
+
+        if (matchesIfNoneMatch(request.headers.get("if-none-match"), etag)) {
+          return new Response(null, { status: 304, headers });
+        }
+
+        if (variant === "original") {
+          const bytes = await readRegularFileNoFollow(photo.filePath);
+          headers.set("Content-Length", String(bytes.length));
+          return new Response(new Uint8Array(bytes), { status: 200, headers });
+        }
+
+        const maxEdge = variant === "thumbnail" ? 640 : 1280;
+        const quality = variant === "thumbnail" ? 76 : 80;
+        const bytes = await variants.getOrCreate(etag, async () => {
+          const original = await readRegularFileNoFollow(photo.filePath);
+          return sharp(original, { failOn: "error", limitInputPixels: 40_000_000 })
+            .rotate()
+            .resize({
+              width: maxEdge,
+              height: maxEdge,
+              fit: "inside",
+              withoutEnlargement: true,
+            })
+            .webp({ quality, effort: 4 })
+            .toBuffer();
+        });
+        headers.set("Content-Length", String(bytes.length));
+        return new Response(new Uint8Array(bytes), { status: 200, headers });
       });
-      response.headers.set("Cache-Control", "private, no-store");
+      if (response.status === 200 || response.status === 304) {
+        response.headers.set("Cache-Control", "private, no-cache, must-revalidate");
+        response.headers.set("Vary", "Cookie");
+      }
       return response;
     },
     DELETE(request: Request, route: RouteContext): Promise<Response> {
@@ -83,4 +128,12 @@ export function createPhotoItemRoutes(
       });
     },
   };
+}
+
+function matchesIfNoneMatch(header: string | null, etag: string): boolean {
+  if (!header) return false;
+  return header.split(",").some((candidate) => {
+    const value = candidate.trim();
+    return value === "*" || value.replace(/^W\//, "") === etag;
+  });
 }
