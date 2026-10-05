@@ -5,17 +5,18 @@
 ## 访问和账号
 
 - 正式地址：<https://8.133.186.15>。HTTP 自动转 HTTPS；Caddy `default_sni` 解决 IP 客户端不发送 SNI、ECS NAT 隐藏公网监听地址的问题。
-- 已迁移账号：`admin@couple.local`。原有密码哈希保持完全一致，不重设密码；旧本地会话及未使用邀请在恢复时失效。另一位成员由首页“邀请另一半”注册并配对，不开放公共注册。
+- 原首位成员 `admin@couple.local` 已按本次授权绑定手机号并更新为用户指定密码，身份 ID 和原有空间保留；对象手机号账号已加入该空间第二位置。两位成员直接通过手机号密码登录，不开放公共注册。
+- 独立管理员登录 `/admin`，不占双人成员位置。面板支持创建成员、绑定空位置、密码重置和启停账号；管理员角色不能读取私人空间内容。账号凭据通过受保护标准输入配置，不写入文档。
 - 生产 IP 证书由 Let's Encrypt 签发，SAN 含 `8.133.186.15`，当前证书有效期为 2026-10-05 06:43:42 UTC 至 2026-10-11 22:43:41 UTC。Caddy 自动维护 shortlived 证书，证书和 ACME 账号写入持久化卷。
 
 ## 运行配置
 
 实例 `i-uf6i9ie15g82dprialoy`，区域 `cn-shanghai`，Ubuntu 24.04 amd64，2 vCPU/2 GiB、40 GB 系统盘、3 Mbps 公网带宽。安装 Docker 29.1.3、Compose 2.40.3，新增独立 2 GiB swap。
 
-- 代码：`/srv/yougui/releases/b2fb8c4`；`/srv/yougui/current` 指向该版本目录。前端基于提交 `b2fb8c4`，附本次部署配置。
+- 代码：`/srv/yougui/releases/81ab435`；`/srv/yougui/current` 指向该版本目录。源提交 `81ab435`，跟踪文件已逐一核对；管理员与手机号增量验收见 `docs/admin-phone-acceptance.md`。
 - 配置：`/srv/yougui/config/production.env`，属主 root、权限 0600；代码目录 `.env` 只是该文件的符号链接，构建时排除环境文件。
 - 固定项目名：`COMPOSE_PROJECT_NAME=yougui`。`compose.override.yml` 指向 `deploy/compose.ip.yml`，备份脚本和普通 Compose 命令使用相同卷。
-- 应用、照片清理、维护镜像：`yougui-app:b2fb8c4-ecs`，UID/GID 10001。附件仅保存在 `yougui_attachments_data`。
+- 应用、照片清理、维护镜像：`yougui-app:81ab435-ecs`，UID/GID 10001。附件仅保存在 `yougui_attachments_data`。
 - 数据库：PostgreSQL 18，卷 `yougui_database_data`，不向公网发布 5432。
 - 网关：`yougui-caddy:2.11.7`，卷 `yougui_caddy_data` / `yougui_caddy_config`；镜像显式设置 XDG 存储位置。
 - 所有服务采用最多 3 个、每个 10 MB 的日志轮转。常驻服务 `restart: unless-stopped`。
@@ -32,13 +33,15 @@ Docker Hub 在本机房连接超时，Node/PostgreSQL 使用 AWS ECR 的 Docker 
 - 通过五分钟自动过期的管理验收会话读取迁移账号；未登录照片/SSE 请求返回 401，跨源写入返回 403。两条接受压缩的公网 HTTP/2 SSE 连接及时收到数据，持续 70 秒、各收到至少四次心跳，未被代理缓冲或断开。会话随后主动撤销，未改变密码或真实业务记录。
 - 生产镜像扫描 318 个构建文件，没有配置凭据或附件路径；`npm audit --omit=dev` 报告 0 个漏洞。维护后四项常驻服务正常，数据库 healthy，主机可用内存约 1 GiB、系统盘剩余约 30 GB。
 
-当前真实空间只有一位成员，没有历史照片；照片写入与恢复使用独立测试资料验证。管理员当前密码不可从数据库还原，因此没有以该密码提交登录；本次不重置它。真实安卓设备的输入法、性能和添加到桌面仍需设备验收。
+初次发布时真实空间只有一位成员、没有历史照片；照片写入与恢复使用独立测试资料验证。随后本次授权的账号增量发布创建了第二位成员和独立管理员；三个正式密码登录与权限矩阵、应用重启后配对保留均已实际验证。真实安卓设备的输入法、性能和添加到桌面仍需设备验收。
 
 ## 备份与维护
 
 每日上海时间 03:00（随机延迟最多 5 分钟）由 `yougui-backup.timer` 执行一致性备份，结果写 `/srv/yougui/backups/automatic`。已实际启动服务并成功完成一次备份，应用、照片清理和 Caddy 在备份后自动恢复。备份期间短暂停服；照片越多，时间越长。当前不自动删除历史备份，维护时检查磁盘容量，并将完成备份复制到站外。
 
 本机站外备份目录为 `~/Library/Application Support/Yougui/Backups/ECS`，权限 0700，真实资料不提交到代码仓库。`cloud-20261005.tar.gz` 保存完整备份 `20261005T074910Z-ecfb44b83371`；下载后完成标记、清单和数据库文件 SHA256 均验证通过，归档 SHA256 为 `8beca3e40051030b56e10b797203833cf7c5d6265d936347442fe1b9fdd0303b`。
+
+账号增量升级后备份 `20261005T145924Z-7b27f9212d06` 另存为 `post-admin-20261005.tar.gz`，服务器和本机归档 SHA256 一致：`61d6bb53410e46b9399fbe1cbee59241864ad8be01c367f2357d2e10c2fe902d`。该副本包含新角色、手机号登录与两位成员关系，权限 0600。
 
 ```sh
 cd /srv/yougui/current
@@ -51,4 +54,4 @@ systemctl list-timers yougui-backup.timer
 
 恢复只接受空数据库和空附件目录。先建立新 Compose 项目/空卷、配置不同项目名；让 UID 10001 可读取完整备份树，再按 `docs/operations.md` 执行恢复。禁止对当前卷直接清库或运行 `docker compose down -v`。
 
-若需要管理员重置密码，获得用户的明确重置授权后，在服务器执行 `docker compose exec app npm run reset-password -- --email admin@couple.local`，通过交互提示输入密码，不放入命令历史或文档；重置会撤销既有会话。购买域名后改配置和对应网关文件，并按新 Origin 重新验收。
+成员忘记密码可由独立管理员在面板中重置，操作会撤销成员既有会话。管理员本人在面板“修改我的密码”弹窗输入当前密码与新密码；服务器紧急重置仍需用户明确授权，并使用 CLI 交互标准输入，禁止把密码放入命令历史或文档。购买域名后改配置和对应网关文件，并按新 Origin 重新验收。
