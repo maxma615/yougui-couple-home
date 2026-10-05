@@ -186,7 +186,6 @@ function MahjongRoot() {
         mode={mode}
         busy={busy}
         joinCode={joinCode}
-        serviceRunning={response.serviceRunning}
         onMode={setMode}
         onJoinCode={(value) => setJoinCode(value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8))}
         onCreate={() => void send({ action: "create", mode })}
@@ -231,8 +230,8 @@ export function MahjongClient() {
   return <SessionProvider requireHome={false}><MahjongRoot/></SessionProvider>;
 }
 
-function Lobby({ mode, busy, joinCode, serviceRunning, onMode, onJoinCode, onCreate, onJoin }: {
-  mode: GameMode; busy: boolean; joinCode: string; serviceRunning: boolean;
+function Lobby({ mode, busy, joinCode, onMode, onJoinCode, onCreate, onJoin }: {
+  mode: GameMode; busy: boolean; joinCode: string;
   onMode: (mode: GameMode) => void; onJoinCode: (value: string) => void; onCreate: () => void; onJoin: () => void;
 }) {
   return <section className="mahjong-lobby">
@@ -255,7 +254,6 @@ function Lobby({ mode, busy, joinCode, serviceRunning, onMode, onJoinCode, onCre
       <div className="mahjong-join-form"><input id="mahjong-join-code" inputMode="text" autoComplete="off" maxLength={8} value={joinCode} onChange={(event) => onJoinCode(event.target.value)} placeholder="例：N7K4Q2TP"/><button type="button" aria-label="加入牌桌" disabled={busy || joinCode.length !== 8} onClick={onJoin}>{busy ? <LoaderCircle size={17} className="mahjong-spin"/> : <ArrowRight size={17}/>}</button></div>
       <p className="mahjong-panel-note">创建牌桌后，把房间码分享给朋友。</p>
     </div>
-    {serviceRunning ? <p className="mahjong-service-note" role="status"><Radio size={14}/> 当前有牌局正在进行。</p> : null}
   </section>;
 }
 
