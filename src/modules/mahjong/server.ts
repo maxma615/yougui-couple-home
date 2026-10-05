@@ -8,6 +8,7 @@ import { appErrorResponse } from "@/lib/errors";
 import { assertJsonMutation, readJson } from "@/lib/http";
 import { RateLimiter } from "@/lib/security";
 import { requireMahjongPlayer } from "./auth";
+import { BotRunner } from "./bot-runner";
 import { RoomStore, ROOM_IDLE_MS } from "./rooms";
 import type { MahjongResponse } from "./types";
 
@@ -20,7 +21,7 @@ function asRequest(message: IncomingMessage, origin: string): Request {
   } as RequestInit);
 }
 
-export async function runMahjongServer(options: { port: number; idleMs?: number; sweepMs?: number; host?: string } ) {
+export async function runMahjongServer(options: { port: number; idleMs?: number; sweepMs?: number; host?: string; botDelayMs?: number } ) {
   const config = loadConfig();
   const database = new Pool({ connectionString: config.databaseUrl, max: 2 });
   const rooms = new RoomStore();
@@ -90,6 +91,7 @@ export async function runMahjongServer(options: { port: number; idleMs?: number;
       if (pushAgain) { pushAgain = false; void push(); }
     }
   }
+  const bots = new BotRunner(rooms, { visualDelayMs: options.botDelayMs, onChange: () => { void push(); } });
   io.on("connection", socket => {
     rooms.connection(socket.data.userId, 1);
     socket.on("disconnect", () => { rooms.connection(socket.data.userId, -1); void push(); });
@@ -116,8 +118,9 @@ export async function runMahjongServer(options: { port: number; idleMs?: number;
     if (shuttingDown) return;
     shuttingDown = true;
     clearInterval(timer);
+    await bots.close();
     await new Promise<void>(resolve => io.close(() => resolve()));
     await database.end();
   }
-  return { close, io, rooms };
+  return { close, io, rooms, bots };
 }

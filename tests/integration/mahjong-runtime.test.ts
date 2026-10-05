@@ -71,6 +71,41 @@ describe("authenticated volatile runtime", () => {
     expect((await post(0,{action:"finish"})).ok).toBe(true);
     expect(service.rooms.size).toBe(0);
   });
+  it("authenticates mixed three-seat tables, pushes computer moves and refuses bot impersonation", async () => {
+    const created = await (await post(0, { action: "create", mode: "east", variant: "sanma" })).json() as MahjongResponse;
+    const roomId = created.room!.id;
+    expect((await post(1, { action: "join", code: created.room!.code })).ok).toBe(true);
+    expect((await post(1, { action: "fill-bots" })).status).toBe(403);
+    expect((await post(0, { action: "fill-bots" })).ok).toBe(true);
+    const bot = service.rooms.view(users[0])!.members.find(m => m.kind === "bot")!;
+    expect((await fetch(`${address}/internal/room`, { headers: { cookie: `${SESSION_COOKIE_NAME}=${bot.userId}` } })).status).toBe(401);
+    expect((await post(0, { action: "respond", userId: bot.userId, decisionId: "fake", choiceId: "fake" })).status).toBe(400);
+    expect((await db.pool.query("SELECT count(*)::int AS n FROM users WHERE id::text LIKE 'bot:%'")).rows[0].n).toBe(0);
+    const states: MahjongResponse[] = [];
+    sockets[0].on("mahjong:state", state => states.push(state));
+    for (const n of [0, 1]) expect((await post(n, { action: "ready", ready: true })).ok).toBe(true);
+    expect((await post(0, { action: "start" })).ok).toBe(true);
+    await vi.waitFor(async () => {
+      for (const n of [0, 1]) {
+        const game = service.rooms.view(users[n])!.game!;
+        if (game.choices.length) {
+          const choice = game.choices.find(c => c.type === "discard" || c.type === "pass") ?? game.choices[0];
+          await post(n, { action: "respond", decisionId: game.decisionId, choiceId: choice.id });
+        }
+      }
+      expect(service.bots.metrics.completed).toBeGreaterThan(0);
+    }, { timeout: 5000 });
+    await vi.waitFor(() => expect(states.some(s => s.room?.game?.players.find(p => p.seat === bot.seat)?.discards.length)).toBe(true));
+    sockets[0].disconnect();
+    sockets[1].disconnect();
+    await vi.waitFor(() => expect(service.rooms.botDecisions()).toEqual([]));
+    const pausedVersion = service.rooms.view(users[0])!.version;
+    await new Promise(resolve => setTimeout(resolve, 500));
+    expect(service.rooms.view(users[0])!.version).toBe(pausedVersion);
+    expect(service.bots.workerRunning).toBe(false);
+    expect((await post(0, { action: "finish", roomId })).ok).toBe(true);
+    expect(service.rooms.size).toBe(0);
+  });
   it("exits when there are no rooms and restarts with no previous table", async () => {
     await service.close();
     const port = await freePort(); address=`http://127.0.0.1:${port}`;

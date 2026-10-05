@@ -2,11 +2,14 @@ import { createHash, randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { RiichiGame } from "./engine";
-import type { GameMode, MahjongCommand, PlayerIdentity, RoomView } from "./types";
+import { SanmaGame } from "./sanma";
+import type { GameMode, GameVariant, GameView, MahjongCommand, PlayerIdentity, RoomView } from "./types";
 
 const nonce = z.string().uuid();
 const commandSchema = z.discriminatedUnion("action", [
-  z.object({ nonce, action: z.literal("create"), mode: z.enum(["east", "hanchan"]) }).strict(),
+  z.object({ nonce, action: z.literal("create"), mode: z.enum(["east", "hanchan"]), variant: z.enum(["sanma", "yonma"]).optional() }).strict(),
+  ...["add-bot", "remove-bot"].map(action => z.object({ nonce, action: z.literal(action as "add-bot" | "remove-bot"), seat: z.number().int().min(0).max(3), roomId: z.string().uuid() }).strict()),
+  z.object({ nonce, action: z.literal("fill-bots"), roomId: z.string().uuid() }).strict(),
   z.object({ nonce, action: z.literal("join"), code: z.string().trim().toUpperCase().regex(/^[A-HJ-NP-Z2-9]{8}$/) }).strict(),
   z.object({ nonce, action: z.literal("ready"), ready: z.boolean(), roomId: z.string().uuid() }).strict(),
   ...["start", "leave", "finish", "rematch"].map(action => z.object({ nonce, action: z.literal(action as "start" | "leave" | "finish" | "rematch"), roomId: z.string().uuid() }).strict()),
@@ -19,8 +22,29 @@ export function parseMahjongCommand(value: unknown): MahjongCommand {
   return parsed.data as MahjongCommand;
 }
 
-type Seat = PlayerIdentity & { seat: number; ready: boolean };
-type Room = { id: string; code: string; hostUserId: string; mode: GameMode; status: RoomView["status"]; version: number; members: Seat[]; game: RiichiGame | null; lastActivity: number; disconnectedSince: number | null };
+type Seat = PlayerIdentity & { kind: "human" | "bot"; seat: number; ready: boolean };
+type Room = {
+  id: string;
+  code: string;
+  hostUserId: string;
+  variant: GameVariant;
+  mode: GameMode;
+  status: RoomView["status"];
+  version: number;
+  members: Seat[];
+  game: RiichiGame | SanmaGame | null;
+  lastActivity: number;
+  disconnectedSince: number | null;
+};
+export type BotDecision = {
+  roomId: string;
+  version: number;
+  decisionId: string;
+  seat: number;
+  variant: GameVariant;
+  view: GameView;
+};
+
 export const ROOM_IDLE_MS = 10 * 60_000;
 
 export class RoomStore {
@@ -28,19 +52,74 @@ export class RoomStore {
   private membership = new Map<string, string>();
   private connections = new Map<string, number>();
   private commands = new Map<string, string>();
+  private listeners = new Set<() => void>();
   private readonly now: () => number;
   constructor(options: { now?: () => number } = {}) { this.now = options.now ?? Date.now; }
   get size() { return this.rooms.size; }
 
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  }
+
+  private changed() { for (const listener of this.listeners) listener(); }
+
+  private humanOnline(room: Room) {
+    return room.members.some(m => m.kind === "human" && (this.connections.get(m.userId) ?? 0) > 0);
+  }
+
+  get hasOnlineBotTable() {
+    return [...this.rooms.values()].some(room =>
+      room.status === "playing" && this.humanOnline(room)
+      && room.members.some(m => m.kind === "bot"));
+  }
+
+  botDecisions(): BotDecision[] {
+    return [...this.rooms.values()].flatMap(room => {
+      if (room.status !== "playing" || !room.game || !this.humanOnline(room)) return [];
+      return room.members.filter(m => m.kind === "bot").flatMap(member => {
+        const view = room.game!.view(member.seat);
+        if (!view.choices.length) return [];
+        return [{
+          roomId: room.id, version: room.version, decisionId: view.decisionId,
+          seat: member.seat, variant: room.variant, view,
+        }];
+      });
+    });
+  }
+
+  isBotDecisionCurrent(job: BotDecision) {
+    const room = this.rooms.get(job.roomId);
+    if (!room || room.version !== job.version || room.status !== "playing"
+      || !this.humanOnline(room) || !room.game
+      || !room.members.some(m => m.kind === "bot" && m.seat === job.seat)) return false;
+    const view = room.game.view(job.seat);
+    return view.decisionId === job.decisionId && view.choices.length > 0;
+  }
+
+  respondBot(job: BotDecision, choiceId: string) {
+    if (!this.isBotDecisionCurrent(job)) return false;
+    const room = this.rooms.get(job.roomId)!;
+    if (!room.game!.view(job.seat).choices.some(c => c.id === choiceId)) return false;
+    room.game!.respond(job.seat, job.decisionId, choiceId);
+    if (room.game!.view(job.seat).ranking) room.status = "finished";
+    room.version++;
+    // Computer activity never extends the human offline grace period.
+    this.changed();
+    return true;
+  }
+
   connection(userId: string, delta: number) {
+    if (userId.startsWith("bot:")) return;
     const n = Math.max(0, (this.connections.get(userId) ?? 0) + delta);
     if (n) this.connections.set(userId, n); else this.connections.delete(userId);
     const room = this.ownRoom(userId);
     if (room) this.updateDisconnected(room);
+    this.changed();
   }
 
   private updateDisconnected(room: Room) {
-    if (room.members.some(m => (this.connections.get(m.userId) ?? 0) > 0)) room.disconnectedSince = null;
+    if (this.humanOnline(room)) room.disconnectedSince = null;
     else room.disconnectedSince ??= this.now();
   }
 
@@ -48,6 +127,7 @@ export class RoomStore {
   private removeRoom(room: Room) {
     this.rooms.delete(room.id);
     room.members.forEach(m => this.membership.delete(m.userId));
+    this.changed();
   }
 
   sweep(now = this.now()) {
@@ -61,14 +141,15 @@ export class RoomStore {
     const me = room?.members.find(m => m.userId === userId);
     if (!room || !me) return null;
     return {
-      id: room.id, code: room.code, hostUserId: room.hostUserId, mode: room.mode, status: room.status,
+      id: room.id, code: room.code, hostUserId: room.hostUserId, variant: room.variant, mode: room.mode, status: room.status,
       version: room.version, mySeat: me.seat,
-      members: room.members.map(m => ({ ...m, connected: (this.connections.get(m.userId) ?? 0) > 0 })),
+      members: room.members.map(m => ({ ...m, connected: m.kind === "human" && (this.connections.get(m.userId) ?? 0) > 0 })),
       game: room.game?.view(me.seat) ?? null,
     };
   }
 
   execute(player: PlayerIdentity, input: MahjongCommand): RoomView | null {
+    if (player.userId.startsWith("bot:")) throw new AppError(403, "human_required", "电脑不能登录或提交玩家请求");
     const command = parseMahjongCommand(input);
     this.sweep();
     const key = player.userId + ":" + command.nonce;
@@ -79,6 +160,7 @@ export class RoomStore {
       return this.view(player.userId);
     }
     this.apply(player, command);
+    this.changed();
     this.commands.set(key, hash);
     if (this.commands.size > 4096) this.commands.delete(this.commands.keys().next().value!);
     return this.view(player.userId);
@@ -92,7 +174,7 @@ export class RoomStore {
       let code: string;
       const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       do { code = Array.from({ length: 8 }, () => alphabet[randomInt(alphabet.length)]).join(""); } while ([...this.rooms.values()].some(r => r.code === code));
-      room = { id: randomUUID(), code, hostUserId: player.userId, mode: command.mode, status: "lobby", version: 1, members: [{ ...player, seat: 0, ready: false }], game: null, lastActivity: this.now(), disconnectedSince: null };
+      room = { id: randomUUID(), code, hostUserId: player.userId, variant: command.variant ?? "yonma", mode: command.mode, status: "lobby", version: 1, members: [{ ...player, kind: "human", seat: 0, ready: false }], game: null, lastActivity: this.now(), disconnectedSince: null };
       this.rooms.set(room.id, room);
       this.membership.set(player.userId, room.id);
       this.updateDisconnected(room);
@@ -102,9 +184,9 @@ export class RoomStore {
       if (room) throw new AppError(409, "already_seated", "请先离开当前牌桌");
       room = [...this.rooms.values()].find(r => r.code === command.code);
       if (!room) throw new AppError(404, "room_missing", "牌桌不存在或已结束");
-      if (room.status !== "lobby" || room.members.length >= 4) throw new AppError(409, "room_unavailable", "牌桌已满或已经开局");
-      const seat = [0,1,2,3].find(n => !room!.members.some(m => m.seat === n))!;
-      room.members.push({ ...player, seat, ready: false });
+      if (room.status !== "lobby" || room.members.length >= (room.variant === "sanma" ? 3 : 4)) throw new AppError(409, "room_unavailable", "牌桌已满或已经开局");
+      const seat = Array.from({ length: room.variant === "sanma" ? 3 : 4 }, (_, n) => n).find(n => !room!.members.some(m => m.seat === n))!;
+      room.members.push({ ...player, kind: "human", seat, ready: false });
       room.members.sort((a, b) => a.seat - b.seat);
       this.membership.set(player.userId, room.id);
       this.updateDisconnected(room);
@@ -112,14 +194,41 @@ export class RoomStore {
       if (!room) throw new AppError(409, "seat_required", "你没有当前牌桌，请创建或加入一桌");
       if (room.id !== command.roomId) throw new AppError(409, "room_changed", "牌桌已改变，请按当前牌桌操作");
       const member = room.members.find(m => m.userId === player.userId)!;
-      if (["start", "finish", "rematch"].includes(command.action) && room.hostUserId !== player.userId) throw new AppError(403, "host_required", "只有房主可以执行这个操作");
+      if (["start", "finish", "rematch", "add-bot", "remove-bot", "fill-bots"].includes(command.action) && room.hostUserId !== player.userId) throw new AppError(403, "host_required", "只有房主可以执行这个操作");
       switch (command.action) {
+        case "add-bot":
+        case "remove-bot":
+        case "fill-bots": {
+          if (room.status !== "lobby") throw new AppError(409, "game_in_progress", "只能在大厅调整电脑席位");
+          const capacity = room.variant === "sanma" ? 3 : 4;
+          if (command.action !== "fill-bots" && command.seat >= capacity) throw new AppError(400, "invalid_seat", "席位不存在");
+          if (command.action === "remove-bot") {
+            if (!room.members.some(m => m.seat === command.seat && m.kind === "bot")) throw new AppError(409, "bot_required", "只能移除电脑席位");
+            room.members = room.members.filter(m => m.seat !== command.seat);
+          } else {
+            const seats = command.action === "add-bot"
+              ? [command.seat]
+              : Array.from({ length: capacity }, (_, n) => n)
+                .filter(n => !room!.members.some(m => m.seat === n));
+            for (const seat of seats) {
+              if (room.members.some(m => m.seat === seat)) throw new AppError(409, "seat_taken", "席位已有人");
+              room.members.push({
+                userId: `bot:${randomUUID()}`, displayName: `电脑 ${seat + 1}`,
+                kind: "bot", seat, ready: true,
+              });
+            }
+            room.members.sort((a, b) => a.seat - b.seat);
+          }
+          break;
+        }
         case "ready":
           if (room.status !== "lobby") throw new AppError(409, "game_in_progress", "当前不在准备阶段");
           member.ready = command.ready; break;
         case "start":
-          if (room.status !== "lobby" || room.members.length !== 4 || !room.members.every(m => m.ready)) throw new AppError(409, "four_ready_required", "需要四位玩家全部准备");
-          room.game = new RiichiGame(room.mode, room.members.map(m => m.displayName));
+          if (room.status !== "lobby" || room.members.length !== (room.variant === "sanma" ? 3 : 4) || !room.members.every(m => m.ready)) throw new AppError(409, "all_ready_required", "需要席位补齐且全部真人准备");
+          room.game = room.variant === "sanma"
+            ? new SanmaGame(room.mode, room.members.map(m => m.displayName))
+            : new RiichiGame(room.mode, room.members.map(m => m.displayName));
           room.status = "playing"; break;
         case "respond":
           if (room.status !== "playing" || !room.game) throw new AppError(409, "no_active_game", "当前没有进行中的对局");
@@ -130,14 +239,14 @@ export class RoomStore {
           if (room.status === "playing") throw new AppError(409, "game_in_progress", "正在对局，短暂离线会保留你的座位；需要结束请由房主解散");
           room.members = room.members.filter(m => m.userId !== player.userId);
           this.membership.delete(player.userId);
-          if (!room.members.length) { this.removeRoom(room); return; }
-          if (room.hostUserId === player.userId) room.hostUserId = room.members[0].userId;
+          if (!room.members.some(m => m.kind === "human")) { this.removeRoom(room); return; }
+          if (room.hostUserId === player.userId) room.hostUserId = room.members.find(m => m.kind === "human")!.userId;
           this.updateDisconnected(room); break;
         case "finish": this.removeRoom(room); return;
         case "rematch":
           if (room.status !== "finished") throw new AppError(409, "game_not_finished", "请先完成当前对局");
           room.game = null; room.status = "lobby";
-          room.members.forEach(m => { m.ready = false; }); break;
+          room.members.forEach(m => { m.ready = m.kind === "bot"; }); break;
       }
     }
     room.version++;
