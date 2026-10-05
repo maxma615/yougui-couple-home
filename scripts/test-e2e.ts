@@ -19,7 +19,13 @@ async function main(){
   const database=await createTestDatabase();
   const directory=await mkdtemp(path.resolve('.local/e2e/run-'));
   const port=await freePort(),mahjongPort=await freePort(),origin=`http://127.0.0.1:${port}`;
-  const environment={...process.env,NODE_ENV:'development' as const,DATABASE_URL:database.databaseUrl,APP_ORIGIN:origin,ATTACHMENTS_DIR:path.join(directory,'attachments'),SESSION_SECRET:randomBytes(48).toString('base64url'),E2E_ORIGIN:origin,PLAYWRIGHT_BROWSERS_PATH:path.resolve('.local/browsers'),NEXT_TELEMETRY_DISABLED:'1',NEXT_DEV_DIST_DIR:'.local/e2e/next',MAHJONG_PORT:String(mahjongPort)};
+  const inheritedEnvironment={...process.env};
+  // Playwright adds FORCE_COLOR to workers; normalize NO_COLOR without changing the selected behavior.
+  if(inheritedEnvironment.NO_COLOR!==undefined){
+    if(inheritedEnvironment.FORCE_COLOR===undefined)inheritedEnvironment.FORCE_COLOR="0";
+    delete inheritedEnvironment.NO_COLOR;
+  }
+  const environment={...inheritedEnvironment,NODE_ENV:'development' as const,DATABASE_URL:database.databaseUrl,APP_ORIGIN:origin,ATTACHMENTS_DIR:path.join(directory,'attachments'),SESSION_SECRET:randomBytes(48).toString('base64url'),E2E_ORIGIN:origin,PLAYWRIGHT_BROWSERS_PATH:path.resolve('.local/browsers'),NEXT_TELEMETRY_DISABLED:'1',NEXT_DEV_DIST_DIR:'.local/e2e/next',MAHJONG_PORT:String(mahjongPort)};
   await mkdir(environment.ATTACHMENTS_DIR);
   const log=createWriteStream(path.join(directory,'server.log'),{mode:0o600});
   let server:ChildProcess|undefined;
