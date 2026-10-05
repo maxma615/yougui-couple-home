@@ -298,7 +298,9 @@ describe("photo API security boundary", () => {
       new Request(`${origin}/api/photos/${payload.photo.id}`, { headers: { cookie: cookieA } }),
       { params: Promise.resolve({ id: payload.photo.id }) },
     );
-    expect(Buffer.from(await original.arrayBuffer())).toEqual(source);
+    const originalBytes = Buffer.from(await original.arrayBuffer());
+    expect(originalBytes.byteLength).toBe(source.byteLength);
+    expect(originalBytes.equals(source)).toBe(true);
   });
 
   it("does not return 304 after the previously valid session is revoked", async () => {
