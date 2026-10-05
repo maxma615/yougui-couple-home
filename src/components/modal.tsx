@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
+import "./space-motion.css";
 
 export function Modal({ title, description, children, onClose, returnFocusTo, busy = false }: {
   title: string; description?: string; children: ReactNode; onClose: () => void; returnFocusTo?: HTMLElement | null; busy?: boolean;

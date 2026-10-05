@@ -24,6 +24,15 @@ function displayDate(date: string): string {
   return date.split("-").join(" . ");
 }
 
+function appendMomentPhoto(moment: Moment | null, momentId: string, photo: MomentPhoto, version: number): Moment | null {
+  if (!moment || moment.id !== momentId || moment.version > version) return moment;
+  return {
+    ...moment,
+    version,
+    photos: moment.photos.some((entry) => entry.id === photo.id) ? moment.photos : [...moment.photos, photo],
+  };
+}
+
 function PhotoFrame({
   moment,
   photo,
@@ -101,15 +110,33 @@ function PhotoViewer({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const closingRef = useRef(false);
   const navigationRef = useRef({ onClose, onPrevious, onNext });
   navigationRef.current = { onClose, onPrevious, onNext };
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   useLayoutEffect(() => {
     setAttempt(0);
     setFailed(false);
   }, [photo.id]);
+
+  const requestClose = useCallback(() => {
+    if (closingRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      closingRef.current = true;
+      navigationRef.current.onClose();
+      return;
+    }
+    closingRef.current = true;
+    setClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      navigationRef.current.onClose();
+    }, 220);
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -119,6 +146,7 @@ function PhotoViewer({
     closeRef.current?.focus();
 
     function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (closingRef.current) return;
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         navigationRef.current.onPrevious();
@@ -129,7 +157,7 @@ function PhotoViewer({
     }
     function onCancel(event: Event) {
       event.preventDefault();
-      navigationRef.current.onClose();
+      requestClose();
     }
 
     dialog.addEventListener("keydown", onKeyDown);
@@ -140,22 +168,26 @@ function PhotoViewer({
       if (dialog.open) dialog.close();
       if (previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [returnFocusTo]);
+  }, [requestClose, returnFocusTo]);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
+  }, []);
 
   function onDialogClick(event: MouseEvent<HTMLDialogElement>) {
-    if (event.target === event.currentTarget) onClose();
+    if (event.target === event.currentTarget) requestClose();
   }
 
   return (
-    <dialog ref={dialogRef} className="space-photo-viewer" aria-label={`大图查看：${moment.title}`} onClick={onDialogClick}>
+    <dialog ref={dialogRef} className="space-photo-viewer" aria-label={`大图查看：${moment.title}`} data-gallery-motion={closing ? "closing" : "open"} onClick={onDialogClick}>
       <div className="space-photo-viewer__inner">
         <div className="space-photo-viewer__bar">
           <p className="space-photo-viewer__label">{moment.title} · {photo.filename}</p>
           <p className="space-photo-viewer__counter">{String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}</p>
-          <button ref={closeRef} className="space-gallery__icon-button" type="button" aria-label="关闭大图查看" onClick={onClose}><X size={21} /></button>
+          <button ref={closeRef} className="space-gallery__icon-button" type="button" aria-label="关闭大图查看" disabled={closing} onClick={requestClose}><X size={21} /></button>
         </div>
         <div className="space-photo-viewer__stage">
-          <button className="space-gallery__icon-button" type="button" aria-label="上一张照片" disabled={count < 2} onClick={onPrevious}><ChevronLeft size={23} /></button>
+          <button className="space-gallery__icon-button" type="button" aria-label="上一张照片" disabled={count < 2 || closing} onClick={onPrevious}><ChevronLeft size={23} /></button>
           <div className="space-photo-viewer__image-wrap">
             {failed ? (
               <div className="space-memory__broken" role="status">
@@ -174,7 +206,7 @@ function PhotoViewer({
               />
             )}
           </div>
-          <button className="space-gallery__icon-button" type="button" aria-label="下一张照片" disabled={count < 2} onClick={onNext}><ChevronRight size={23} /></button>
+          <button className="space-gallery__icon-button" type="button" aria-label="下一张照片" disabled={count < 2 || closing} onClick={onNext}><ChevronRight size={23} /></button>
         </div>
         <div className="space-photo-viewer__footer">使用方向键或两侧按钮浏览照片</div>
       </div>
@@ -229,8 +261,8 @@ export default function MomentDetailPage() {
         form.append("file", file);
         form.append("version", String(current.version));
         const result = await apiRequest<PhotoUploadResult>(`/api/moments/${item.id}/photos`, { method: "POST", body: form });
-        current = { ...current, version: result.version, photos: [...current.photos, result.photo] };
-        resource.setData(current);
+        current = appendMomentPhoto(current, item.id, result.photo, result.version) ?? current;
+        resource.setData((latest) => appendMomentPhoto(latest, item.id, result.photo, result.version));
         completed += 1;
         remaining = remaining.slice(1);
         setPendingFiles(remaining);
@@ -264,9 +296,10 @@ export default function MomentDetailPage() {
         method: "DELETE",
         body: jsonBody({ version: item.version }),
       });
-      const nextPhotos = item.photos.filter((entry) => entry.id !== photo.id);
-      resource.setData({ ...item, version: result.version, photos: nextPhotos });
-      setSelectedPhotoIndex((current) => Math.min(current, Math.max(nextPhotos.length - 1, 0)));
+      resource.setData((current) => {
+        if (!current || current.id !== item.id || current.version > result.version) return current;
+        return { ...current, version: result.version, photos: current.photos.filter((entry) => entry.id !== photo.id) };
+      });
       if (viewerIndex !== null) setViewerIndex(null);
       setUploadTone("success");
       setUploadStatus(`照片“${photo.filename}”已删除。`);

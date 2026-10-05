@@ -26,6 +26,8 @@
   --radius-input: 10px;
   --radius-pill: 999px;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
   --shadow-float: 0 18px 48px rgb(0 0 0 / 45%);
 
   color-scheme: dark;

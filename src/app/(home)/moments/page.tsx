@@ -80,7 +80,7 @@ export default function MomentsPage() {
   }
 
   return (
-    <div className="space-gallery">
+    <div className="space-gallery" data-gallery-view={view}>
       <PageHeader
         eyebrow="PRIVATE IMAGE ARCHIVE"
         title="相册与点滴"

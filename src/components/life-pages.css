@@ -88,6 +88,15 @@
 .life-calendar-grid {
   margin: 0 -0.75rem;
   border-left: 1px solid var(--hairline);
+  animation: life-calendar-reveal .34s var(--motion-ease-reveal, cubic-bezier(.16, 1, .3, 1)) both;
+}
+
+.life-calendar-grid[data-direction="forward"] {
+  --calendar-reveal-x: 8px;
+}
+
+.life-calendar-grid[data-direction="back"] {
+  --calendar-reveal-x: -8px;
 }
 
 .life-calendar-grid .life-calendar-day {
@@ -109,11 +118,15 @@
   color: var(--text);
   font: inherit;
   cursor: pointer;
-  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 120ms ease;
 }
 
 .life-calendar-grid .life-calendar-day:hover:not(:disabled) {
   background: var(--overlay);
+}
+
+.life-calendar-grid .life-calendar-day:active:not(:disabled) {
+  transform: scale(.97);
 }
 
 .life-calendar-day:focus-visible,
@@ -141,10 +154,20 @@
   color: var(--text);
 }
 
+.life-calendar-grid .life-calendar-day.is-selected .life-calendar-day__number {
+  background: var(--accent);
+  color: var(--bg);
+}
+
 .life-calendar-grid .life-calendar-day.is-today .life-calendar-day__number {
   color: var(--accent);
   background: var(--bg);
   font-weight: 700;
+}
+
+.life-calendar-grid .life-calendar-day.is-selected.is-today .life-calendar-day__number {
+  background: var(--accent);
+  color: var(--bg);
 }
 
 .life-calendar-day__number {
@@ -154,6 +177,7 @@
   flex: 0 0 28px;
   place-items: center;
   border-radius: 50%;
+  transition: background 180ms ease, color 180ms ease;
   font-size: .85rem;
   font-variant-numeric: tabular-nums;
 }
@@ -208,6 +232,10 @@
 
 .life-calendar-agenda {
   padding: clamp(1rem, 3vw, 1.4rem);
+}
+
+.life-calendar-agenda__content {
+  animation: life-agenda-reveal .26s var(--motion-ease-soft, cubic-bezier(.22, .61, .36, 1)) both;
 }
 
 .life-calendar-agenda__heading {
@@ -410,6 +438,7 @@
 }
 
 .life-anniversary-feature {
+  animation: life-anniversary-reveal .48s var(--motion-ease-reveal, cubic-bezier(.16, 1, .3, 1)) both;
   overflow: hidden;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
@@ -518,6 +547,27 @@
 
 .life-anniversary-row {
   border-bottom: 1px solid var(--hairline);
+  animation: life-anniversary-reveal .48s var(--motion-ease-reveal, cubic-bezier(.16, 1, .3, 1)) both;
+}
+
+.life-anniversary-row:nth-child(2) {
+  animation-delay: .06s;
+}
+
+.life-anniversary-row:nth-child(3) {
+  animation-delay: .12s;
+}
+
+.life-anniversary-row:nth-child(4) {
+  animation-delay: .18s;
+}
+
+.life-anniversary-row:nth-child(5) {
+  animation-delay: .24s;
+}
+
+.life-anniversary-row:nth-child(n + 6) {
+  animation-delay: .3s;
 }
 
 .life-anniversary-row > a {
@@ -623,6 +673,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  animation: life-todo-list-reveal .3s var(--motion-ease-soft, cubic-bezier(.22, .61, .36, 1)) both;
 }
 
 .life-todo-row {
@@ -679,7 +730,14 @@
 
 .life-todo-row.is-completed .life-todo-check {
   color: var(--accent);
-  animation: life-todo-check-pop 220ms ease-out;
+}
+
+.life-todo-check[data-confirmation="odd"] {
+  animation: life-todo-check-confirm-odd .34s var(--motion-ease-reveal, cubic-bezier(.16, 1, .3, 1)) backwards;
+}
+
+.life-todo-check[data-confirmation="even"] {
+  animation: life-todo-check-confirm-even .34s var(--motion-ease-reveal, cubic-bezier(.16, 1, .3, 1)) backwards;
 }
 
 .life-todo-copy {
@@ -744,6 +802,14 @@
   color: var(--text-muted);
 }
 
+.life-todo-state[data-confirmation="odd"] {
+  animation: life-todo-state-confirm-odd .34s var(--motion-ease-soft, cubic-bezier(.22, .61, .36, 1)) backwards;
+}
+
+.life-todo-state[data-confirmation="even"] {
+  animation: life-todo-state-confirm-even .34s var(--motion-ease-soft, cubic-bezier(.22, .61, .36, 1)) backwards;
+}
+
 .life-todo-empty {
   display: grid;
   min-height: 10rem;
@@ -753,6 +819,10 @@
   border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
   color: var(--text-muted);
+}
+
+.life-todo-empty--filter {
+  animation: life-todo-list-reveal .3s var(--motion-ease-soft, cubic-bezier(.22, .61, .36, 1)) both;
 }
 
 .life-todo-empty h2 {
@@ -767,10 +837,46 @@
   font-size: .85rem;
 }
 
-@keyframes life-todo-check-pop {
+@keyframes life-calendar-reveal {
+  from { opacity: 0; transform: translateX(var(--calendar-reveal-x, 8px)); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes life-agenda-reveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes life-anniversary-reveal {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes life-todo-list-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes life-todo-check-confirm-odd {
+  0% { transform: scale(.88); }
+  68% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes life-todo-check-confirm-even {
   0% { transform: scale(.82); }
   65% { transform: scale(1.08); }
   100% { transform: scale(1); }
+}
+
+@keyframes life-todo-state-confirm-odd {
+  from { opacity: .55; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes life-todo-state-confirm-even {
+  from { opacity: .55; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (min-width: 768px) {
@@ -853,5 +959,25 @@
 
   .life-todo-row.is-completed .life-todo-check {
     animation: none;
+  }
+
+  .life-calendar-grid .life-calendar-day:active:not(:disabled) {
+    transform: none;
+  }
+
+  .life-todo-check:active:not(:disabled) {
+    transform: none;
+  }
+
+  .life-calendar-grid,
+  .life-calendar-agenda__content,
+  .life-anniversary-feature,
+  .life-anniversary-row,
+  .life-todo-list,
+  .life-todo-empty--filter,
+  .life-todo-check[data-confirmation],
+  .life-todo-state[data-confirmation] {
+    animation: none;
+    transform: none;
   }
 }
