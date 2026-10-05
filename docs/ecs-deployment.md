@@ -1,0 +1,54 @@
+# 上海 ECS 发布记录
+
+发布日期：2026-10-05。用户已授权将情侣空间部署到已购服务器，并确认没有域名；通过自己的 Chrome 登录控制台，单独确认后新增了网站的 TCP 80/443 入站规则。
+
+## 访问和账号
+
+- 正式地址：<https://8.133.186.15>。HTTP 自动转 HTTPS；Caddy `default_sni` 解决 IP 客户端不发送 SNI、ECS NAT 隐藏公网监听地址的问题。
+- 已迁移账号：`admin@couple.local`。原有密码哈希保持完全一致，不重设密码；旧本地会话及未使用邀请在恢复时失效。另一位成员由首页“邀请另一半”注册并配对，不开放公共注册。
+- 生产 IP 证书由 Let's Encrypt 签发，SAN 含 `8.133.186.15`，当前证书有效期为 2026-10-05 06:43:42 UTC 至 2026-10-11 22:43:41 UTC。Caddy 自动维护 shortlived 证书，证书和 ACME 账号写入持久化卷。
+
+## 运行配置
+
+实例 `i-uf6i9ie15g82dprialoy`，区域 `cn-shanghai`，Ubuntu 24.04 amd64，2 vCPU/2 GiB、40 GB 系统盘、3 Mbps 公网带宽。安装 Docker 29.1.3、Compose 2.40.3，新增独立 2 GiB swap。
+
+- 代码：`/srv/yougui/releases/b2fb8c4`；`/srv/yougui/current` 指向该版本目录。前端基于提交 `b2fb8c4`，附本次部署配置。
+- 配置：`/srv/yougui/config/production.env`，属主 root、权限 0600；代码目录 `.env` 只是该文件的符号链接，构建时排除环境文件。
+- 固定项目名：`COMPOSE_PROJECT_NAME=yougui`。`compose.override.yml` 指向 `deploy/compose.ip.yml`，备份脚本和普通 Compose 命令使用相同卷。
+- 应用、照片清理、维护镜像：`yougui-app:b2fb8c4-ecs`，UID/GID 10001。附件仅保存在 `yougui_attachments_data`。
+- 数据库：PostgreSQL 18，卷 `yougui_database_data`，不向公网发布 5432。
+- 网关：`yougui-caddy:2.11.7`，卷 `yougui_caddy_data` / `yougui_caddy_config`；镜像显式设置 XDG 存储位置。
+- 所有服务采用最多 3 个、每个 10 MB 的日志轮转。常驻服务 `restart: unless-stopped`。
+
+Docker Hub 在本机房连接超时，Node/PostgreSQL 使用 AWS ECR 的 Docker 官方镜像缓存并打本地标签。Caddy 使用官方 GitHub Linux amd64 发布文件，按官方 SHA512 清单验证；归档 SHA256 为 `727b91701a392de6ebc5027509f548bf39979e5216340d0faed8fa5e69c84f8b`。自制 Caddy 镜像复用 PostgreSQL Debian 层，并复制新 Ubuntu 主机官方 `ca-certificates` 的根证书集合；`/usr/local/share/ca-certificates` 无额外根证书。不得禁用 TLS 校验。
+
+## 验证记录
+
+- 在空数据库和空附件卷内恢复本地一致性备份；存储检查没有未知文件、断裂引用或哈希错误。
+- 迁移前后 10 张表的行数和规范化行 SHA256 完全相同，包括用户密码哈希、成员、空间版本、日历、照片元数据与迁移校验。
+- 实例上以 UID 10001 执行 50 项目标测试：备份恢复、会话/邀请竞争、照片生命周期与照片权限通过。第一次照片 API 用例因测试 Origin 仍使用公网配置返回 403；在独立测试进程指定其固定 localhost Origin 后，3 项用例通过。
+- Linux 生产进程重启测试保留四类业务资源、两种日历事件、会话、版本和审计成员；重新登录后 JPEG/PNG/WebP 均保持原 SHA256。测试仅创建独立临时数据库和资料目录，不写入真实空间。
+- 公网 curl 默认校验证书，HTTPS `/api/health` 返回 200；用户 Chrome 正常显示登录页，HTTP 返回 308 跳转。没有浏览器证书警告绕过。
+- 通过五分钟自动过期的管理验收会话读取迁移账号；未登录照片/SSE 请求返回 401，跨源写入返回 403。两条接受压缩的公网 HTTP/2 SSE 连接及时收到数据，持续 70 秒、各收到至少四次心跳，未被代理缓冲或断开。会话随后主动撤销，未改变密码或真实业务记录。
+- 生产镜像扫描 318 个构建文件，没有配置凭据或附件路径；`npm audit --omit=dev` 报告 0 个漏洞。维护后四项常驻服务正常，数据库 healthy，主机可用内存约 1 GiB、系统盘剩余约 30 GB。
+
+当前真实空间只有一位成员，没有历史照片；照片写入与恢复使用独立测试资料验证。管理员当前密码不可从数据库还原，因此没有以该密码提交登录；本次不重置它。真实安卓设备的输入法、性能和添加到桌面仍需设备验收。
+
+## 备份与维护
+
+每日上海时间 03:00（随机延迟最多 5 分钟）由 `yougui-backup.timer` 执行一致性备份，结果写 `/srv/yougui/backups/automatic`。已实际启动服务并成功完成一次备份，应用、照片清理和 Caddy 在备份后自动恢复。备份期间短暂停服；照片越多，时间越长。当前不自动删除历史备份，维护时检查磁盘容量，并将完成备份复制到站外。
+
+本机站外备份目录为 `~/Library/Application Support/Yougui/Backups/ECS`，权限 0700，真实资料不提交到代码仓库。`cloud-20261005.tar.gz` 保存完整备份 `20261005T074910Z-ecfb44b83371`；下载后完成标记、清单和数据库文件 SHA256 均验证通过，归档 SHA256 为 `8beca3e40051030b56e10b797203833cf7c5d6265d936347442fe1b9fdd0303b`。
+
+```sh
+cd /srv/yougui/current
+docker compose ps
+docker compose logs --tail 100 app photo-cleanup caddy
+docker compose exec -T app npm run verify-storage
+systemctl start yougui-backup.service
+systemctl list-timers yougui-backup.timer
+```
+
+恢复只接受空数据库和空附件目录。先建立新 Compose 项目/空卷、配置不同项目名；让 UID 10001 可读取完整备份树，再按 `docs/operations.md` 执行恢复。禁止对当前卷直接清库或运行 `docker compose down -v`。
+
+若需要管理员重置密码，获得用户的明确重置授权后，在服务器执行 `docker compose exec app npm run reset-password -- --email admin@couple.local`，通过交互提示输入密码，不放入命令历史或文档；重置会撤销既有会话。购买域名后改配置和对应网关文件，并按新 Origin 重新验收。

@@ -1,0 +1,23 @@
+{
+  # IP clients normally omit SNI; ECS NAT hides the public listener address.
+  default_sni {$APP_DOMAIN}
+}
+
+{$APP_DOMAIN} {
+  tls {
+    issuer acme {
+      dir {$ACME_DIRECTORY:https://acme-v02.api.letsencrypt.org/directory}
+      profile shortlived
+    }
+  }
+
+  encode zstd gzip
+  reverse_proxy app:3000 {
+    flush_interval -1
+  }
+
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+  }
+}

@@ -1,6 +1,8 @@
-# 情侣小屋运维手册
+# 情侣空间运维手册
 
 本文适用于 M1 的单机 Docker Compose 部署和本地维护。数据库与附件必须作为一个备份单元处理；不能只复制 PostgreSQL 或只复制照片目录。
+
+上海 ECS 的已上线配置、IP HTTPS 和每日备份见 [ECS 发布记录](ecs-deployment.md)。应用和维护容器以 UID/GID `10001:10001` 运行；新的附件卷会从镜像继承正确属主。已有附件卷或外置备份目录须在维护停服时由管理员确认其属主和访问权限。
 
 ## 运行前配置
 
@@ -45,10 +47,14 @@ npm run verify-storage
 
 ```sh
 mkdir -p /srv/couple-home-backups
+chown 10001:10001 /srv/couple-home-backups
+chmod 750 /srv/couple-home-backups
 ./scripts/backup.sh /srv/couple-home-backups
 ```
 
 脚本记录原先正在运行的 `app`、`photo-cleanup`（如已配置）和 `caddy`，停止这些服务并确认没有其他非数据库服务运行，然后在 maintenance 容器中备份。无论成功或失败，脚本都会尝试恢复原来的服务状态。停服时间包含数据库导出与照片复制，主要随数据库和照片总量增长；首次正式使用前应以实际数据量计时。
+
+从其他机器复制来的备份需让 UID `10001` 能遍历备份根目录及其子目录，并读取其中的 `0600` 文件；仅修改外层目录属主不够。管理员应只对选定的备份树执行递归属主调整，保留文件 `0600`、目录 `0750` 或更严格的权限。生产环境文件必须使用固定 `COMPOSE_PROJECT_NAME`，这样日常命令和备份/恢复脚本会选择同一组容器与卷。
 
 本地维护命令不负责停进程，但仍获取独占写维护锁和迁移锁：
 

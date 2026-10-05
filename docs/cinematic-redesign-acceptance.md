@@ -59,4 +59,6 @@
 
 这是 macOS 本地、真实数据库与浏览器验收。手机尺寸与 WebKit 模拟不能替代真实安卓设备的输入法、性能及浏览器验收；安卓实机、Linux/Docker 和 ECS 公网部署仍待验证。此次未执行远端发布，不改变学术工作台的文件、进程或数据。
 
+2026-10-05 后续已单独完成 Linux/Docker 与上海 ECS 公网 HTTPS 发布，原有密码与业务数据保持一致；实际部署验证见 [ECS 发布记录](ecs-deployment.md)。安卓实机验收仍未完成。本段补充不改变上面本地验收当时的范围。
+
 已有未提交内容在 `.local/cinematic-native/baseline.patch` 与 `baseline-status.txt` 留下基线；本次整合保留已有功能，未重置或清理原有工作。

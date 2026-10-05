@@ -18,6 +18,13 @@ RUN npm ci --include=dev --no-audit --no-fund
 COPY . .
 RUN npm run build
 
+# A shared, unprivileged identity owns only the persistent attachment directory.
+RUN groupadd --gid 10001 yougui \
+    && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin yougui \
+    && mkdir -p /data/attachments \
+    && chown 10001:10001 /data/attachments
+USER 10001:10001
+
 EXPOSE 3000
 
 ENTRYPOINT []

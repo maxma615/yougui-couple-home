@@ -1,0 +1,10 @@
+[Unit]
+Description=Consistent backup of Yougui database and attachments
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /srv/yougui/current/deploy/backup-service.sh
+TimeoutStartSec=20min
+UMask=0077

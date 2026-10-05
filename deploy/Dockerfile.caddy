@@ -1,0 +1,12 @@
+# Supply the official Linux amd64 Caddy binary as ./caddy after verifying the
+# release's SHA512 checksum. Ensure the file has executable permissions.
+# Include ca-certificates.crt from the deployment host's official Ubuntu
+# ca-certificates package in this build context, with no locally added roots.
+# Shares the already cached Debian runtime when Docker Hub is unreachable.
+FROM postgres:18
+COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY caddy /usr/bin/caddy
+ENV XDG_DATA_HOME=/data
+ENV XDG_CONFIG_HOME=/config
+ENTRYPOINT []
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

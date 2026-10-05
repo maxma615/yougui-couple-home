@@ -1,0 +1,29 @@
+# Symlink this file as compose.override.yml in the release directory.
+x-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    logging: *bounded-logs
+  app:
+    logging: *bounded-logs
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  photo-cleanup:
+    logging: *bounded-logs
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  maintenance:
+    logging: *bounded-logs
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2.11.7-alpine}
+    logging: *bounded-logs
+    environment:
+      ACME_DIRECTORY: ${ACME_DIRECTORY:-https://acme-v02.api.letsencrypt.org/directory}
+    volumes:
+      - ./deploy/Caddyfile.ip:/etc/caddy/Caddyfile:ro

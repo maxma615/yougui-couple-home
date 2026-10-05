@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Yougui backup at 03:00 China Standard Time
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

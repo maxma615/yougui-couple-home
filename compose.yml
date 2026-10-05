@@ -16,6 +16,7 @@ services:
       retries: 12
 
   app:
+    image: ${APP_IMAGE:-yougui-app:local}
     build: .
     restart: unless-stopped
     depends_on:
@@ -36,6 +37,7 @@ services:
       - "3000"
 
   photo-cleanup:
+    image: ${APP_IMAGE:-yougui-app:local}
     build: .
     restart: unless-stopped
     depends_on:
@@ -58,6 +60,7 @@ services:
       - npm run migrate && while true; do npm run photo-cleanup; sleep 60; done
 
   maintenance:
+    image: ${APP_IMAGE:-yougui-app:local}
     profiles: ["maintenance"]
     build: .
     restart: "no"
@@ -78,7 +81,7 @@ services:
       - ${MAINTENANCE_HOST_DIR:-./backups}:/backups
 
   caddy:
-    image: caddy:2.10-alpine
+    image: caddy:2.11.7-alpine
     restart: unless-stopped
     depends_on:
       - app
