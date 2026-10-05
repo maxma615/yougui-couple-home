@@ -36,7 +36,7 @@ test("跨月全天事项完成月视图、详情、编辑和删除", async ({ br
     await expect(page.getByRole("heading", { name: "国庆杭州旅行", level: 1 })).toBeVisible();
 
     await stableGoto(page, "/home");
-    await expect(page.getByRole("heading", { name: "近期日程" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "下一场约定" })).toBeVisible();
     await expect(page.getByRole("link", { name: /国庆杭州旅行/ })).toBeVisible();
 
     await stableGoto(page, "/calendar");
@@ -48,10 +48,45 @@ test("跨月全天事项完成月视图、详情、编辑和删除", async ({ br
     await page.screenshot({ path: `docs/screenshots/calendar-${testInfo.project.name}.png`, fullPage: true });
 
     await page.getByRole("link", { name: "国庆杭州旅行" }).click();
-    page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "删除“国庆杭州旅行”" }).click();
+    await expect(page).toHaveURL(/\/calendar\/[0-9a-f-]+$/);
+    const eventId = new URL(page.url()).pathname.split("/").pop()!;
+    const deletePath = `**/api/calendar/${eventId}`;
+    let deleteRequests = 0;
+    page.on("request", (request) => {
+      if (request.method() === "DELETE" && new URL(request.url()).pathname === `/api/calendar/${eventId}`) deleteRequests += 1;
+    });
+    let failFirstDelete = true;
+    await page.route(deletePath, (route) => {
+      if (route.request().method() === "DELETE" && failFirstDelete) {
+        failFirstDelete = false;
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "TEST_DELETE_FAILED", message: "暂时无法删除，请重试" } }),
+        });
+      }
+      return route.continue();
+    });
+    const deleteButton = page.getByRole("button", { name: "删除“国庆杭州旅行”" });
+    await deleteButton.click();
+    const dialog = page.getByRole("dialog", { name: "删除日程" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(/国庆杭州旅行/)).toBeVisible();
+    await expect(dialog.getByText(/删除后无法恢复/)).toBeVisible();
+    await dialog.getByRole("button", { name: "取消" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("heading", { name: "国庆杭州旅行", level: 1 })).toBeVisible();
+    expect(deleteRequests).toBe(0);
+
+    await deleteButton.click();
+    await dialog.getByRole("button", { name: "确认删除" }).click();
+    await expect(dialog.getByRole("alert")).toHaveText("暂时无法删除，请重试");
+    await expect(page.getByRole("heading", { name: "国庆杭州旅行", level: 1 })).toBeVisible();
+    expect(deleteRequests).toBe(1);
+    await dialog.getByRole("button", { name: "确认删除" }).click();
     await expect(page).toHaveURL(/\/calendar$/);
     await expect(page.getByText("这一天还没有安排")).toBeVisible();
+    expect(deleteRequests).toBe(2);
   } finally {
     await pair.cleanup();
   }

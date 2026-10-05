@@ -1,6 +1,6 @@
 # 有归深色电影感前端重构实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task when available. Steps use checkbox syntax for tracking. 指定实施工具：Claude Code + GLM；缺少该技能时按本文件逐项执行并保留验收证据。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task when available. Steps use checkbox syntax for tracking. 当前实施工具：Codex 与子代理；按用户 2026-10-05 最新指令执行，并保留验收证据。
 
 **Goal:** 重构有归全部前端，交付真实可用、手机优先的深色电影感界面。
 
@@ -12,12 +12,29 @@
 
 **Approval:** 用户已于 2026-10-03 确认实施计划；实施方式为 Claude Code + GLM，Codex 负责方案及验收。Claude Code 2.1.276 已安装，现有配置使用智谱 Anthropic 兼容端点及 `glm-5.3-flash[1m]`；此处仅记录非敏感路由信息，不表示实际调用已验证。
 
-## Global Constraints
+**2026-10-05 执行更新：** 用户指定全部由 Codex 开发，可使用 GPT 子代理。保留已完成的功能与测试，重新提升首页、公共入口、相册与业务页视觉；最终参考为 Monolith + Nature + Unseen。全界面称呼改为情侣空间，不改写用户自定义名称或数据库接口。三个子代理各自拥有日历/纪念日/待办、设置/弹窗、相册，Codex 负责公共视觉、首页、整合与全套验收。测试与构建统一串行执行，避免共享产物冲突；不再要求 Claude 阶段交接。
+
+## 2026-10-05 实际交付
+
+原步骤列表保留为批准时的执行安排；本轮整合结果以下表及[验收记录](../../cinematic-redesign-acceptance.md)为准，不将未执行的历史中间命令标为已执行。
+
+| 任务 | 当前状态 |
+| --- | --- |
+| Task 1 视觉基础与导航 | 完成；午夜/淡紫 token、公共壳、原创场景、五项手机导航与六项桌面导航 |
+| Task 2 账号与配对 | 完成；登录、初始化、邀请及过期/满员状态，真实两人配对回归通过 |
+| Task 3 首页与摄影回忆 | 完成；真实照片封面切换、相册与大图、上传失败及实时删除回归通过 |
+| Task 4 日历、纪念日、待办 | 完成；全部 CRUD 与删除弹窗，补充两条待办并发响应回归 |
+| Task 5 我们、改密与输入 | 完成；弹窗改密、姓名清空、保存期间锁定字段、冲突草稿与焦点管理 |
+| Task 6 本地交付 | 完成；120 项单元/集成、70 项 E2E、类型/生产/无配置构建、318 文件秘密扫描、生产重启持久化均通过；预览已重启 |
+
+真实安卓、Linux/Docker 与 ECS 发布不在本次本地验收结论中。基线实际位置为 `.local/cinematic-native/`，截图实际位置为 `docs/screenshots/cinematic-*.png`。
+
+## Global Constraints（批准时）
 
 - 只修改 couple-home；不修改根配置、学术工作台、其进程和数据。
 - 保留现有未提交改动；先记录基线，再逐文件整合。禁止 reset、clean 或把整批现有改动作为自己的提交。
 - 保留 API、鉴权、数据 DTO、SSE 与版本冲突接口；不改变数据库模式，不引入服务器依赖。
-- 背景 #0B0D12，内容 #131720，浮层 #1B202B，正文 #F2F3F5，次文字 #A5ACB9，细线 #2A303D，强调 #B8CFFF；普通正文对比度至少 4.5:1。
+- 落地色板按 Unseen 追加参考更新：背景 #0D0E15，内容 #171923，浮层 #222430，正文 #F5F2F6，次文字 #AAA7B8，细线 #30313F，强调 #D2C4E8；正文保持可读对比度。
 - 手机 <768px，紧凑布局 768–1099px，桌面 >=1100px；320px 无横向滚动，触控区域至少 44px。
 - 不依赖外部图片或字体；不把示例照片作为用户真实回忆；支持 reduced-motion。
 - 本轮只交付本地预览与证据，不发布 ECS，不获取或输出凭据。
@@ -119,4 +136,4 @@
 
 每完成一项提交一份简短进度：具体改变、验证命令与结果、尚未解决的问题。先完成 Task 1–3 的代表性页面截图供方案负责人检查，再铺开其余页面；这是一项设计质量检查，不能省略其余任务。验收结论由方案负责人结合截图与实际操作给出，不能以模型声称“高级”作为通过标准。
 
-本计划由 Codex 制定，用户已审阅确认，实施方式按用户指定的 Claude Code + GLM 保留。沿用当前 GLM 配置，不擅自切换供应商或重新配置密钥；实际调用与执行状态以运行日志为准。
+本计划由 Codex 制定，用户已审阅确认。2026-10-05 起按最新指令由 Codex 与子代理直接开发；此前 Claude 阶段记录仅作为历史，不再同步或委托 Claude。

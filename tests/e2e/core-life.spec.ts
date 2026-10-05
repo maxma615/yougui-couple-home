@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addSession, checkNoOverflow, pairedFixture } from "./fixtures";
+import { addSession, checkNoOverflow, mutationHeaders, pairedFixture } from "./fixtures";
 
 async function stableGoto(page: Page, path: string) {
   try { await page.goto(path); } catch (error) {
@@ -52,18 +52,82 @@ test("手机与桌面均可完成纪念日和待办的新增、查看、修改�
     await page.getByRole("button", { name: "保存待办" }).click();
     await expect(page.getByRole("heading", { name: "准备周末湖边野餐", level: 1 })).toBeVisible();
 
-    page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "删除“准备周末湖边野餐”" }).click();
+    const todoDeleteButton = page.getByRole("button", { name: "删除“准备周末湖边野餐”" });
+    await todoDeleteButton.click();
+    const todoDeleteDialog = page.getByRole("dialog", { name: "删除待办" });
+    await expect(todoDeleteDialog).toBeVisible();
+    await expect(todoDeleteDialog.getByText(/准备周末湖边野餐/)).toBeVisible();
+    await todoDeleteDialog.getByRole("button", { name: "取消" }).click();
+    await expect(todoDeleteDialog).toBeHidden();
+    await expect(page.getByRole("heading", { name: "准备周末湖边野餐", level: 1 })).toBeVisible();
+    await todoDeleteButton.click();
+    await todoDeleteDialog.getByRole("button", { name: "确认删除" }).click();
     await expect(page).toHaveURL(/\/todos$/);
     await expect(page.getByText("现在没有共同待办")).toBeVisible();
 
     await stableGoto(page, "/anniversaries");
     await page.getByRole("link", { name: "一起旅行的日子" }).click();
-    page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "删除“一起旅行的日子”" }).click();
+    const anniversaryDeleteButton = page.getByRole("button", { name: "删除“一起旅行的日子”" });
+    await anniversaryDeleteButton.click();
+    const anniversaryDeleteDialog = page.getByRole("dialog", { name: "删除纪念日" });
+    await expect(anniversaryDeleteDialog).toBeVisible();
+    await expect(anniversaryDeleteDialog.getByText(/一起旅行的日子/)).toBeVisible();
+    await anniversaryDeleteDialog.getByRole("button", { name: "确认删除" }).click();
     await expect(page).toHaveURL(/\/anniversaries$/);
     await expect(page.getByText("从第一个重要日子开始")).toBeVisible();
   } finally {
+    await pair.cleanup();
+  }
+});
+
+test("两条待办同时保存时，较晚的响应保留另一条已经完成的状态", async ({ browser, page }) => {
+  const pair = await pairedFixture(browser);
+  await addSession(page.context(), pair.a.id);
+  const releases = new Map<string, () => void>();
+  try {
+    const todos = [];
+    for (const title of ["准备相机", "准备野餐垫"]) {
+      const response = await page.context().request.post("/api/todos", {
+        headers: mutationHeaders(),
+        data: { title, description: "", assigneeId: null, dueDate: null, completed: false },
+      });
+      expect(response.status(), await response.text()).toBe(201);
+      todos.push(await response.json());
+    }
+    await stableGoto(page, "/todos");
+    await page.getByRole("button", { name: "全部", exact: true }).click();
+    const first = page.locator(".life-todo-row").filter({ has: page.getByRole("link", { name: "准备相机", exact: true }) }).getByRole("button");
+    const second = page.locator(".life-todo-row").filter({ has: page.getByRole("link", { name: "准备野餐垫", exact: true }) }).getByRole("button");
+    await expect(first).toBeEnabled();
+    await expect(second).toBeEnabled();
+
+    // Keep the loaded list stable while real PATCH writes finish, then deliver
+    // the two responses separately to exercise the local merge deterministically.
+    await page.route("**/api/todos", (route) => route.fulfill({
+      status: 503, contentType: "application/json",
+      body: JSON.stringify({ error: { code: "TEST_DELAY", message: "列表同步暂时延迟" } }),
+    }));
+    await page.route("**/api/todos/*", async (route) => {
+      if (route.request().method() !== "PATCH") return route.continue();
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      const id = new URL(route.request().url()).pathname.split("/").pop()!;
+      await new Promise<void>((resolve) => releases.set(id, resolve));
+      await route.fulfill({ response });
+    });
+    await first.click();
+    await second.click();
+    await expect.poll(() => releases.size).toBe(2);
+    releases.get(todos[0].id)!();
+    await expect(first).toBeEnabled();
+    releases.get(todos[1].id)!();
+    await expect(second).toBeEnabled();
+    await expect(first).toHaveAttribute("aria-pressed", "true");
+    await expect(second).toHaveAttribute("aria-pressed", "true");
+    const persisted = await page.context().request.get("/api/todos");
+    expect((await persisted.json()).items.every((todo: { completed: boolean }) => todo.completed)).toBe(true);
+  } finally {
+    releases.forEach((release) => release());
     await pair.cleanup();
   }
 });

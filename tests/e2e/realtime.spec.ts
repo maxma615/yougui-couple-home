@@ -27,7 +27,7 @@ test("双会话经实时事件看见变化，409 保留草稿并可基于最新�
     await page.getByRole("button", { name: "保存待办" }).click();
     await expect(page).toHaveURL(/\/todos\/[0-9a-f-]+$/);
     const id = new URL(page.url()).pathname.split("/").pop()!;
-    await expect(pageB.getByRole("heading", { name: "同步买花" })).toBeVisible({ timeout: 15_000 });
+    await expect(pageB.getByRole("link", { name: /同步买花/ })).toBeVisible({ timeout: 15_000 });
 
     await Promise.all([
       stableGoto(page, `/todos/${id}/edit`),
@@ -66,7 +66,7 @@ test("SSE 不可用时退回轮询，恢复在线会立即补齐变化", async (
       data: { title: "轮询补齐的待办", description: "SSE 已断开", assigneeId: null, dueDate: null, completed: false },
     });
     expect(polled.status(), await polled.text()).toBe(201);
-    await expect(pageB.getByRole("heading", { name: "轮询补齐的待办" })).toBeVisible({ timeout: 25_000 });
+    await expect(pageB.getByRole("link", { name: /轮询补齐的待办/ })).toBeVisible({ timeout: 25_000 });
 
     await pair.contextB.setOffline(true);
     await expect(pageB.locator(".connection-status:visible").getByText("当前离线，恢复网络后会自动刷新")).toBeVisible();
@@ -76,7 +76,7 @@ test("SSE 不可用时退回轮询，恢复在线会立即补齐变化", async (
     });
     expect(whileOffline.status(), await whileOffline.text()).toBe(201);
     await pair.contextB.setOffline(false);
-    await expect(pageB.getByRole("heading", { name: "联网后立即出现" })).toBeVisible({ timeout: 10_000 });
+    await expect(pageB.getByRole("link", { name: /联网后立即出现/ })).toBeVisible({ timeout: 10_000 });
   } finally {
     await pair.cleanup();
   }

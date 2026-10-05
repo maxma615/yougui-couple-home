@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AlertCircle, ArrowLeft, Heart, LoaderCircle, Plus } from "lucide-react";
+import { AlertCircle, ArrowLeft, LoaderCircle, Plus } from "lucide-react";
 
 import type { AuditMember, AuditedRecord, Member } from "@/components/home-types";
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <span className={compact ? "brand-mark brand-mark--compact" : "brand-mark"} aria-hidden="true">
-      <Heart fill="currentColor" strokeWidth={2.2} />
+      <svg viewBox="0 0 32 32" fill="none"><path d="M7 25V14a9 9 0 0 1 18 0v11" stroke="currentColor" strokeWidth="1.3" /><path d="M12 25V15a4 4 0 0 1 8 0v10M5 25h22" stroke="currentColor" strokeWidth="1.3" /><circle cx="16" cy="7" r="1.5" fill="currentColor" /></svg>
     </span>
   );
 }
@@ -125,10 +125,6 @@ export function AuditLine({ record, members }: { record: AuditedRecord; members?
       {memberName(record.updatedBy, members)} 最后修改于 {formatShanghaiTime(record.updatedAt)}
     </p>
   );
-}
-
-export function confirmDelete(kind: string, name: string): boolean {
-  return window.confirm(`确定删除${kind}“${name}”吗？删除后无法恢复。`);
 }
 
 export function StatusMessage({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "error" }) {

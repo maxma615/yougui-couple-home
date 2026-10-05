@@ -1,0 +1,35 @@
+/* 公共入口：夜色建筑场景与轻盈的表单，保护内容仅在登录后读取。 */
+.public-shell { position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,440px); gap:8%; min-height:100dvh; align-items:center; isolation:isolate; overflow:hidden; padding:100px 7% 60px; background:var(--bg); }
+.public-scene { z-index:-2; }
+.public-shell .public-scene .space-scene__art { object-position:70% center; opacity:.85; }
+.public-shell::after { position:absolute; z-index:-1; inset:0; content:""; background:linear-gradient(90deg, rgb(13 14 21 / 12%) 10%, rgb(13 14 21 / 6%) 40%, rgb(13 14 21 / 86%) 100%); pointer-events:none; }
+.public-brand { top:34px; left:7%; gap:12px; }
+.public-brand > span { font-size:23px; }
+.public-brand small { font-size:9px; letter-spacing:.14em; margin-top:6px; }
+.public-intro { position:relative; align-self:center; padding-bottom:130px; }
+.public-intro .eyebrow { color:#c5bbd5; font-size:10px; letter-spacing:.25em; }
+.public-intro h2 { font-size:clamp(48px,5vw,76px); font-weight:400; line-height:1.26; letter-spacing:.02em; margin:28px 0 24px; }
+.public-intro > p:not(.eyebrow) { font-size:14px; color:#c3bdd0; line-height:2; }
+.public-intro__note { display:block; margin-top:56px; color:#aaa1b8; font-size:9px; letter-spacing:.17em; }
+.public-shell .auth-card { width:100%; position:relative; padding:36px; background:rgb(22 22 32 / 78%); border:1px solid rgb(222 207 246 / 12%); border-radius:22px; box-shadow:0 30px 90px rgb(0 0 0 / 22%); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); animation:public-arrive 650ms var(--ease-out) backwards; }
+.auth-card .eyebrow { color:var(--text-muted); font-size:11px; letter-spacing:.13em; }
+.auth-card h1 { font-size:28px; font-weight:400; line-height:1.4; margin:12px 0 0; }
+.auth-card__intro { font-size:12px; color:var(--text-muted); line-height:1.9; margin:13px 0 26px; }
+.auth-card .form-stack { gap:17px; }
+.auth-card .field label { font-size:12px; font-weight:400; color:#cbc5d5; }
+.auth-card .field input { background:rgb(255 255 255 / 2%); border-color:rgb(222 207 246 / 15%); }
+.auth-card .button--wide { margin-top:7px; min-height:48px; }
+.auth-card .field-help { font-size:11px; line-height:1.8; }
+.auth-card .field-help svg { vertical-align:middle; margin-right:4px; }
+.public-shell .entry-guide { margin-top:27px; border-top:1px solid rgb(222 207 246 / 12%); padding-top:23px; }
+.entry-guide h2 { font-family:var(--font-body); font-size:12px; font-weight:500; margin:0 0 10px; color:#d8d0e2; }
+.entry-guide p { font-size:11px; color:#b2aabd; line-height:1.9; margin:7px 0 0; }
+.entry-guide strong { color:#d2c8df; font-weight:500; }
+.invite-closed { display:grid; justify-items:start; gap:7px; }
+.invite-closed > svg { color:var(--accent); margin-bottom:10px; }
+.invite-closed .button { margin-top:18px; }
+@keyframes public-arrive { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+@media (max-width:1099px) and (min-width:768px) { .public-shell { gap:4%; padding:90px 5% 40px; grid-template-columns:minmax(0,1fr) minmax(330px,400px); } .public-brand { left:5%; } .public-intro h2 { font-size:48px; } }
+@media (max-width:767px) { .public-shell { display:flex; flex-direction:column; align-items:stretch; gap:0; padding:100px 20px 36px; overflow:hidden; } .public-brand { top:25px; left:24px; } .public-intro { align-self:stretch; padding:20px 8px 26px; } .public-intro .eyebrow { font-size:8px; } .public-intro h2 { font-size:36px; line-height:1.25; margin:14px 0 12px; } .public-intro h2 br { display:none; } .public-intro > p:not(.eyebrow) { font-size:12px; margin:0; line-height:1.8; } .public-intro__note { display:none; } .public-shell .auth-card { padding:26px 23px; background:rgb(22 22 32 / 90%); } .auth-card h1 { font-size:24px; } .auth-card__intro { margin-bottom:22px; } .public-scene { position:absolute; height:680px; } .public-shell .public-scene .space-scene__art { object-position:64% center; opacity:.62; } .public-shell::after { background:linear-gradient(180deg, transparent 0, rgb(13 14 21 / 25%) 300px,var(--bg) 660px); } }
+@media (max-width:350px) { .public-shell { padding-left:12px; padding-right:12px; } .public-intro h2 { font-size:31px; } .public-shell .auth-card { padding:24px 18px; } }
+@media (prefers-reduced-motion:reduce) { .public-shell .auth-card { animation:none; } }

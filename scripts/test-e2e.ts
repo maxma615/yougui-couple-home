@@ -19,7 +19,7 @@ async function main(){
   const database=await createTestDatabase();
   const directory=await mkdtemp(path.resolve('.local/e2e/run-'));
   const port=await freePort(),origin=`http://127.0.0.1:${port}`;
-  const environment={...process.env,NODE_ENV:'development' as const,DATABASE_URL:database.databaseUrl,APP_ORIGIN:origin,ATTACHMENTS_DIR:path.join(directory,'attachments'),SESSION_SECRET:randomBytes(48).toString('base64url'),E2E_ORIGIN:origin,PLAYWRIGHT_BROWSERS_PATH:path.resolve('.local/browsers'),NEXT_TELEMETRY_DISABLED:'1'};
+  const environment={...process.env,NODE_ENV:'development' as const,DATABASE_URL:database.databaseUrl,APP_ORIGIN:origin,ATTACHMENTS_DIR:path.join(directory,'attachments'),SESSION_SECRET:randomBytes(48).toString('base64url'),E2E_ORIGIN:origin,PLAYWRIGHT_BROWSERS_PATH:path.resolve('.local/browsers'),NEXT_TELEMETRY_DISABLED:'1',NEXT_DEV_DIST_DIR:'.next/e2e'};
   await mkdir(environment.ATTACHMENTS_DIR);
   const log=createWriteStream(path.join(directory,'server.log'),{mode:0o600});
   let server:ChildProcess|undefined;

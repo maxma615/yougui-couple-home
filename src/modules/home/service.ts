@@ -25,7 +25,7 @@ function validateHomeValues(input: HomeValues, now: Date): { name: string; start
   let name = "";
   let startDate = "";
   try {
-    name = validateName(input.name, "name", "小屋名称", 120);
+    name = validateName(input.name, "name", "空间名称", 120);
   } catch (error) {
     Object.assign(fields, (error as AppError).fields);
   }
@@ -58,7 +58,7 @@ export async function createHome(
     const user = await tx.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [ownerId]);
     if (!user.rowCount) throw new AppError(404, "account_not_found", "没有找到账号");
     const membership = await tx.query("SELECT home_id FROM home_members WHERE user_id=$1", [ownerId]);
-    if (membership.rowCount) throw new AppError(409, "home_already_exists", "账号已经加入小屋");
+    if (membership.rowCount) throw new AppError(409, "home_already_exists", "账号已经加入空间");
     const inserted = await tx.query<{ id: string }>(
       "INSERT INTO homes(name,start_date) VALUES($1,$2) RETURNING id",
       [values.name, values.startDate],
@@ -126,7 +126,7 @@ export async function updateHome(
        WHERE h.id=$1 AND mine.user_id=$2 FOR UPDATE OF h`,
       [context.homeId, context.userId],
     );
-    if (!locked.rows[0]) throw new AppError(404, "home_not_found", "没有找到小屋");
+    if (!locked.rows[0]) throw new AppError(404, "home_not_found", "没有找到空间");
     if (locked.rows[0].version !== input.version) {
       const current = await queryHome(context, tx);
       throw new AppError(409, "version_conflict", "内容已被另一位成员更新", undefined, current);
@@ -143,7 +143,7 @@ export async function updateHome(
       expectedIds.some((id, index) => id !== submittedIds[index])
     ) {
       throw new AppError(422, "validation_failed", "请检查输入内容", {
-        members: "只能修改当前小屋成员的显示名称",
+        members: "只能修改当前空间成员的显示名称",
       });
     }
     const updated = await tx.query<{ version: number }>(

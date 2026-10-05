@@ -62,13 +62,13 @@ export async function issueInvitation(
        WHERE h.id=$1 AND hm.user_id=$2 FOR UPDATE OF h`,
       [context.homeId, context.userId],
     );
-    if (!home.rowCount) throw new AppError(404, "home_not_found", "没有找到小屋");
+    if (!home.rowCount) throw new AppError(404, "home_not_found", "没有找到空间");
     const count = await tx.query<{ count: number }>(
       "SELECT count(*)::int AS count FROM home_members WHERE home_id=$1",
       [context.homeId],
     );
     if (count.rows[0].count >= 2) {
-      throw new AppError(409, "home_full", "小屋已有两位成员");
+      throw new AppError(409, "home_full", "空间已有两位成员");
     }
     await tx.query(
       "INSERT INTO invitations(token_hash,home_id,inviter_id,expires_at) VALUES($1,$2,$3,$4)",
@@ -140,7 +140,7 @@ export async function acceptInvitation(
         [row.home_id],
       );
       if (members.rows.length >= 2) {
-        throw new AppError(409, "home_full", "小屋已有两位成员");
+        throw new AppError(409, "home_full", "空间已有两位成员");
       }
       const inserted = await tx.query<{ id: string }>(
         `INSERT INTO users(email,display_name,password_hash)

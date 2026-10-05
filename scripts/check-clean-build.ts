@@ -7,7 +7,7 @@ async function main() {
   await mkdir(".local/clean-build", { recursive: true });
   const directory = await mkdtemp(path.resolve(".local/clean-build/run-"));
   try {
-    for (const entry of ["src", "db", "package.json", "package-lock.json", "tsconfig.json", "next-env.d.ts", "next.config.ts"]) {
+    for (const entry of ["src", "public", "db", "package.json", "package-lock.json", "tsconfig.json", "next-env.d.ts", "next.config.ts"]) {
       await cp(path.join(root, entry), path.join(directory, entry), { recursive: true });
     }
     await symlink(path.join(root, "node_modules"), path.join(directory, "node_modules"), "dir");

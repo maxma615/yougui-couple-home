@@ -35,7 +35,7 @@ export function ConflictForm<T extends ConflictRecord>({
   retrying = false,
 }: ConflictFormProps<T>) {
   return (
-    <section className="conflict-card" role="alert" aria-labelledby="conflict-title">
+    <section className="conflict-card space-conflict" role="alert" aria-labelledby="conflict-title">
       <div className="conflict-card__heading">
         <div>
           <p className="eyebrow">保存前请确认</p>

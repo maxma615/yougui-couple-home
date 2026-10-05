@@ -39,7 +39,7 @@ export default function LoginPage() {
     <PublicShell>
       <section className="auth-card" aria-labelledby="login-title">
         <p className="eyebrow">欢迎回来</p>
-        <h1 id="login-title">回到我们的小屋</h1>
+        <h1 id="login-title">回到我们的空间</h1>
         <p className="auth-card__intro">使用管理员创建或邀请加入时设置的独立账号登录。</p>
         <form className="form-stack" onSubmit={submit} noValidate>
           <div className="field">
@@ -59,6 +59,12 @@ export default function LoginPage() {
           </button>
           <p className="field-help"><KeyRound size={14} aria-hidden="true" /> 忘记密码时，请由服务器管理员执行密码重置命令。</p>
         </form>
+        <section className="entry-guide" aria-labelledby="registration-help">
+          <h2 id="registration-help">如何注册和配对？</h2>
+          <p><strong>首位成员：</strong>使用管理员已创建的账号登录，填写名称和恋爱日期，创建空间。</p>
+          <p><strong>另一位成员：</strong>请对方在空间首页点击“邀请另一半”，把生成的邀请链接交给你。打开链接设置自己的邮箱和密码，完成注册后自动配对。</p>
+          <p className="field-help">这里仅供两人使用，不开放公共注册。已经通过邀请加入过，直接用自己的账号登录即可。</p>
+        </section>
       </section>
     </PublicShell>
   );

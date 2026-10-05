@@ -1,30 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, CalendarRange, CheckCircle2, Heart, Sparkles } from "lucide-react";
-
+import { useState } from "react";
+import { ArrowDown, ArrowUpRight, CalendarHeart, Camera, Check, Plus } from "lucide-react";
+import { SpaceScene } from "@/components/space-scene";
 import { compactCalendarLabel } from "@/components/calendar-format";
 import type { Anniversary, ItemList, Moment, Todo } from "@/components/home-types";
-import { ErrorState, LoadingState, PageHeader, StatusMessage } from "@/components/ui";
+import { ErrorState, LoadingState, StatusMessage } from "@/components/ui";
 import { useResource } from "@/hooks/use-resource";
 import { useSession } from "@/hooks/use-session";
 import { daysTogether, nextOccurrence, shanghaiToday } from "@/lib/local-date";
 import { upcomingEvents } from "@/modules/calendar/queries";
 import type { CalendarEventDto } from "@/modules/calendar/schema";
-
-function distance(from: string, to: string): number {
-  return daysTogether(from, to) - 1;
-}
-
-function upcomingAnniversary(items: Anniversary[], today: string) {
-  return items
-    .map((item) => ({
-      item,
-      next: item.yearly ? nextOccurrence(item.date, today) : item.date,
-    }))
-    .filter(({ next }) => next >= today)
-    .sort((a, b) => a.next.localeCompare(b.next))[0] || null;
-}
+import "@/components/space-home.css";
 
 export default function HomePage() {
   const { session } = useSession();
@@ -32,98 +20,54 @@ export default function HomePage() {
   const todos = useResource<ItemList<Todo>>("/api/todos");
   const moments = useResource<ItemList<Moment>>("/api/moments");
   const calendar = useResource<ItemList<CalendarEventDto>>("/api/calendar");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const today = shanghaiToday();
-
   if (!session?.home) return null;
   const error = anniversaries.error || todos.error || moments.error || calendar.error;
-  const missingData = !anniversaries.data || !todos.data || !moments.data || !calendar.data;
-  if (missingData && (anniversaries.loading || todos.loading || moments.loading || calendar.loading)) return <LoadingState label="正在整理今天的小屋…" />;
-  if (missingData) return <ErrorState message={error || "暂时无法读取首页"} onRetry={() => { void anniversaries.refresh(); void todos.refresh(); void moments.refresh(); void calendar.refresh(); }} />;
-
-  const next = upcomingAnniversary(anniversaries.data?.items || [], today);
-  const openTodos = (todos.data?.items || [])
-    .filter((item) => !item.completed)
-    .sort((a, b) => (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31"))
-    .slice(0, 4);
-  const recentMoments = (moments.data?.items || []).slice(0, 3);
-  const upcoming = upcomingEvents(calendar.data?.items || [], new Date(), 4);
+  const missing = !anniversaries.data || !todos.data || !moments.data || !calendar.data;
+  if (missing && (anniversaries.loading || todos.loading || moments.loading || calendar.loading)) return <LoadingState label="正在整理今天的空间…" />;
+  if (missing) return <ErrorState message={error || "暂时无法读取首页"} onRetry={() => { void anniversaries.refresh(); void todos.refresh(); void moments.refresh(); void calendar.refresh(); }} />;
+  const next = (anniversaries.data?.items || []).map(item => ({ item, next: item.yearly ? nextOccurrence(item.date, today) : item.date })).filter(item => item.next >= today).sort((a,b) => a.next.localeCompare(b.next))[0];
+  const openTodos = (todos.data?.items || []).filter(item => !item.completed).sort((a,b) => (a.dueDate || "9999").localeCompare(b.dueDate || "9999")).slice(0,3);
+  const recent = (moments.data?.items || []).slice(0,3);
+  const photographs = (moments.data?.items || []).filter(item => item.photos.length).slice(0,3);
+  const cover = photographs.find(item => item.id === selectedId) || photographs[0];
+  const upcoming = upcomingEvents(calendar.data?.items || [], new Date(), 3);
   const totalDays = Math.max(0, daysTogether(session.home.startDate, today));
+  const solo = session.home.members.length < 2;
 
-  return (
-    <>
-      {error ? <StatusMessage tone="error">部分内容暂时无法同步，页面继续显示上一次成功读取的内容。</StatusMessage> : null}
-      <PageHeader eyebrow="今天也在一起" title={`你好，${session.user.displayName}`} description="这里是你们共同生活的最新一页。" />
-      <section className="hero-card">
-        <p className="eyebrow">{session.home.members.map((member) => member.displayName).join(" ♡ ")}</p>
-        <h1>相爱的第 <span className="hero-card__days">{totalDays}</span> 天</h1>
-        <p>从 {session.home.startDate} 开始，按北京时间计算。</p>
-      </section>
-
-      <div className="card-grid card-grid--summary">
-        <article className="summary-card">
-          <span className="summary-card__icon"><CalendarDays size={20} /></span>
-          <strong>{next ? next.item.title : "还没有"}</strong>
-          <small>{next ? `${next.next} · ${distance(today, next.next) === 0 ? "就是今天" : `还有 ${distance(today, next.next)} 天`}` : "添加一个值得期待的日子"}</small>
-        </article>
-        <article className="summary-card">
-          <span className="summary-card__icon"><CalendarRange size={20} /></span>
-          <strong>{upcoming.length ? upcoming[0].title : "暂无安排"}</strong>
-          <small>{upcoming.length ? compactCalendarLabel(upcoming[0]) : "把下一次约会写进日历"}</small>
-        </article>
-        <article className="summary-card">
-          <span className="summary-card__icon"><CheckCircle2 size={20} /></span>
-          <strong>{openTodos.length} 件</strong>
-          <small>还有这些小事，等我们一起完成</small>
-        </article>
-        <article className="summary-card">
-          <span className="summary-card__icon"><Sparkles size={20} /></span>
-          <strong>{recentMoments.length ? recentMoments[0].date : "等待记录"}</strong>
-          <small>{recentMoments.length ? "最近一次共同点滴" : "把今天留在这里"}</small>
-        </article>
+  return <>
+    <section className="space-home" aria-label={`${session.home.name}主视觉`}>
+      <SpaceScene />
+      <header className="space-home__top"><span>有归 <i>/</i> 情侣空间</span><span>{session.home.name}</span></header>
+      <div className="space-home__copy">
+        <p className="eyebrow">A PLACE FOR THE TWO OF US</p>
+        <h1>在这里，<br/><em>只属于我们。</em></h1>
+        <p className="space-home__intro">让每一个普通的日子，<br/>都有值得留下的瞬间。</p>
+        <div className="space-home__actions"><Link className="button" href="/moments/new"><Plus size={17}/>添加照片</Link><Link className="space-home__text-link" href="/moments">走进回忆 <ArrowUpRight size={18}/></Link></div>
       </div>
-
-      <section className="surface-card" style={{ marginTop: "1rem" }}>
-        <div className="section-title"><h2>近期日程</h2><Link className="section-link" href="/calendar">打开日历</Link></div>
-        {upcoming.length ? (
-          <div className="home-calendar-list">
-            {upcoming.map((event) => (
-              <Link className="list-card" key={event.id} href={`/calendar/${event.id}`}>
-                <div className="list-card__top"><h3>{event.title}</h3><CalendarRange size={17} color="var(--home-accent)" /></div>
-                <p>{compactCalendarLabel(event)}{event.location ? ` · ${event.location}` : ""}</p>
-              </Link>
-            ))}
-          </div>
-        ) : <p className="muted-copy">近期还没有安排，给彼此留一个值得期待的时间吧。</p>}
-      </section>
-
-      <div className="dashboard-grid" style={{ marginTop: "1rem" }}>
-        <section className="surface-card">
-          <div className="section-title"><h2>最近待办</h2><Link className="section-link" href="/todos">查看全部</Link></div>
-          {openTodos.length ? (
-            <div className="list-stack">
-              {openTodos.map((todo) => (
-                <Link className="list-card" key={todo.id} href={`/todos/${todo.id}`}>
-                  <div className="list-card__top"><h3>{todo.title}</h3><span className="status-chip status-chip--open">未完成</span></div>
-                  <p>{todo.dueDate ? `截止 ${todo.dueDate}` : "没有截止日期"}</p>
-                </Link>
-              ))}
-            </div>
-          ) : <p className="muted-copy">现在没有未完成待办，轻松享受今天吧。</p>}
-        </section>
-        <section className="surface-card">
-          <div className="section-title"><h2>最近点滴</h2><Link className="section-link" href="/moments">打开时间线</Link></div>
-          {recentMoments.length ? (
-            <div className="list-stack">
-              {recentMoments.map((moment) => (
-                <Link className="list-card" key={moment.id} href={`/moments/${moment.id}`}>
-                  <div className="list-card__top"><h3>{moment.title}</h3><Heart size={17} color="var(--home-accent)" /></div>
-                  <p>{moment.date}{moment.photos.length ? ` · ${moment.photos.length} 张照片` : ""}</p>
-                </Link>
-              ))}
-            </div>
-          ) : <p className="muted-copy">还没有点滴记录，第一篇可以从今天开始。</p>}
-        </section>
+      {cover ? <div className="space-home__photographs">
+        {photographs.filter(item=>item.id!==cover.id).slice(0,2).map((item,index)=><button key={item.id} className={`space-home__floating space-home__floating--${index+1}`} onClick={()=>setSelectedId(item.id)} aria-label={`查看封面：${item.title}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={`/api/photos/${item.photos[0].id}`} alt="" loading="lazy"/><span>{item.date.replaceAll("-",".")}</span>
+        </button>)}
+        <Link href={`/moments/${cover.id}`} className="space-home__featured" aria-label={`打开回忆：${cover.title}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={`/api/photos/${cover.photos[0].id}`} alt={cover.title} fetchPriority="high"/><span><small>OUR MEMORIES</small>{cover.title}<ArrowUpRight size={18}/></span>
+        </Link>
+      </div> : <Link className="space-home__first-photo" href="/moments/new"><Camera size={21}/><span>第一张照片，等你们来放。</span><ArrowUpRight size={17}/></Link>}
+      <footer className="space-home__foot"><div><span className="space-home__day-label">相爱的第</span><strong>{totalDays.toLocaleString("zh-CN")}</strong><span>天</span><small>{session.home.members.map(member=>member.displayName).join(" 与 ")}<br/>SINCE {session.home.startDate.replaceAll("-",".")}</small></div><a href="#our-today" className="space-home__scroll" aria-label="查看今天"><span>向下，看看今天</span><ArrowDown size={18}/></a></footer>
+    </section>
+    <div className="space-dashboard" id="our-today">
+      {error ? <StatusMessage tone="error">部分内容暂时无法同步，继续显示上一次读取的记录。</StatusMessage> : null}
+      <div className="space-dashboard__heading"><div><p className="eyebrow">OUR EVERYDAY</p><h2>日子很长，我们慢慢来。</h2></div><Link href="/settings#pairing" className="space-pair-link"><span className="space-pair-link__dots"><i/><i/></span>{solo?"邀请另一半":"已配对"}<ArrowUpRight size={16}/></Link></div>
+      <div className="space-today">
+        <Link className="space-today__anniversary" href="/anniversaries" aria-label="纪念日"><span className="eyebrow"><CalendarHeart size={14}/> 下一个纪念日</span><h3>{next?next.item.title:"留一个值得期待的日子"}</h3><p>{next?next.next.replaceAll("-","."):"第一次相见、下一次旅行，都值得纪念。"}</p><div><strong>{next?Math.max(0,daysTogether(today,next.next)-1):"—"}</strong><span>{next?"天后":"等待记录"}</span><ArrowUpRight size={23}/></div></Link>
+        <section className="space-today__agenda"><header><h3>下一场约定</h3><Link href="/calendar" aria-label="打开日历"><ArrowUpRight size={20}/></Link></header>{upcoming.length?upcoming.map(event=><Link key={event.id} href={`/calendar/${event.id}`} className="space-agenda-row"><span>{compactCalendarLabel(event)}</span><strong>{event.title}</strong><small>{event.location||"留一段只属于彼此的时间"}</small></Link>):<div className="space-agenda-empty"><span>MAKE TIME FOR US</span><p>找一天见面，<br/>把期待写进日历。</p><Link href="/calendar/new">安排一次约会 <Plus size={15}/></Link></div>}</section>
+        <section className="space-today__tasks"><header><h3>一起完成的小事</h3><Link href="/todos" aria-label="查看全部待办"><ArrowUpRight size={20}/></Link></header>{openTodos.length?openTodos.map(item=><Link className="space-task-row" key={item.id} href={`/todos/${item.id}`}><span className="space-task-row__circle"><Check size={13}/></span><div><strong>{item.title}</strong><small>{item.dueDate?`截止 ${item.dueDate}`:"慢慢来，一起做"}</small></div><ArrowUpRight size={14}/></Link>):<div className="space-agenda-empty"><p>一起去做的小事，<br/>也会变成回忆。</p><Link href="/todos/new">写下第一件事 <Plus size={15}/></Link></div>}</section>
       </div>
-    </>
-  );
+      <section className="space-recent"><header><div><p className="eyebrow">COLLECTING MOMENTS</p><h2>最近，值得留下的。</h2></div><Link href="/moments">全部回忆 <ArrowUpRight size={16}/></Link></header>{recent.length?<div className="space-recent__grid">{recent.map((item,index)=><Link key={item.id} href={`/moments/${item.id}`} className={`space-recent__item${item.photos.length?"":" is-text"}`}>
+        {item.photos.length?/* eslint-disable-next-line @next/next/no-img-element */<img src={`/api/photos/${item.photos[0].id}`} alt="" loading="lazy"/>:<div className="space-recent__words"><span>NOTE {String(index+1).padStart(2,"0")}</span><p>{item.body||"一句想说的话，一个值得记住的日子。"}</p></div>}
+        <div><small>{item.date.replaceAll("-",".")}</small><h3>{item.title}</h3><ArrowUpRight size={18}/></div></Link>)}</div>:<Link className="space-recent__empty" href="/moments/new"><Camera size={25}/><span>收好第一份回忆。<small>照片或文字，都可以。</small></span><Plus size={21}/></Link>}</section>
+      <footer className="space-dashboard__foot"><span>有归 · 情侣空间</span><span>只对彼此开放。</span></footer>
+    </div>
+  </>;
 }

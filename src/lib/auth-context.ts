@@ -36,6 +36,6 @@ export async function requireHomeMember(
     [session.userId],
   );
   const row = result.rows[0];
-  if (!row) throw new AppError(403, "home_membership_required", "请先完成小屋设置");
+  if (!row) throw new AppError(403, "home_membership_required", "请先完成空间设置");
   return { userId: session.userId, homeId: row.home_id };
 }

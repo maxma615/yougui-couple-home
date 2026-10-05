@@ -23,7 +23,7 @@ function SetupForm() {
   const router = useRouter();
   const { session, loading } = useSession();
   const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +31,7 @@ function SetupForm() {
 
   useEffect(() => {
     if (session?.home) router.replace("/home");
-    if (session?.user.displayName && !displayName) setDisplayName(session.user.displayName);
-  }, [session, router, displayName]);
+  }, [session, router]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,7 +41,7 @@ function SetupForm() {
     try {
       await apiRequest<Home>("/api/home", {
         method: "POST",
-        body: jsonBody({ name, displayName, startDate }),
+        body: jsonBody({ name, displayName: displayName ?? session?.user.displayName ?? "", startDate }),
       });
       router.replace("/home");
     } catch (requestError) {
@@ -59,17 +58,18 @@ function SetupForm() {
   return (
     <section className="auth-card auth-card--wide" aria-labelledby="setup-title">
       <p className="eyebrow">第一次见面</p>
-      <h1 id="setup-title">为你们建一间小屋</h1>
-      <p className="auth-card__intro">这些内容会出现在共同首页，之后仍可在设置中修改。</p>
+      <h1 id="setup-title">开启你们的情侣空间</h1>
+      <p className="auth-card__intro">先填写你自己的资料。创建后，在首页点击“邀请另一半”，对方通过邀请链接注册，便会自动加入同一个空间。</p>
+      <p className="field-help">照片保存在“相册”中，建好空间后即可添加。这些资料之后仍可在设置中修改。</p>
       <form className="form-stack" onSubmit={submit} noValidate>
         <div className="field">
-          <label htmlFor="home-name">小屋名称</label>
-          <input id="home-name" maxLength={120} required value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：我们的海边小屋" aria-invalid={Boolean(fields.name)} />
+          <label htmlFor="home-name">空间名称</label>
+          <input id="home-name" maxLength={120} required value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：我们的私人宇宙" aria-invalid={Boolean(fields.name)} />
           <FieldError message={fields.name} />
         </div>
         <div className="field">
           <label htmlFor="display-name">你的名字</label>
-          <input id="display-name" maxLength={60} required value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" aria-invalid={Boolean(fields.displayName)} />
+          <input id="display-name" maxLength={60} required value={displayName ?? session.user.displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" aria-invalid={Boolean(fields.displayName)} />
           <FieldError message={fields.displayName} />
         </div>
         <div className="field">
@@ -81,7 +81,7 @@ function SetupForm() {
         {error ? <StatusMessage tone="error">{error}</StatusMessage> : null}
         <button className="button button--wide" type="submit" disabled={saving}>
           {saving ? <LoaderCircle className="spin" size={18} /> : <HeartHandshake size={18} />}
-          {saving ? "正在创建…" : "创建小屋"}
+          {saving ? "正在创建…" : "创建空间"}
         </button>
       </form>
     </section>

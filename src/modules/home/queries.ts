@@ -24,7 +24,7 @@ export async function getHome(
     [context.homeId, context.userId],
   );
   const home = homeResult.rows[0];
-  if (!home) throw new AppError(404, "home_not_found", "没有找到小屋");
+  if (!home) throw new AppError(404, "home_not_found", "没有找到空间");
   const memberResult = await target.query<{ id: string; display_name: string }>(
     `SELECT u.id,u.display_name
      FROM home_members hm JOIN users u ON u.id=hm.user_id

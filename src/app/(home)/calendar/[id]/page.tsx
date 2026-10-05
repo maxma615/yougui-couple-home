@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { CalendarDays, Clock3, MapPin, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, Pencil } from "lucide-react";
 
 import { apiRequest, errorMessage, jsonBody } from "@/components/api-client";
 import { calendarRangeLabel } from "@/components/calendar-format";
-import { AuditLine, ErrorState, LoadingState, PageHeader, StatusMessage, confirmDelete } from "@/components/ui";
+import { DeleteConfirmButton } from "@/components/delete-confirm";
+import { AuditLine, ErrorState, LoadingState, PageHeader, StatusMessage } from "@/components/ui";
 import { useResource } from "@/hooks/use-resource";
 import { useSession } from "@/hooks/use-session";
 import type { CalendarEventDto } from "@/modules/calendar/schema";
+
+import "@/components/life-pages.css";
 
 export default function CalendarEventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,13 +22,13 @@ export default function CalendarEventDetailPage() {
   const item = resource.data;
 
   async function remove() {
-    if (!item || !confirmDelete("日程", item.title)) return;
+    if (!item) return;
     try {
       await apiRequest<{ ok: true }>(`/api/calendar/${item.id}`, { method: "DELETE", body: jsonBody({ version: item.version }) });
       router.replace("/calendar");
     } catch (requestError) {
-      window.alert(errorMessage(requestError));
       void resource.refresh();
+      throw new Error(errorMessage(requestError));
     }
   }
 
@@ -35,10 +38,10 @@ export default function CalendarEventDetailPage() {
     <>
       {resource.error ? <StatusMessage tone="error">同步失败：{resource.error}。继续显示上一次读取的内容。</StatusMessage> : null}
       <PageHeader title={item.title} backHref="/calendar" action={<Link className="button" href={`/calendar/${item.id}/edit`}><Pencil size={17} /> 编辑</Link>} />
-      <article className="detail-card">
+      <article className="detail-card life-detail-card life-calendar-detail">
         <div className="detail-heading">
           <div><p className="eyebrow">{item.allDay ? "全天事项" : "带时刻事项"}</p><h2>{calendarRangeLabel(item)}</h2></div>
-          <CalendarDays size={30} color="var(--home-accent)" />
+          <CalendarDays size={30} />
         </div>
         <div className="chip-row">
           <span className="meta-chip"><Clock3 size={13} /> {item.allDay ? "全天" : "北京时间"}</span>
@@ -48,7 +51,7 @@ export default function CalendarEventDetailPage() {
         <AuditLine record={item} members={session?.home?.members} />
         <div className="button-row" style={{ marginTop: "1rem" }}>
           <Link className="button button--secondary" href={`/calendar/${item.id}/edit`}><Pencil size={17} /> 编辑</Link>
-          <button className="button button--danger" type="button" onClick={() => void remove()}><Trash2 size={17} /> 删除“{item.title}”</button>
+          <DeleteConfirmButton kind="日程" name={item.title} onConfirm={remove} />
         </div>
       </article>
     </>
