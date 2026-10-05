@@ -91,8 +91,8 @@ for (const variant of ["sanma", "yonma"] as const) test(`单人${variant === "sa
     await expect(page.locator('.mahjong-player')).toHaveCount(count);
     await page.route("**/api/mahjong", route => route.request().method() === "GET" ? route.abort("blockedbyclient") : route.continue());
     await expect.poll(async () => { await actHumans([page]); return page.locator('.mahjong-river:not(.mahjong-river--0) [data-tile]').count(); }, { timeout: 30_000 }).toBeGreaterThan(0);
-    // A human decision stops the bot loop, so the private hand is stable across reload.
-    await expect(page.locator('[data-choice-type="discard"]:enabled').first()).toBeVisible({ timeout: 30_000 });
+    // A legal human decision holds this hand stable, including a pending call/pass response.
+    await expect(page.locator("[data-choice-type]:enabled").first()).toBeVisible({ timeout: 30_000 });
     const hand = await page.getByTestId("mahjong-hand").locator('[data-tile-face]').evaluateAll(tiles => tiles.map(tile => tile.getAttribute("data-tile-face")));
     await page.unroute("**/api/mahjong"); await page.reload();
     await expect.poll(() => page.getByTestId("mahjong-hand").locator('[data-tile-face]').evaluateAll(tiles => tiles.map(tile => tile.getAttribute("data-tile-face")))).toEqual(hand);

@@ -63,22 +63,42 @@ function MahjongRoot() {
   const [confirmFinish, setConfirmFinish] = useState(false);
   const finishDialog = useRef<HTMLDialogElement>(null);
   const socketRef = useRef<Socket | null>(null);
+  const responseRef = useRef<MahjongResponse | null>(null);
+  const responseRevision = useRef(0);
+  const getSequence = useRef(0);
+  const pendingMutation = useRef<number | null>(null);
+  const [socketEpoch, setSocketEpoch] = useState(0);
   const room = response?.room || null;
   const isMember = session?.user.role === "member";
 
-  const applyResponse = useCallback((next: MahjongResponse) => {
-    setResponse((current) => {
-      if (current?.room && next.room?.id === current.room.id && next.room.version < current.room.version) return current;
-      return next;
-    });
+  const applyResponse = useCallback((next: MahjongResponse, expectedRevision?: number) => {
+    if (expectedRevision !== undefined && expectedRevision !== responseRevision.current) return false;
+    const current = responseRef.current;
+    if (current?.room && next.room?.id === current.room.id && next.room.version < current.room.version) return false;
+    // A different membership retires the old stream immediately, before React runs effect cleanup.
+    if ((current?.room?.id ?? null) !== (next.room?.id ?? null)) {
+      const oldSocket = socketRef.current;
+      socketRef.current = null;
+      oldSocket?.disconnect();
+      setConnected(false);
+      setSocketEpoch(epoch => epoch + 1);
+    }
+    responseRef.current = next;
+    responseRevision.current++;
+    setResponse(next);
+    return true;
   }, []);
 
   const refresh = useCallback(async (quiet = false) => {
+    const revision = responseRevision.current;
+    const sequence = ++getSequence.current;
+    const isCurrent = () => revision === responseRevision.current && sequence === getSequence.current && pendingMutation.current === null;
     try {
       const next = await apiRequest<MahjongResponse>("/api/mahjong", { method: "GET" });
-      applyResponse(next);
-      if (!quiet) setNotice("");
+      if (!isCurrent()) return;
+      if (applyResponse(next, revision) && !quiet) setNotice("");
     } catch (error) {
+      if (!isCurrent()) return;
       if (!quiet) setNotice(errorMessage(error));
       if (error instanceof Error && "status" in error && (error as { status?: number }).status === 401) void refreshSession();
     }
@@ -94,6 +114,7 @@ function MahjongRoot() {
     window.addEventListener("online", onVisible);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
+      responseRevision.current++;
       window.clearInterval(interval);
       window.removeEventListener("online", onVisible);
       document.removeEventListener("visibilitychange", onVisible);
@@ -102,32 +123,37 @@ function MahjongRoot() {
 
   useEffect(() => {
     if (!response?.serviceRunning || !session || !isMember) {
-      socketRef.current?.disconnect();
+      const oldSocket = socketRef.current;
       socketRef.current = null;
+      oldSocket?.disconnect();
       setConnected(false);
       return;
     }
     const socket = io({ path: "/mahjong/socket.io", addTrailingSlash: false, transports: ["websocket", "polling"], tryAllTransports: true, reconnection: true, reconnectionDelayMax: 4_000 });
     socketRef.current = socket;
+    const isCurrent = () => socketRef.current === socket;
     socket.on("connect", () => {
+      if (!isCurrent()) return;
       setConnected(true);
       void refresh(true);
     });
-    socket.on("disconnect", () => setConnected(false));
-    socket.on("connect_error", () => setConnected(false));
+    socket.on("disconnect", () => { if (isCurrent()) setConnected(false); });
+    socket.on("connect_error", () => { if (isCurrent()) setConnected(false); });
     socket.on("mahjong:state", (next: MahjongResponse) => {
+      if (!isCurrent()) return;
       applyResponse(next);
-      setConnected(true);
+      if (isCurrent()) setConnected(true);
     });
     socket.on("mahjong:error", (payload: { message?: string }) => {
+      if (!isCurrent()) return;
       setNotice(payload.message || "实时牌局连接暂时中断，正在恢复。");
       void refresh(true);
     });
     return () => {
+      if (isCurrent()) socketRef.current = null;
       socket.disconnect();
-      if (socketRef.current === socket) socketRef.current = null;
     };
-  }, [response?.serviceRunning, session, isMember, refresh, applyResponse]);
+  }, [response?.serviceRunning, session, isMember, refresh, applyResponse, socketEpoch]);
 
   useEffect(() => {
     if (!confirmFinish || !finishDialog.current) return;
@@ -143,6 +169,10 @@ function MahjongRoot() {
       setNotice("请先进入牌桌，再进行操作。");
       return;
     }
+    if (pendingMutation.current !== null) return;
+    const revision = ++responseRevision.current;
+    pendingMutation.current = revision;
+    let reconcile = false;
     setBusy(true);
     setNotice("");
     try {
@@ -150,12 +180,16 @@ function MahjongRoot() {
         method: "POST",
         body: JSON.stringify({ ...command, ...(roomIdRequired ? { roomId } : {}), nonce: crypto.randomUUID() }),
       });
-      applyResponse(next);
+      // Socket delivery may already have observed this command or a later membership.
+      reconcile = !applyResponse(next, revision);
     } catch (error) {
-      setNotice(errorMessage(error));
-      await refresh(true);
+      if (responseRevision.current === revision) setNotice(errorMessage(error));
+      reconcile = true;
     } finally {
+      pendingMutation.current = null;
       setBusy(false);
+      // Re-read after completion rather than guessing whether a delayed POST is newer than a socket.
+      if (reconcile) await refresh(true);
     }
   }, [room?.id, refresh, applyResponse]);
 
