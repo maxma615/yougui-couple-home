@@ -30,6 +30,7 @@
     "provision-accounts": "tsx --env-file-if-exists=.env.local src/cli/provision-accounts.ts"
   },
   "dependencies": {
+    "@kobalab/majiang-core": "1.4.1",
     "argon2": "0.45.1",
     "drizzle-orm": "0.45.3",
     "lucide-react": "1.47.0",
@@ -38,6 +39,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "sharp": "0.35.4",
+    "socket.io": "4.8.4",
+    "socket.io-client": "4.8.4",
     "zod": "4.6.5"
   },
   "devDependencies": {
