@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { isIP } from "node:net";
 
 import { AppError } from "@/lib/errors";
 
@@ -39,9 +40,17 @@ export type RateLimitOptions = {
 
 export function requestSourceKey(request: Request): string {
   const serverObservedIp = (request as Request & { ip?: unknown }).ip;
-  return typeof serverObservedIp === "string" && serverObservedIp.length > 0
-    ? `ip:${serverObservedIp}`
-    : "source:unavailable";
+  if (typeof serverObservedIp === "string" && serverObservedIp.length > 0) {
+    return `ip:${serverObservedIp}`;
+  }
+
+  if (process.env.TRUST_PROXY_CLIENT_IP === "1") {
+    const proxyObservedIp = request.headers.get("x-yougui-client-ip");
+    if (proxyObservedIp && isIP(proxyObservedIp) !== 0) return `ip:${proxyObservedIp}`;
+    throw new AppError(503, "trusted_client_ip_unavailable", "暂时无法处理请求来源");
+  }
+
+  return "source:unavailable";
 }
 
 function opaqueIdentifier(value: string): string {
@@ -49,7 +58,7 @@ function opaqueIdentifier(value: string): string {
 }
 
 export function enforceRateLimit(
-  scope: "login" | "invite" | "password",
+  scope: "login" | "invite" | "password" | "admin",
   account: string,
   request: Request,
   options: RateLimitOptions = {},
@@ -70,7 +79,17 @@ export function enforceRateLimit(
 export function auditSecurityEvent(
   event: string,
   outcome: "success" | "failure",
-  details: { actorId?: string; reason?: string } = {},
+  details: { actorId?: string; targetId?: string; homeId?: string; reason?: string } = {},
 ): void {
-  console.info(JSON.stringify({ category: "security", event, outcome, actorId:details.actorId, reason:details.reason }));
+  console.info(
+    JSON.stringify({
+      category: "security",
+      event,
+      outcome,
+      actorId: details.actorId,
+      targetId: details.targetId,
+      homeId: details.homeId,
+      reason: details.reason,
+    }),
+  );
 }

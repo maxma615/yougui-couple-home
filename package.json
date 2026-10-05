@@ -26,7 +26,8 @@
     "verify-storage": "tsx --env-file-if-exists=.env.local src/cli/verify-storage.ts",
     "photo-cleanup": "tsx --env-file-if-exists=.env.local src/cli/cleanup-photos.ts",
     "test:persistence": "tsx --env-file-if-exists=.env.local scripts/test-persistence.ts",
-    "check:clean-build": "tsx scripts/check-clean-build.ts"
+    "check:clean-build": "tsx scripts/check-clean-build.ts",
+    "provision-accounts": "tsx --env-file-if-exists=.env.local src/cli/provision-accounts.ts"
   },
   "dependencies": {
     "argon2": "0.45.1",

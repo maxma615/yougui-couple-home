@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { ApiError, apiRequest, errorMessage } from "@/components/api-client";
 import type { SessionData } from "@/components/home-types";
@@ -17,6 +17,9 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children, requireHome = true }: { children: ReactNode; requireHome?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   const [session, setSession] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +29,14 @@ export function SessionProvider({ children, requireHome = true }: { children: Re
       const next = await apiRequest<SessionData>("/api/session");
       setSession(next);
       setError(null);
-      if (requireHome && !next.home) router.replace("/setup");
+      const onAdminRoute = pathnameRef.current === "/admin" || pathnameRef.current.startsWith("/admin/");
+      if (next.user.role === "admin") {
+        if (!onAdminRoute) router.replace("/admin");
+      } else if (onAdminRoute) {
+        router.replace(next.home ? "/home" : "/setup");
+      } else if (requireHome && !next.home) {
+        router.replace("/setup");
+      }
       return true;
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {

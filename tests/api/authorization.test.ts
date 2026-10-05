@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runMigrations } from "../../src/cli/migrate";
 import { assertJsonMutation, json, readJson, requestSourceKey } from "../../src/lib/http";
@@ -26,6 +26,8 @@ beforeEach(async () => {
 afterAll(async () => {
   await database.cleanup();
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("mutation request boundary", () => {
   it("marks JSON responses as private and non-cacheable", () => {
@@ -75,11 +77,18 @@ describe("mutation request boundary", () => {
   });
 
   it("does not trust attacker-controlled forwarding headers for rate-limit source", () => {
+    vi.stubEnv("TRUST_PROXY_CLIENT_IP", "0");
     const first = new Request("http://localhost/api/auth/login", {
-      headers: { "x-forwarded-for": "198.51.100.1" },
+      headers: {
+        "x-forwarded-for": "198.51.100.1",
+        "x-yougui-client-ip": "198.51.100.1",
+      },
     });
     const second = new Request("http://localhost/api/auth/login", {
-      headers: { "x-forwarded-for": "203.0.113.9" },
+      headers: {
+        "x-forwarded-for": "203.0.113.9",
+        "x-yougui-client-ip": "203.0.113.9",
+      },
     });
     expect(requestSourceKey(first)).toBe(requestSourceKey(second));
   });

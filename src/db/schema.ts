@@ -1,5 +1,6 @@
 import {
   check,
+  boolean,
   date,
   index,
   integer,
@@ -12,13 +13,24 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique("users_email_key"),
-  displayName: text("display_name").notNull(),
-  passwordHash: text("password_hash").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").unique("users_email_key"),
+    phone: text("phone").unique("users_phone_key"),
+    displayName: text("display_name").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    role: text("role").default("member").notNull(),
+    disabled: boolean("disabled").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check("users_phone_check", sql`${table.phone} IS NULL OR ${table.phone} ~ '^1[3-9][0-9]{9}$'`),
+    check("users_role_check", sql`${table.role} IN ('member','admin')`),
+    check("users_login_identifier_check", sql`${table.email} IS NOT NULL OR ${table.phone} IS NOT NULL`),
+  ],
+);
 
 export const homes = pgTable(
   "homes",

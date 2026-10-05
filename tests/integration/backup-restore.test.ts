@@ -14,7 +14,8 @@ import {
   issueInvitation,
 } from "../../src/modules/auth/invitation";
 import { initializeAdmin, login } from "../../src/modules/auth/service";
-import { sessionCookieHeader } from "../../src/modules/auth/session";
+import { createSession, sessionCookieHeader } from "../../src/modules/auth/session";
+import { hashPassword, verifyPassword } from "../../src/modules/auth/password";
 import { createHome } from "../../src/modules/home/service";
 import { createCalendarService } from "../../src/modules/calendar/service";
 import type { CalendarEventDto } from "../../src/modules/calendar/schema";
@@ -36,16 +37,32 @@ import {
 import { createTestDatabase, type TestDatabase } from "../helpers/database";
 
 const originalPassword = "backup-owner-password";
+const partnerPassword = "backup-partner-password";
+const adminPassword = "backup-admin-password";
+const ownerPhone = "13800000001";
+const disabledPartnerPhone = "13900000002";
+const adminPhone = "13700000003";
 const imageFixtures = path.resolve(process.cwd(), "tests/fixtures/images");
+
+type AccountState = {
+  id: string;
+  email: string | null;
+  phone: string;
+  role: "member" | "admin";
+  disabled: boolean;
+  password_hash: string;
+};
 
 type Fixture = {
   database: TestDatabase;
   attachments: string;
   backupRoot: string;
-  oldSessionToken: string;
+  oldSessionTokens: string[];
   unusedInvitationToken: string;
   calendarContext: { homeId: string; userId: string };
   calendarEvents: CalendarEventDto[];
+  accounts: AccountState[];
+  memberSlots: Array<{ user_id: string; slot: number }>;
 };
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -107,7 +124,7 @@ async function seedBackupFixture(): Promise<Fixture> {
     {
       email: "partner@example.test",
       displayName: "乙",
-      password: "backup-partner-password",
+      password: partnerPassword,
     },
     database.pool,
   );
@@ -115,6 +132,25 @@ async function seedBackupFixture(): Promise<Fixture> {
     { email: owner.email, password: originalPassword },
     database.pool,
   );
+  await database.pool.query(
+    "UPDATE users SET phone=$2,role='member' WHERE id=$1",
+    [owner.id, ownerPhone],
+  );
+  await database.pool.query(
+    "UPDATE users SET phone=$2,role='member',disabled=true WHERE id=$1",
+    [partner.user.id, disabledPartnerPhone],
+  );
+  await expect(
+    requireSession(requestWithSession(partner.token), database.pool),
+  ).rejects.toMatchObject({ status: 401 });
+  const adminId = randomUUID();
+  const adminHash = await hashPassword(adminPassword);
+  await database.pool.query(
+    `INSERT INTO users(id,phone,display_name,password_hash,role,disabled)
+     VALUES($1,$2,'独立管理员',$3,'admin',false)`,
+    [adminId, adminPhone, adminHash],
+  );
+  const adminSession = await createSession(adminId, database.pool);
   const calendar = createCalendarService(database.pool);
   const allDay = await calendar.create(context, {
     title: "跨月旅行",
@@ -213,10 +249,22 @@ async function seedBackupFixture(): Promise<Fixture> {
     database,
     attachments,
     backupRoot,
-    oldSessionToken: oldSession.token,
+    oldSessionTokens: [oldSession.token, partner.token, adminSession.token],
     unusedInvitationToken: unusedInvitation.token,
     calendarContext: context,
     calendarEvents: (await calendar.list(context)) as CalendarEventDto[],
+    accounts: (
+      await database.pool.query<AccountState>(
+        `SELECT id,email,phone,role,disabled,password_hash
+         FROM users ORDER BY email`,
+      )
+    ).rows,
+    memberSlots: (
+      await database.pool.query<{ user_id: string; slot: number }>(
+        "SELECT user_id,slot FROM home_members WHERE home_id=$1 ORDER BY slot",
+        [home.id],
+      )
+    ).rows,
   };
 }
 
@@ -306,7 +354,7 @@ describe("consistent backup and empty-target restore", () => {
       (SELECT count(*)::int FROM sessions) AS sessions,
       (SELECT count(*)::int FROM invitations WHERE consumed_at IS NULL AND expires_at > now()) AS active_invites`);
     expect(counts.rows[0]).toEqual({
-      users: 2,
+      users: 3,
       anniversaries: 1,
       todos: 1,
       moments: 1,
@@ -343,6 +391,63 @@ describe("consistent backup and empty-target restore", () => {
     });
     expect(restoredTimed?.createdBy).toBe(restoredTimed?.updatedBy);
 
+    const restoredAccounts = (
+      await restored.pool.query<AccountState>(
+        `SELECT id,email,phone,role,disabled,password_hash
+         FROM users ORDER BY email`,
+      )
+    ).rows;
+    expect(restoredAccounts).toEqual(fixture.accounts);
+    expect(restoredAccounts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: "owner@example.test",
+          phone: ownerPhone,
+          role: "member",
+          disabled: false,
+        }),
+        expect.objectContaining({
+          email: "partner@example.test",
+          phone: disabledPartnerPhone,
+          role: "member",
+          disabled: true,
+        }),
+        expect.objectContaining({
+          email: null,
+          phone: adminPhone,
+          role: "admin",
+          disabled: false,
+        }),
+      ]),
+    );
+    for (const account of restoredAccounts) {
+      expect(account.password_hash).toMatch(/^\$argon2id\$/);
+    }
+    const restoredOwner = restoredAccounts.find((account) => account.phone === ownerPhone)!;
+    const restoredAdmin = restoredAccounts.find((account) => account.phone === adminPhone)!;
+    const restoredDisabled = restoredAccounts.find(
+      (account) => account.phone === disabledPartnerPhone,
+    )!;
+    await expect(verifyPassword(restoredOwner.password_hash, originalPassword)).resolves.toBe(true);
+    await expect(verifyPassword(restoredAdmin.password_hash, adminPassword)).resolves.toBe(true);
+    await expect(verifyPassword(restoredDisabled.password_hash, partnerPassword)).resolves.toBe(true);
+    expect(
+      (
+        await restored.pool.query<{ user_id: string; slot: number }>(
+          "SELECT user_id,slot FROM home_members WHERE home_id=$1 ORDER BY slot",
+          [fixture.calendarContext.homeId],
+        )
+      ).rows,
+    ).toEqual(fixture.memberSlots);
+    expect(
+      (
+        await restored.pool.query<{ count: number }>(
+          "SELECT count(*)::int AS count FROM home_members WHERE user_id=$1",
+          [restoredAdmin.id],
+        )
+      ).rows[0].count,
+    ).toBe(0);
+
     const storage = await verifyStorage(restored.pool, restoredAttachments);
     expect(storage.summary).toEqual({
       valid: 2,
@@ -355,15 +460,26 @@ describe("consistent backup and empty-target restore", () => {
       { storageName: `${"c".repeat(32)}.webp`, exists: true },
       { storageName: `${"d".repeat(32)}.jpg`, exists: false },
     ]);
-    await expect(
-      requireSession(requestWithSession(fixture.oldSessionToken), restored.pool),
-    ).rejects.toMatchObject({ status: 401 });
+    for (const token of fixture.oldSessionTokens) {
+      await expect(
+        requireSession(requestWithSession(token), restored.pool),
+      ).rejects.toMatchObject({ status: 401 });
+    }
     await expect(
       getInvitationPreview(fixture.unusedInvitationToken, restored.pool),
     ).rejects.toMatchObject({ status: 404 });
     await expect(
       login({ email: "owner@example.test", password: originalPassword }, restored.pool),
     ).resolves.toMatchObject({ user: { email: "owner@example.test" } });
+    await expect(
+      login({ identifier: ownerPhone, password: originalPassword }, restored.pool),
+    ).resolves.toHaveProperty("token");
+    await expect(
+      login({ identifier: adminPhone, password: adminPassword }, restored.pool),
+    ).resolves.toHaveProperty("token");
+    await expect(
+      login({ identifier: disabledPartnerPhone, password: partnerPassword }, restored.pool),
+    ).rejects.toMatchObject({ status: 401 });
     await expect(readdir(restoredAttachments)).resolves.not.toContain(".restore-in-progress");
     await expect(readdir(restoredAttachments)).resolves.not.toContain(".restore-failed");
   });

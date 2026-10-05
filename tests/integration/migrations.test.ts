@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -30,6 +30,121 @@ afterEach(async () => {
 });
 
 describe("database migrations", () => {
+  it("upgrades 0000 through 0005 users without changing identity, credentials or membership", async () => {
+    const database = await createTestDatabase();
+    databases.push(database);
+    const legacyMigrations = await temporaryDirectory();
+    const migrationNames = (await readdir(migrationsDirectory))
+      .filter((name) => /^000[0-5]_.*\.sql$/.test(name))
+      .sort();
+    expect(migrationNames).toHaveLength(6);
+    for (const name of migrationNames) {
+      await writeFile(
+        path.join(legacyMigrations, name),
+        await readFile(path.join(migrationsDirectory, name)),
+      );
+    }
+    await runMigrations(database.pool, legacyMigrations);
+
+    const legacyUserId = "11111111-1111-4111-8111-111111111111";
+    const legacyHomeId = "22222222-2222-4222-8222-222222222222";
+    const legacyHash = "$argon2id$legacy-hash-must-stay-byte-identical";
+    await database.pool.query(
+      `INSERT INTO users(id,email,display_name,password_hash)
+       VALUES($1,'admin@example.test','旧管理员',$2)`,
+      [legacyUserId, legacyHash],
+    );
+    await database.pool.query(
+      `INSERT INTO homes(id,name,start_date) VALUES($1,'旧小屋','2020-01-02')`,
+      [legacyHomeId],
+    );
+    await database.pool.query(
+      `INSERT INTO home_members(home_id,user_id,slot) VALUES($1,$2,1)`,
+      [legacyHomeId, legacyUserId],
+    );
+
+    await runMigrations(database.pool, migrationsDirectory);
+
+    const columns = await database.pool.query<{ column_name: string; is_nullable: string }>(
+      `SELECT column_name,is_nullable FROM information_schema.columns
+       WHERE table_schema='public' AND table_name='users'
+         AND column_name IN ('email','phone','role','disabled')
+       ORDER BY column_name`,
+    );
+    expect(columns.rows).toEqual([
+      { column_name: "disabled", is_nullable: "NO" },
+      { column_name: "email", is_nullable: "YES" },
+      { column_name: "phone", is_nullable: "YES" },
+      { column_name: "role", is_nullable: "NO" },
+    ]);
+    const legacyUser = await database.pool.query<{
+      id: string;
+      email: string;
+      display_name: string;
+      password_hash: string;
+      phone: string | null;
+      role: string;
+      disabled: boolean;
+    }>(
+      `SELECT id,email,display_name,password_hash,phone,role,disabled
+       FROM users WHERE id=$1`,
+      [legacyUserId],
+    );
+    expect(legacyUser.rows[0]).toEqual({
+      id: legacyUserId,
+      email: "admin@example.test",
+      display_name: "旧管理员",
+      password_hash: legacyHash,
+      phone: null,
+      role: "member",
+      disabled: false,
+    });
+    const legacyMembership = await database.pool.query<{
+      home_id: string;
+      user_id: string;
+      slot: number;
+      home_name: string;
+    }>(
+      `SELECT hm.home_id,hm.user_id,hm.slot,h.name AS home_name
+       FROM home_members hm JOIN homes h ON h.id=hm.home_id
+       WHERE hm.user_id=$1`,
+      [legacyUserId],
+    );
+    expect(legacyMembership.rows[0]).toEqual({
+      home_id: legacyHomeId,
+      user_id: legacyUserId,
+      slot: 1,
+      home_name: "旧小屋",
+    });
+
+    const phoneOnlyUser = await database.pool.query<{
+      email: string | null;
+      role: string;
+      disabled: boolean;
+    }>(
+      `INSERT INTO users(phone,display_name,password_hash)
+       VALUES('13800000011','手机号一','hash')
+       RETURNING email,role,disabled`,
+    );
+    expect(phoneOnlyUser.rows[0]).toEqual({
+      email: null,
+      role: "member",
+      disabled: false,
+    });
+    await expect(
+      database.pool.query(
+        `INSERT INTO users(phone,display_name,password_hash)
+         VALUES('13800000011','手机号二','hash')`,
+      ),
+    ).rejects.toMatchObject({ code: "23505" });
+    await expect(
+      database.pool.query(
+        `INSERT INTO users(phone,display_name,password_hash)
+         VALUES('12800000011','无效手机号','hash')`,
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
+  });
+
   it("creates the core tables and enforces exactly two distinct member slots", async () => {
     const database = await createTestDatabase();
     databases.push(database);

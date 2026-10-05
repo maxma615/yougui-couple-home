@@ -55,8 +55,10 @@ export async function createHome(
   const values = validateHomeValues(input, now);
   const ownerName = validateDisplayName(input.displayName);
   return withWriteTransaction(target, async (tx) => {
-    const user = await tx.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [ownerId]);
+    const user = await tx.query<{ role: string; disabled: boolean }>("SELECT role,disabled FROM users WHERE id=$1 FOR UPDATE", [ownerId]);
     if (!user.rowCount) throw new AppError(404, "account_not_found", "没有找到账号");
+    if (user.rows[0].disabled) throw new AppError(401, "authentication_required", "登录已失效，请重新登录");
+    if (user.rows[0].role !== "member") throw new AppError(403, "member_account_required", "请使用成员账号进入情侣空间");
     const membership = await tx.query("SELECT home_id FROM home_members WHERE user_id=$1", [ownerId]);
     if (membership.rowCount) throw new AppError(409, "home_already_exists", "账号已经加入空间");
     const inserted = await tx.query<{ id: string }>(

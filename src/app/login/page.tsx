@@ -6,11 +6,12 @@ import { KeyRound, LoaderCircle, LogIn } from "lucide-react";
 
 import { ApiError, apiRequest, errorMessage, jsonBody } from "@/components/api-client";
 import { PublicShell } from "@/components/app-shell";
+import type { SessionData } from "@/components/home-types";
 import { FieldError, StatusMessage } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +25,10 @@ export default function LoginPage() {
     try {
       await apiRequest<{ ok: true }>("/api/auth/login", {
         method: "POST",
-        body: jsonBody({ email, password }),
+        body: jsonBody({ identifier, password }),
       });
-      router.replace("/home");
+      const session = await apiRequest<SessionData>("/api/session");
+      router.replace(session.user.role === "admin" ? "/admin" : "/home");
     } catch (requestError) {
       if (requestError instanceof ApiError) setFields(requestError.fields);
       setError(errorMessage(requestError));
@@ -40,12 +42,12 @@ export default function LoginPage() {
       <section className="auth-card" aria-labelledby="login-title">
         <p className="eyebrow">欢迎回来</p>
         <h1 id="login-title">回到我们的空间</h1>
-        <p className="auth-card__intro">使用管理员创建或邀请加入时设置的独立账号登录。</p>
+        <p className="auth-card__intro">使用为你配置的手机号和密码登录；原有邮箱账号仍可继续使用。</p>
         <form className="form-stack" onSubmit={submit} noValidate>
           <div className="field">
-            <label htmlFor="email">邮箱</label>
-            <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} aria-invalid={Boolean(fields.email)} />
-            <FieldError message={fields.email} />
+            <label htmlFor="login-identifier">登录账号（手机号或邮箱）</label>
+            <input id="login-identifier" name="identifier" type="text" inputMode="tel" autoComplete="username" required value={identifier} onChange={(event) => setIdentifier(event.target.value)} aria-invalid={Boolean(fields.identifier || fields.email)} />
+            <FieldError message={fields.identifier || fields.email} />
           </div>
           <div className="field">
             <label htmlFor="password">密码</label>
@@ -57,13 +59,12 @@ export default function LoginPage() {
             {saving ? <LoaderCircle className="spin" size={18} /> : <LogIn size={18} />}
             {saving ? "正在登录…" : "登录"}
           </button>
-          <p className="field-help"><KeyRound size={14} aria-hidden="true" /> 忘记密码时，请由服务器管理员执行密码重置命令。</p>
+          <p className="field-help"><KeyRound size={14} aria-hidden="true" /> 忘记密码时，请联系管理员在管理面板重置。</p>
         </form>
         <section className="entry-guide" aria-labelledby="registration-help">
-          <h2 id="registration-help">如何注册和配对？</h2>
-          <p><strong>首位成员：</strong>使用管理员已创建的账号登录，填写名称和恋爱日期，创建空间。</p>
-          <p><strong>另一位成员：</strong>请对方在空间首页点击“邀请另一半”，把生成的邀请链接交给你。打开链接设置自己的邮箱和密码，完成注册后自动配对。</p>
-          <p className="field-help">这里仅供两人使用，不开放公共注册。已经通过邀请加入过，直接用自己的账号登录即可。</p>
+          <h2 id="registration-help">账号使用说明</h2>
+          <p><strong>已有空间：</strong>两位成员的账号由管理员创建并绑定到同一个情侣空间，收到登录信息后即可进入共同空间。</p>
+          <p><strong>登录方式：</strong>新账号使用手机号；原有邮箱账号也可继续使用。账号仅供对应成员本人使用。</p>
         </section>
       </section>
     </PublicShell>

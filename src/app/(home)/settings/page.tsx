@@ -112,7 +112,7 @@ export default function SettingsPage() {
             <div className="space-person__identity">
               <p className="space-person__role">本人 <span>·</span> 独立账号</p>
               <h3>{me.displayName}</h3>
-              <p className="space-person__detail">{user.email}</p>
+              <p className="space-person__detail">{user.phone ? `手机号 · ${user.phone}` : user.email ? `邮箱 · ${user.email}` : "登录账号未设置"}</p>
               <button className="space-text-action" type="button" onClick={event => open("me", event)}>
                 <Pencil size={14} /> 编辑我的昵称
               </button>

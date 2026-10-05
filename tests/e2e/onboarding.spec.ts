@@ -17,7 +17,7 @@ test("首位成员登录建屋、邀请第二人，并拒绝第三人重复加�
   const thirdContext = await browser.newContext();
   try {
     await stableGoto(page, "/login");
-    await page.getByLabel("邮箱").fill(owner.email);
+    await page.getByLabel("登录账号（手机号或邮箱）", { exact: true }).fill(owner.email);
     await page.getByLabel("密码").fill(owner.password);
     await page.getByRole("button", { name: "登录" }).click();
     await expect(page.getByRole("heading", { name: "开启你们的情侣空间" })).toBeVisible();
@@ -98,11 +98,11 @@ test("已登录但尚未建屋的账号访问内容页会前往设置流程", as
   await expect(page.getByRole("heading", { name: "开启你们的情侣空间" })).toBeVisible();
 });
 
-test("登录页说明首位账号和受邀注册配对流程", async ({ page }) => {
+test("登录页说明成员账号由管理员配置并直接登录", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByRole("heading", { name: "如何注册和配对？" })).toBeVisible();
-  await expect(page.getByText("另一位成员", { exact: false })).toBeVisible();
-  await expect(page.getByText("完成注册后自动配对", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "账号使用说明" })).toBeVisible();
+  await expect(page.getByText("成员的账号由管理员创建并绑定到同一个情侣空间", { exact: false })).toBeVisible();
+  await expect(page.getByLabel("登录账号（手机号或邮箱）", { exact: true })).toHaveAttribute("inputmode", "tel");
   await checkNoOverflow(page);
 });
 

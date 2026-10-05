@@ -4,7 +4,9 @@ export type Member = {
 };
 
 export type User = Member & {
-  email: string;
+  email: string | null;
+  phone?: string | null;
+  role?: "member" | "admin";
 };
 
 export type Home = {
@@ -64,4 +66,3 @@ export type Moment = AuditedRecord & {
 };
 
 export type ItemList<T> = { items: T[] };
-

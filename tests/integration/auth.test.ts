@@ -117,7 +117,13 @@ describe("sessions", () => {
     await expect(requireSession(request, pool)).resolves.toEqual({ userId: user.id });
     await expect(requireHomeMember(request, pool)).rejects.toMatchObject({ status: 403 });
     await expect(getSessionSnapshot(request, pool)).resolves.toEqual({
-      user: { id: user.id, email: user.email, displayName: user.displayName },
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: null,
+        displayName: user.displayName,
+        role: "member",
+      },
       home: null,
     });
   });
