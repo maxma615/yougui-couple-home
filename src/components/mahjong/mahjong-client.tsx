@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, LoaderCircle, Radio, RefreshCw, ShieldCheck, Sparkles, Swords, Wifi, WifiOff, X } from "lucide-react";
+import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, LoaderCircle, Radio, RefreshCw, Sparkles, Swords, Wifi, WifiOff, X } from "lucide-react";
 
 import { apiRequest, errorMessage } from "@/components/api-client";
 import { SessionProvider, useSession } from "@/hooks/use-session";
@@ -176,7 +176,7 @@ function MahjongRoot() {
       <header className="mahjong-header">
         <Link href="/home" className="mahjong-brand" aria-label="返回情侣空间"><span className="mahjong-brand__mark"><Dices size={17}/></span><span>有归 <i>/</i> 麻将室</span></Link>
         <div className={`mahjong-link-state${connected ? " is-connected" : response.serviceRunning ? " is-reconnecting" : ""}`} role="status">
-          {connected ? <><Wifi size={14}/>实时同步</> : response.serviceRunning ? <><WifiOff size={14}/>正在恢复连接</> : <><Radio size={14}/>按需运行</>}
+          {connected ? <><Wifi size={14}/>实时同步</> : response.serviceRunning ? <><WifiOff size={14}/>正在恢复连接</> : <><Radio size={14}/>等待开桌</>}
         </div>
       </header>
 
@@ -213,8 +213,7 @@ function MahjongRoot() {
       />}
 
       <footer className="mahjong-footer">
-        <span><ShieldCheck size={13}/>每位玩家只会看到自己的手牌</span>
-        <span>无人在线 10 分钟后牌桌会清理；服务重启也会结束当前牌局。</span>
+        <span>全员离线 10 分钟或服务重启后，本局结束。</span>
       </footer>
     </div>
 
@@ -222,7 +221,7 @@ function MahjongRoot() {
       <div className="mahjong-confirm__seal"><DoorOpen size={20}/></div>
       <p className="mahjong-kicker">结束牌桌</p>
       <h2 id="mahjong-finish-title">确定解散这张牌桌？</h2>
-      <p>所有玩家会离开本局，当前对局不会保存，无法继续。</p>
+      <p>解散后本局结束，牌局进度不会保存。</p>
       <div className="mahjong-confirm__actions"><button type="button" className="mahjong-button mahjong-button--quiet" onClick={() => setConfirmFinish(false)}>继续打牌</button><button type="button" className="mahjong-button mahjong-button--danger" disabled={busy} onClick={closeRoom}>{busy ? "正在解散…" : "解散牌桌"}</button></div>
     </dialog> : null}
   </main>;
@@ -254,7 +253,7 @@ function Lobby({ mode, busy, joinCode, serviceRunning, onMode, onJoinCode, onCre
       <div className="mahjong-divider"><span>或者加入朋友的牌桌</span></div>
       <label className="mahjong-code-label" htmlFor="mahjong-join-code">输入 8 位房间码</label>
       <div className="mahjong-join-form"><input id="mahjong-join-code" inputMode="text" autoComplete="off" maxLength={8} value={joinCode} onChange={(event) => onJoinCode(event.target.value)} placeholder="例：N7K4Q2TP"/><button type="button" aria-label="加入牌桌" disabled={busy || joinCode.length !== 8} onClick={onJoin}>{busy ? <LoaderCircle size={17} className="mahjong-spin"/> : <ArrowRight size={17}/>}</button></div>
-      <p className="mahjong-panel-note">牌桌会在需要时启动。没有进行中的牌局时，麻将服务会自动休眠。</p>
+      <p className="mahjong-panel-note">创建牌桌后，把房间码分享给朋友。</p>
     </div>
     {serviceRunning ? <p className="mahjong-service-note" role="status"><Radio size={14}/> 当前有牌局正在进行。</p> : null}
   </section>;
@@ -278,7 +277,6 @@ function WaitingRoom({ room, busy, host, ownSeat, onReady, onStart, onLeave, onF
       <button className="mahjong-icon-button" type="button" aria-label="解散牌桌" disabled={busy || !host} title={host ? "解散牌桌" : "仅房主可解散"} onClick={onFinish}><X size={17}/></button>
       {!host ? <button className="mahjong-button mahjong-button--quiet" type="button" disabled={busy} onClick={onLeave}>离开</button> : null}
     </div></div>
-    <p className="mahjong-seat-footnote"><ShieldCheck size={14}/>四位玩家的手牌只会显示给本人。房主可以解散未开局的牌桌。</p>
   </section>;
 }
 
@@ -315,9 +313,9 @@ function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFinish, on
   const ownMember = room.members.find((member) => member.seat === ownSeat);
 
   return <section className={`mahjong-game${isFinished ? " is-finished" : ""}`}>
-    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : <span className="mahjong-seat-reserved" aria-label="你的座位会保留">座位已保留</span>}</header>
+    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</header>
 
-    {!connected ? <div className="mahjong-reconnect" role="status"><WifiOff size={15}/>实时连接中断，牌局状态每 5 秒自动核对。</div> : null}
+    {!connected ? <div className="mahjong-reconnect" role="status"><WifiOff size={15}/>连接中断，正在重连…</div> : null}
 
     {isFinished && game.ranking ? <section className="mahjong-ranking" aria-label="最终名次"><p className="mahjong-kicker">FINAL TABLE</p><h1>这一场，<em>落子有声。</em></h1><div>{[...game.ranking].sort((a, b) => a.rank - b.rank).map((row) => {
       const player = game.players.find((candidate) => candidate.seat === row.seat);
