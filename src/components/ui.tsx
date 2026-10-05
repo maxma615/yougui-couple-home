@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { AlertCircle, ArrowLeft, LoaderCircle, Plus } from "lucide-react";
 
 import type { AuditMember, AuditedRecord, Member } from "@/components/home-types";
+import "./space-motion.css";
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -28,7 +29,7 @@ export function PageHeader({
   backHref?: string;
 }) {
   return (
-    <header className="page-header">
+    <header className="page-header page-header--motion">
       <div className="page-header__copy">
         {backHref ? (
           <Link className="back-link" href={backHref}>
@@ -36,7 +37,7 @@ export function PageHeader({
           </Link>
         ) : null}
         {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-        <h1>{title}</h1>
+        <h1><span className="motion-title"><span className="motion-title__inner">{title}</span></span></h1>
         {description ? <p>{description}</p> : null}
       </div>
       {action ? <div className="page-header__action">{action}</div> : null}

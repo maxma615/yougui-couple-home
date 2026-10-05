@@ -77,7 +77,7 @@ export default function SettingsPage() {
         <div className="space-settings__intro-copy">
           <p className="eyebrow">有归 <span aria-hidden="true">/</span> ABOUT US</p>
           <p className="space-settings__index">SHARED SPACE <span>·</span> 01</p>
-          <h1>我们的<span>空间</span></h1>
+          <h1 className="motion-title"><span className="motion-title__inner">我们的<span className="space-settings__title-accent">空间</span></span></h1>
           <p className="space-settings__lede">两个人的名字，一段共同的时间，还有正在发生的日常。</p>
         </div>
         <div className="space-settings__landscape" aria-hidden="true">

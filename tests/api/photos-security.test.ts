@@ -1,12 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import sharp from "sharp";
 
 import { createMomentPhotoRoutes, createPhotoItemRoutes } from "../../src/modules/photos/routes";
+import { verifyStorage } from "../../src/cli/verify-storage";
 import { runMigrations } from "../../src/cli/migrate";
 import { createMomentService } from "../../src/modules/moments/service";
-import { createSession, sessionCookieHeader } from "../../src/modules/auth/session";
+import { createSession, revokeSessionToken, sessionCookieHeader } from "../../src/modules/auth/session";
 import { createTestDatabase, type TestDatabase } from "../helpers/database";
 
 const origin = "http://127.0.0.1:3000";
@@ -49,15 +51,31 @@ describe("photo API security boundary", () => {
   });
 
   async function uploadRequest(momentId: string, version = 1): Promise<Response> {
+    return uploadDataRequest(
+      momentId,
+      await readFile(path.resolve("tests/fixtures/images/valid.jpg")),
+      "私密照片.jpg",
+      "image/jpeg",
+      version,
+      limits,
+    );
+  }
+
+  async function uploadDataRequest(
+    momentId: string,
+    bytes: Uint8Array,
+    filename: string,
+    mime: string,
+    version = 1,
+    photoLimits = limits,
+  ): Promise<Response> {
     const form = new FormData();
     form.set(
       "file",
-      new File([await readFile(path.resolve("tests/fixtures/images/valid.jpg"))], "私密照片.jpg", {
-        type: "image/jpeg",
-      }),
+      new File([Buffer.from(bytes)], filename, { type: mime }),
     );
     form.set("version", String(version));
-    return createMomentPhotoRoutes(database.pool, attachmentsDirectory, limits).POST(
+    return createMomentPhotoRoutes(database.pool, attachmentsDirectory, photoLimits).POST(
       new Request(`${origin}/api/moments/${momentId}/photos`, {
         method: "POST",
         headers: { origin, cookie: cookieA },
@@ -106,10 +124,68 @@ describe("photo API security boundary", () => {
     expect(allowed.headers.get("content-disposition")).toContain(encodeURIComponent("私密照片.jpg"));
     expect(allowed.headers.get("x-content-type-options")).toBe("nosniff");
     expect(allowed.headers.get("cache-control")).toContain("private");
-    expect(allowed.headers.get("cache-control")).toContain("no-store");
+    expect(allowed.headers.get("cache-control")).toContain("no-cache");
+    expect(allowed.headers.get("vary")).toContain("Cookie");
+    const originalEtag = allowed.headers.get("etag");
+    expect(originalEtag).toMatch(/^"[a-f0-9]{64}"$/);
     expect(Buffer.from(await allowed.arrayBuffer())).toEqual(
       await readFile(path.resolve("tests/fixtures/images/valid.jpg")),
     );
+
+    const thumbnail = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { cookie: cookieA },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(thumbnail.status).toBe(200);
+    expect(thumbnail.headers.get("content-type")).toBe("image/webp");
+    expect(thumbnail.headers.get("cache-control")).toContain("private, no-cache");
+    expect(thumbnail.headers.get("etag")).not.toBe(originalEtag);
+    expect(thumbnail.headers.get("content-length")).toBeTruthy();
+    const thumbnailEtag = thumbnail.headers.get("etag");
+    await thumbnail.arrayBuffer();
+
+    const invalidVariant = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=1024`, {
+        headers: { cookie: cookieA },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(invalidVariant.status).toBe(400);
+    expect(await invalidVariant.json()).toMatchObject({
+      error: { code: "INVALID_PHOTO_VARIANT" },
+    });
+
+    const revalidated = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { cookie: cookieA, "if-none-match": thumbnailEtag! },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(revalidated.status).toBe(304);
+    expect(revalidated.headers.get("etag")).toBe(thumbnailEtag);
+
+    const unauthenticatedRevalidation = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { "if-none-match": thumbnailEtag! },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(unauthenticatedRevalidation.status).toBe(401);
+
+    const crossHomeRevalidation = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { cookie: cookieB, "if-none-match": thumbnailEtag! },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(crossHomeRevalidation.status).toBe(404);
+
+    const storage = await verifyStorage(database.pool, attachmentsDirectory);
+    expect(storage.unknownOrphans).toEqual([]);
+    expect(storage.brokenReferences).toEqual([]);
+    expect(storage.hashMismatches).toEqual([]);
 
     const stored = await database.pool.query<{ storage_name: string }>(
       "SELECT storage_name FROM photos WHERE id=$1",
@@ -136,6 +212,128 @@ describe("photo API security boundary", () => {
       { params: Promise.resolve({ id: payload.photo.id }) },
     );
     expect(staleDelete.status).toBe(409);
+
+    const deleted = await routes.DELETE(
+      new Request(`${origin}/api/photos/${payload.photo.id}`, {
+        method: "DELETE",
+        headers: { origin, cookie: cookieA, "content-type": "application/json" },
+        body: JSON.stringify({ version: 2 }),
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(deleted.status).toBe(200);
+    const readAfterDelete = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { cookie: cookieA, "if-none-match": thumbnailEtag! },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(readAfterDelete.status).toBe(404);
+  });
+
+  it.each([
+    ["JPEG", "valid.jpg", "image/jpeg"],
+    ["PNG", "valid.png", "image/png"],
+    ["WebP", "valid.webp", "image/webp"],
+  ])("serves an on-demand WebP thumbnail for an existing %s photo", async (_label, fixture, mime) => {
+    const moment = await createMomentService(database.pool).create(a, {
+      title: `${fixture} 缩略图`,
+      date: "2026-09-23",
+      body: "",
+    });
+    const source = await readFile(path.resolve(`tests/fixtures/images/${fixture}`));
+    const uploaded = await uploadDataRequest(moment.id, source, fixture, mime);
+    expect(uploaded.status).toBe(201);
+    const payload = (await uploaded.json()) as { photo: { id: string } };
+    const routes = createPhotoItemRoutes(database.pool, attachmentsDirectory);
+    const response = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { cookie: cookieA },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(response.status).toBe(200);
+    const data = Buffer.from(await response.arrayBuffer());
+    expect(response.headers.get("content-type")).toBe("image/webp");
+    expect((await sharp(data).metadata()).format).toBe("webp");
+  });
+
+  it("reduces a large existing photo to a bounded WebP preview while preserving the original", async () => {
+    const width = 1600;
+    const height = 1200;
+    const pixels = randomBytes(width * height * 3);
+    const source = await sharp(pixels, { raw: { width, height, channels: 3 } })
+      .jpeg({ quality: 94, chromaSubsampling: "4:4:4" })
+      .toBuffer();
+    const moment = await createMomentService(database.pool).create(a, {
+      title: "较大照片预览",
+      date: "2026-09-23",
+      body: "",
+    });
+    const uploaded = await uploadDataRequest(
+      moment.id,
+      source,
+      "large.jpg",
+      "image/jpeg",
+      1,
+      { maxBytes: 10 * 1024 * 1024, maxPixels: width * height },
+    );
+    expect(uploaded.status).toBe(201);
+    const payload = (await uploaded.json()) as { photo: { id: string } };
+    const routes = createPhotoItemRoutes(database.pool, attachmentsDirectory);
+    const preview = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=preview`, {
+        headers: { cookie: cookieA },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    const previewBytes = Buffer.from(await preview.arrayBuffer());
+    const previewMetadata = await sharp(previewBytes).metadata();
+    expect(preview.status).toBe(200);
+    expect(previewMetadata.format).toBe("webp");
+    expect(Math.max(previewMetadata.width!, previewMetadata.height!)).toBeLessThanOrEqual(1280);
+    expect(previewBytes.byteLength).toBeLessThan(source.byteLength);
+
+    const original = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}`, { headers: { cookie: cookieA } }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    const originalBytes = Buffer.from(await original.arrayBuffer());
+    expect(originalBytes.byteLength).toBe(source.byteLength);
+    expect(originalBytes.equals(source)).toBe(true);
+  });
+
+  it("does not return 304 after the previously valid session is revoked", async () => {
+    const moment = await createMomentService(database.pool).create(a, {
+      title: "注销后仍需鉴权",
+      date: "2026-09-23",
+      body: "",
+    });
+    const uploaded = await uploadRequest(moment.id);
+    expect(uploaded.status).toBe(201);
+    const payload = (await uploaded.json()) as { photo: { id: string } };
+    const session = await createSession(a.userId, database.pool);
+    const cookie = sessionCookieHeader(session.token);
+    const routes = createPhotoItemRoutes(database.pool, attachmentsDirectory);
+    const beforeLogout = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { cookie },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(beforeLogout.status).toBe(200);
+    const etag = beforeLogout.headers.get("etag");
+    await beforeLogout.arrayBuffer();
+
+    await revokeSessionToken(session.token, database.pool);
+    const afterLogout = await routes.GET(
+      new Request(`${origin}/api/photos/${payload.photo.id}?variant=thumbnail`, {
+        headers: { cookie, "if-none-match": etag! },
+      }),
+      { params: Promise.resolve({ id: payload.photo.id }) },
+    );
+    expect(afterLogout.status).toBe(401);
+    expect(afterLogout.headers.get("cache-control")).toBe("no-store");
   });
 
   it("checks origin and multipart content type before accepting upload", async () => {

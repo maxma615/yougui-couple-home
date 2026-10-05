@@ -1,0 +1,100 @@
+/* A shared motion score for the functional pages, alongside the Stratum hero. */
+.page-header.page-header--motion { animation:none; }
+.motion-title { display:block; overflow:clip; padding-block:.12em; margin-block:-.12em; }
+.motion-title__inner { display:block; }
+.page-header--motion .page-header__copy>.eyebrow,
+.page-header--motion .page-header__copy>p:not(.eyebrow),
+.page-header--motion .page-header__action { transform-origin:left center; }
+
+.bottom-nav--motion .bottom-nav__track {
+  position:absolute;
+  inset:.3rem max(.35rem,env(safe-area-inset-right)) max(.35rem,env(safe-area-inset-bottom)) max(.35rem,env(safe-area-inset-left));
+  pointer-events:none;
+}
+.bottom-nav__glider {
+  display:block; width:calc(100% / 6); height:100%; border-radius:var(--radius-input);
+  background:var(--accent-soft); transform:translateX(calc(var(--nav-index,0) * 100%));
+  transition:transform 380ms var(--motion-ease-reveal),opacity 180ms ease;
+}
+.bottom-nav--motion[data-nav-active="false"] .bottom-nav__glider { opacity:0; }
+.bottom-nav--motion .bottom-nav__link { position:relative; }
+.bottom-nav--motion .bottom-nav__link.is-active { background:transparent; }
+.side-rail--motion nav { position:relative; }
+.side-rail__glider {
+  position:absolute; inset:0 0 auto; height:3.2rem; border-radius:var(--radius-input);
+  background:var(--accent-soft); box-shadow:inset 2px 0 0 var(--accent);
+  transform:translateY(calc(var(--nav-index,0) * 3.45rem));
+  transition:transform 380ms var(--motion-ease-reveal),opacity 180ms ease;
+  pointer-events:none;
+}
+.side-rail--motion nav[data-nav-active="false"] .side-rail__glider { opacity:0; }
+.side-rail--motion .nav-link { position:relative; }
+.side-rail--motion .nav-link.is-active { background:transparent; box-shadow:none; }
+
+.home-modal[open] { animation:motion-modal-in 360ms var(--motion-ease-reveal); }
+.home-modal[open]::backdrop { animation:motion-scrim-in 260ms ease; }
+.home-modal[open].is-closing { animation:motion-modal-out 180ms var(--motion-ease-soft) both; }
+.home-modal[open].is-closing::backdrop { animation:motion-scrim-out 180ms ease both; }
+
+@keyframes motion-title-reveal {
+  from { opacity:0; transform:translateY(112%); }
+  to { opacity:1; transform:none; }
+}
+@keyframes motion-section-reveal {
+  from { opacity:0; transform:translateY(14px); }
+  to { opacity:1; transform:none; }
+}
+@keyframes motion-line-draw { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+@keyframes motion-nav-activate {
+  0% { transform:translateY(3px) scale(.86); }
+  65% { transform:translateY(-1px) scale(1.06); }
+  100% { transform:none; }
+}
+@keyframes motion-modal-in {
+  from { opacity:0; transform:translateY(22px) scale(.97); }
+  to { opacity:1; transform:none; }
+}
+@keyframes motion-modal-out { to { opacity:0; transform:translateY(10px) scale(.985); } }
+@keyframes motion-scrim-in { from { opacity:0; } to { opacity:1; } }
+@keyframes motion-scrim-out { to { opacity:0; } }
+
+@media (prefers-reduced-motion:no-preference) {
+  .page-header--motion .motion-title__inner,
+  .space-settings__intro .motion-title__inner { animation:motion-title-reveal 620ms var(--motion-ease-reveal) 40ms both; }
+  .page-header--motion .page-header__copy>.eyebrow { animation:motion-section-reveal 420ms var(--motion-ease-soft) both; }
+  .page-header--motion .page-header__copy>p:not(.eyebrow) { animation:motion-section-reveal 520ms var(--motion-ease-soft) 100ms both; }
+  .page-header--motion .page-header__action { animation:motion-section-reveal 520ms var(--motion-ease-reveal) 160ms both; }
+  [data-motion-reveal="pending"] { opacity:0; transform:translateY(14px); }
+  [data-motion-reveal="visible"] { animation:motion-section-reveal 620ms var(--motion-ease-reveal) var(--reveal-delay,0ms) both; }
+  .space-setting-section:nth-child(2) { --reveal-delay:60ms; }
+  .space-setting-section:nth-child(3) { --reveal-delay:120ms; }
+  .space-pairing[data-motion-reveal="visible"] .space-person { animation:motion-section-reveal 600ms var(--motion-ease-reveal) 100ms both; }
+  .space-pairing[data-motion-reveal="visible"] .space-person:last-child { animation-delay:200ms; }
+  .space-pairing[data-motion-reveal="visible"] .space-pairing__bridge-line { transform-origin:center; animation:motion-line-draw 600ms var(--motion-ease-soft) 240ms both; }
+  .space-pairing[data-motion-reveal="visible"] .space-pairing__bridge-heart { animation:motion-nav-activate 500ms var(--motion-ease-reveal) 300ms both; }
+  .space-settings__intro .eyebrow,.space-settings__lede { animation:motion-section-reveal 550ms var(--motion-ease-soft) 120ms both; }
+  .space-settings__intro .eyebrow { animation-delay:0ms; }
+  .bottom-nav--motion .is-active>svg,.side-rail--motion .is-active>svg { animation:motion-nav-activate 320ms var(--motion-ease-reveal); }
+  .app-shell :is(.button,.quiet-button,.icon-button,.space-setting-link,.space-text-action,.space-inline-action) {
+    transition:transform 160ms var(--motion-ease-soft),background-color 180ms ease,border-color 180ms ease,color 180ms ease,box-shadow 180ms ease;
+  }
+  .app-shell :is(.button,.quiet-button,.icon-button,.space-setting-link,.space-text-action,.space-inline-action):not(:disabled):active { transform:scale(.97); }
+  .app-shell .status-message,.app-shell .field-error { animation:motion-section-reveal 240ms var(--motion-ease-soft) both; }
+}
+
+@media (max-width:767px) {
+  @keyframes motion-modal-in {
+    from { opacity:0; transform:translateY(30px) scale(.985); }
+    to { opacity:1; transform:none; }
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .page-header--motion *,.space-settings__intro *,[data-motion-reveal],
+  .space-pairing[data-motion-reveal] *,.home-modal[open],.home-modal[open]::backdrop,
+  .bottom-nav--motion *,.side-rail--motion .nav-link>svg,
+  .app-shell .status-message,.app-shell .field-error { animation:none !important; }
+  [data-motion-reveal] { opacity:1 !important; transform:none !important; }
+  .home-modal[open],.home-modal[open].is-closing { opacity:1; transform:none; }
+  .bottom-nav__glider,.side-rail__glider { transition:none; }
+  .app-shell :is(.button,.quiet-button,.icon-button,.space-setting-link,.space-text-action,.space-inline-action):active { transform:none; }
+}

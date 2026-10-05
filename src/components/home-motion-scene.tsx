@@ -8,11 +8,19 @@ const VIDEO_SRC = "/art/stratum-vision.mp4";
 const PARALLAX_EASE = 0.045;
 const SETTLED_EPSILON = 0.0004;
 
-type NetworkInformationLike = EventTarget & { saveData?: boolean };
+type NetworkInformationLike = EventTarget & {
+  downlink?: number;
+  effectiveType?: string;
+  saveData?: boolean;
+};
 
 function supportsReducedData(): boolean {
   const connection = (navigator as Navigator & { connection?: NetworkInformationLike }).connection;
-  return connection?.saveData === true;
+  return connection?.saveData === true
+    || connection?.effectiveType === "slow-2g"
+    || connection?.effectiveType === "2g"
+    || connection?.effectiveType === "3g"
+    || (connection?.downlink !== undefined && connection.downlink < 1.3);
 }
 
 /** Stratum's locally hosted VISION still/video scene for the couple-space hero. */
@@ -83,6 +91,16 @@ export function HomeMotionScene() {
 
     let cancelled = false;
     let playRequested = false;
+    let startScheduled = false;
+    let imageWaitTimer: number | null = null;
+    let idleHandle: number | null = null;
+    let fallbackTimer: number | null = null;
+    const pendingImages = Array.from(document.images).filter((image) => image.fetchPriority === "high" && !image.complete);
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
     const markReadyAfterPlayback = () => {
       if (cancelled || playRequested) return;
       playRequested = true;
@@ -99,16 +117,49 @@ export function HomeMotionScene() {
     };
 
     video.addEventListener("canplay", markReadyAfterPlayback);
-    video.preload = "auto";
-    if (video.getAttribute("src") !== VIDEO_SRC) {
-      video.src = VIDEO_SRC;
-      video.load();
+    const startVideo = () => {
+      if (cancelled) return;
+      video.preload = "metadata";
+      if (video.getAttribute("src") !== VIDEO_SRC) {
+        video.src = VIDEO_SRC;
+        video.load();
+      }
+      if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) markReadyAfterPlayback();
+    };
+    const startWhenIdle = () => {
+      if (cancelled || startScheduled) return;
+      startScheduled = true;
+      if (imageWaitTimer !== null) {
+        window.clearTimeout(imageWaitTimer);
+        imageWaitTimer = null;
+      }
+      if (idleWindow.requestIdleCallback) idleHandle = idleWindow.requestIdleCallback(startVideo, { timeout: 800 });
+      else fallbackTimer = window.setTimeout(startVideo, 250);
+    };
+    const onPriorityImageDone = () => {
+      if (pendingImages.every((image) => image.complete)) startWhenIdle();
+    };
+    if (pendingImages.length) {
+      for (const image of pendingImages) {
+        image.addEventListener("load", onPriorityImageDone);
+        image.addEventListener("error", onPriorityImageDone);
+      }
+      // Keep the hero video from competing with a stalled photo request forever.
+      imageWaitTimer = window.setTimeout(startWhenIdle, 2400);
+    } else {
+      startWhenIdle();
     }
-    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) markReadyAfterPlayback();
 
     return () => {
       cancelled = true;
       video.removeEventListener("canplay", markReadyAfterPlayback);
+      for (const image of pendingImages) {
+        image.removeEventListener("load", onPriorityImageDone);
+        image.removeEventListener("error", onPriorityImageDone);
+      }
+      if (imageWaitTimer !== null) window.clearTimeout(imageWaitTimer);
+      if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       video.pause();
     };
   }, [videoAllowed, sceneVisible, pageVisible]);

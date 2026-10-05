@@ -99,7 +99,7 @@
   bottom: 0;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   min-height: calc(3.9rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--hairline);
   padding: 0.3rem max(0.35rem, env(safe-area-inset-right)) max(0.35rem, env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-left));

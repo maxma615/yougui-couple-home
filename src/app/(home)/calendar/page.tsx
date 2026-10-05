@@ -22,6 +22,7 @@ export default function CalendarPage() {
   const [initialYear, initialMonth] = today.split("-").map(Number);
   const [view, setView] = useState({ year: initialYear, month: initialMonth });
   const [selected, setSelected] = useState<string>(today);
+  const [monthDirection, setMonthDirection] = useState<"forward" | "back">("forward");
   const resource = useResource<ItemList<CalendarEventDto>>("/api/calendar");
 
   function moveMonth(offset: number) {
@@ -30,11 +31,15 @@ export default function CalendarPage() {
     if (month === 0) { year -= 1; month = 12; }
     if (month === 13) { year += 1; month = 1; }
     if (year < MIN_CALENDAR_YEAR || year > MAX_CALENDAR_YEAR) return;
+    setMonthDirection(offset > 0 ? "forward" : "back");
     setView({ year, month });
     setSelected(`${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`);
   }
 
   function showToday() {
+    const currentMonth = `${String(view.year).padStart(4, "0")}-${String(view.month).padStart(2, "0")}`;
+    const todayMonth = today.slice(0, 7);
+    setMonthDirection(todayMonth >= currentMonth ? "forward" : "back");
     setView({ year: initialYear, month: initialMonth });
     setSelected(today);
   }
@@ -64,7 +69,11 @@ export default function CalendarPage() {
           <div className="life-calendar-weekdays" aria-hidden="true">
             {weekdays.map((day) => <span key={day}>{day}</span>)}
           </div>
-          <div className="life-calendar-grid">
+          <div
+            key={`${view.year}-${view.month}`}
+            className="life-calendar-grid"
+            data-direction={monthDirection}
+          >
             {days.map((day) => {
               const dayEvents = eventsForDate(items, day.date);
               const dayNumber = Number(day.date.slice(-2));
@@ -98,33 +107,35 @@ export default function CalendarPage() {
         </section>
 
         <section className="life-calendar-agenda" aria-labelledby="selected-day-title">
-          <div className="life-calendar-agenda__heading">
-            <div>
-              <p className="eyebrow">所选日期</p>
-              <h2 id="selected-day-title"><span>{selected.slice(5, 7)}月{Number(selected.slice(8, 10))}日</span><small>{selected.slice(0, 4)}</small></h2>
+          <div key={selected} className="life-calendar-agenda__content">
+            <div className="life-calendar-agenda__heading">
+              <div>
+                <p className="eyebrow">所选日期</p>
+                <h2 id="selected-day-title"><span>{selected.slice(5, 7)}月{Number(selected.slice(8, 10))}日</span><small>{selected.slice(0, 4)}</small></h2>
+              </div>
+              <Link className="life-calendar-add" href={`/calendar/new?date=${selected}`}>添加日程</Link>
             </div>
-            <Link className="life-calendar-add" href={`/calendar/new?date=${selected}`}>添加日程</Link>
+            {selectedEvents.length ? (
+              <div className="life-calendar-events">
+                {selectedEvents.map((event, index) => (
+                  <Link className="life-calendar-event" href={`/calendar/${event.id}`} key={event.id}>
+                    <span className="life-calendar-event__index">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="life-calendar-event__body">
+                      <span className="life-calendar-event__time"><Clock3 size={14} /> {compactCalendarLabel(event)}</span>
+                      <h3>{event.title}</h3>
+                      {event.location ? <span className="life-calendar-event__location"><MapPin size={14} /> {event.location}</span> : null}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="life-calendar-empty">
+                <span>{today === selected ? "TODAY, UNWRITTEN" : "A LITTLE SPACE"}</span>
+                <p>这一天还没有安排</p>
+                <small>把想一起去的地方，留在这里。</small>
+              </div>
+            )}
           </div>
-          {selectedEvents.length ? (
-            <div className="life-calendar-events">
-              {selectedEvents.map((event, index) => (
-                <Link className="life-calendar-event" href={`/calendar/${event.id}`} key={event.id}>
-                  <span className="life-calendar-event__index">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="life-calendar-event__body">
-                    <span className="life-calendar-event__time"><Clock3 size={14} /> {compactCalendarLabel(event)}</span>
-                    <h3>{event.title}</h3>
-                    {event.location ? <span className="life-calendar-event__location"><MapPin size={14} /> {event.location}</span> : null}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="life-calendar-empty">
-              <span>{today === selected ? "TODAY, UNWRITTEN" : "A LITTLE SPACE"}</span>
-              <p>这一天还没有安排</p>
-              <small>把想一起去的地方，留在这里。</small>
-            </div>
-          )}
         </section>
       </div>
     </>

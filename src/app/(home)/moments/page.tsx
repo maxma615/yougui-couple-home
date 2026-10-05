@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Camera, ChevronLeft, ChevronRight, Image as ImageIcon, LayoutGrid, PanelsTopLeft } from "lucide-react";
 
 import type { ItemList, Moment, MomentPhoto } from "@/components/home-types";
+import { photoUrl } from "@/components/photo-url";
 import { AddLink, ErrorState, LoadingState, PageHeader, StatusMessage } from "@/components/ui";
 import { useResource } from "@/hooks/use-resource";
 
@@ -37,7 +38,7 @@ function GalleryTile({ moment, photo }: { moment: Moment; photo?: MomentPhoto })
     >
       {photo && !imageFailed ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img className="space-gallery__tile-image" src={`/api/photos/${photo.id}`} alt={`${moment.title}的照片`} loading="lazy" onError={() => setImageFailed(true)} />
+        <img className="space-gallery__tile-image" src={photoUrl(photo.id, { variant: "thumbnail" })} alt={`${moment.title}的照片`} loading="lazy" decoding="async" onError={() => setImageFailed(true)} />
       ) : null}
       {photo ? <span className="space-gallery__tile-veil" aria-hidden="true" /> : null}
       <span className="space-gallery__tile-copy">
@@ -80,7 +81,7 @@ export default function MomentsPage() {
   }
 
   return (
-    <div className="space-gallery">
+    <div className="space-gallery" data-gallery-view={view}>
       <PageHeader
         eyebrow="PRIVATE IMAGE ARCHIVE"
         title="相册与点滴"
@@ -131,9 +132,10 @@ export default function MomentsPage() {
                 <img
                   key={`${selectedCover.photo.id}-${coverAttempt}`}
                   className="space-cover__image"
-                  src={`/api/photos/${selectedCover.photo.id}${coverAttempt ? `?retry=${coverAttempt}` : ""}`}
+                  src={photoUrl(selectedCover.photo.id, { variant: "preview", retry: coverAttempt })}
                   alt={`${selectedCover.moment.title} · ${selectedCover.photo.filename}`}
                   fetchPriority="high"
+                  decoding="async"
                   onError={() => setCoverFailed(true)}
                 />
               )}

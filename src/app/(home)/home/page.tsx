@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ArrowDown, ArrowUpRight, CalendarHeart, Camera, Check, Dices, Plus } from "lucide-react";
 import { HomeMotionScene } from "@/components/home-motion-scene";
 import { HomeDecodeLabel, HomeMotionFrame } from "@/components/home-motion";
+import { photoUrl } from "@/components/photo-url";
 import { compactCalendarLabel } from "@/components/calendar-format";
 import type { Anniversary, ItemList, Moment, Todo } from "@/components/home-types";
 import { ErrorState, LoadingState, StatusMessage } from "@/components/ui";
@@ -51,10 +52,10 @@ export default function HomePage() {
       </div>
       {cover ? <div className="space-home__photographs">
         {photographs.filter(item=>item.id!==cover.id).slice(0,2).map((item,index)=><button key={item.id} className={`space-home__floating space-home__floating--${index+1}`} onClick={()=>setSelectedId(item.id)} aria-label={`查看封面：${item.title}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={`/api/photos/${item.photos[0].id}`} alt="" loading="lazy"/><span>{item.date.replaceAll("-",".")}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={photoUrl(item.photos[0].id, { variant: "thumbnail" })} alt="" loading="lazy" decoding="async"/><span>{item.date.replaceAll("-",".")}</span>
         </button>)}
         <Link href={`/moments/${cover.id}`} className="space-home__featured" aria-label={`打开回忆：${cover.title}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={`/api/photos/${cover.photos[0].id}`} alt={cover.title} fetchPriority="high"/><span><small>OUR MEMORIES</small>{cover.title}<ArrowUpRight size={18}/></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={photoUrl(cover.photos[0].id, { variant: "preview" })} alt={cover.title} fetchPriority="high" decoding="async"/><span><small>OUR MEMORIES</small>{cover.title}<ArrowUpRight size={18}/></span>
         </Link>
       </div> : <Link className="space-home__first-photo" href="/moments/new"><Camera size={21}/><span>第一张照片，等你们来放。</span><ArrowUpRight size={17}/></Link>}
       <footer className="space-home__foot"><div><span className="space-home__day-label">相爱的第</span><strong>{totalDays.toLocaleString("zh-CN")}</strong><span>天</span><small>{session.home.members.map(member=>member.displayName).join(" 与 ")}<br/>SINCE {session.home.startDate.replaceAll("-",".")}</small></div><a href="#our-today" className="space-home__scroll" aria-label="查看今天"><span><HomeDecodeLabel text="向下，看看今天" delay={1060} /></span><ArrowDown size={18}/></a></footer>
@@ -68,7 +69,7 @@ export default function HomePage() {
         <section className="space-today__tasks"><header><h3>一起完成的小事</h3><Link href="/todos" aria-label="查看全部待办"><ArrowUpRight size={20}/></Link></header>{openTodos.length?openTodos.map(item=><Link className="space-task-row" key={item.id} href={`/todos/${item.id}`}><span className="space-task-row__circle"><Check size={13}/></span><div><strong>{item.title}</strong><small>{item.dueDate?`截止 ${item.dueDate}`:"慢慢来，一起做"}</small></div><ArrowUpRight size={14}/></Link>):<div className="space-agenda-empty"><p>一起去做的小事，<br/>也会变成回忆。</p><Link href="/todos/new">写下第一件事 <Plus size={15}/></Link></div>}</section>
       </div>
       <section className="space-recent"><header><div><p className="eyebrow">COLLECTING MOMENTS</p><h2>最近，值得留下的。</h2></div><Link href="/moments">全部回忆 <ArrowUpRight size={16}/></Link></header>{recent.length?<div className="space-recent__grid">{recent.map((item,index)=><Link key={item.id} href={`/moments/${item.id}`} className={`space-recent__item${item.photos.length?"":" is-text"}`}>
-        {item.photos.length?/* eslint-disable-next-line @next/next/no-img-element */<img src={`/api/photos/${item.photos[0].id}`} alt="" loading="lazy"/>:<div className="space-recent__words"><span>NOTE {String(index+1).padStart(2,"0")}</span><p>{item.body||"一句想说的话，一个值得记住的日子。"}</p></div>}
+        {item.photos.length?/* eslint-disable-next-line @next/next/no-img-element */<img src={photoUrl(item.photos[0].id, { variant: "thumbnail" })} alt="" loading="lazy" decoding="async"/>:<div className="space-recent__words"><span>NOTE {String(index+1).padStart(2,"0")}</span><p>{item.body||"一句想说的话，一个值得记住的日子。"}</p></div>}
         <div><small>{item.date.replaceAll("-",".")}</small><h3>{item.title}</h3><ArrowUpRight size={18}/></div></Link>)}</div>:<Link className="space-recent__empty" href="/moments/new"><Camera size={25}/><span>收好第一份回忆。<small>照片或文字，都可以。</small></span><Plus size={21}/></Link>}</section>
       <footer className="space-dashboard__foot"><span>有归 · 情侣空间</span><span>只对彼此开放。</span></footer>
     </div>

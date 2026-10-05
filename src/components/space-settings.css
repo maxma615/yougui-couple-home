@@ -67,7 +67,7 @@
   line-height: 0.98;
 }
 
-.space-settings__intro h1 span {
+.space-settings__intro h1 .space-settings__title-accent {
   display: block;
   color: var(--accent-strong);
 }

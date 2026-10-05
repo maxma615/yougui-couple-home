@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { CalendarHeart, CalendarRange, Camera, CheckSquare2, Heart, Home, LogOut, Settings } from "lucide-react";
 
 import { apiRequest, errorMessage, jsonBody } from "@/components/api-client";
 import { ConnectionStatus } from "@/components/connection-status";
+import { PageMotionScope } from "@/components/page-motion";
 import { BrandMark, ErrorState, LoadingState, StatusMessage } from "@/components/ui";
 import { useHomeUpdates } from "@/hooks/use-home-updates";
 import { SessionProvider, useSession } from "@/hooks/use-session";
@@ -24,10 +25,10 @@ const navigation = [
   { href: "/settings", label: "我们", icon: Settings },
 ];
 
-// 手机底部导航固定五项；纪念日从首页与「我们」进入，并让「我们」保持激活。
 const mobileNavigation = [
   { href: "/home", label: "首页", icon: Home },
   { href: "/calendar", label: "日历", icon: CalendarRange },
+  { href: "/anniversaries", label: "纪念日", icon: CalendarHeart },
   { href: "/todos", label: "待办", icon: CheckSquare2 },
   { href: "/moments", label: "相册", icon: Camera },
   { href: "/settings", label: "我们", icon: Heart },
@@ -88,8 +89,8 @@ function AppShellContent({ children }: { children: ReactNode }) {
   if (error && !session) return <main className="boot-shell"><ErrorState message={error} onRetry={() => void refreshSession()} /></main>;
   if (!session?.home) return null;
 
-  const mobileActive = (href: string) =>
-    href === "/settings" ? isActive(pathname, "/settings") || isActive(pathname, "/anniversaries") : isActive(pathname, href);
+  const mobileIndex = mobileNavigation.findIndex(({ href }) => isActive(pathname, href));
+  const railIndex = navigation.findIndex(({ href }) => isActive(pathname, href));
 
   return (
     <div className="app-shell">
@@ -102,9 +103,9 @@ function AppShellContent({ children }: { children: ReactNode }) {
           </span>
           <button className="mobile-topbar__logout" type="button" aria-label="退出登录" onClick={() => void logout()}><LogOut size={19} /></button>
         </div>
-        <div className="page-container">{children}</div>
+        <PageMotionScope pathname={pathname}>{children}</PageMotionScope>
       </main>
-      <aside className="side-rail">
+      <aside className="side-rail side-rail--motion">
         <Link className="side-brand" href="/home" aria-label="有归首页">
           <BrandMark />
           <span>
@@ -113,7 +114,8 @@ function AppShellContent({ children }: { children: ReactNode }) {
           </span>
         </Link>
         <p className="side-rail__caption">OUR LITTLE UNIVERSE</p>
-        <nav aria-label="主要导航">
+        <nav aria-label="主要导航" data-nav-active={railIndex >= 0} style={{ "--nav-index": Math.max(0, railIndex) } as CSSProperties}>
+          <span className="side-rail__glider" aria-hidden="true" />
           {navigation.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
@@ -131,9 +133,10 @@ function AppShellContent({ children }: { children: ReactNode }) {
         </div>
       </aside>
       {logoutError || error ? <div className="shell-toast"><StatusMessage tone="error">{logoutError ? `退出失败：${logoutError}` : `暂时无法同步：${error}`}</StatusMessage></div> : null}
-      <nav className="bottom-nav" aria-label="主要导航">
+      <nav className="bottom-nav bottom-nav--motion" aria-label="主要导航" data-nav-active={mobileIndex >= 0} style={{ "--nav-index": Math.max(0, mobileIndex) } as CSSProperties}>
+        <span className="bottom-nav__track" aria-hidden="true"><span className="bottom-nav__glider" /></span>
         {mobileNavigation.map(({ href, label, icon: Icon }) => {
-          const active = mobileActive(href);
+          const active = isActive(pathname, href);
           return (
             <Link key={href} className={active ? "bottom-nav__link is-active" : "bottom-nav__link"} href={href} aria-current={active ? "page" : undefined}>
               <Icon size={21} /> <span>{label}</span>
