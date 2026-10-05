@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowDown, ArrowUpRight, CalendarHeart, Camera, Check, Plus } from "lucide-react";
+import { ArrowDown, ArrowUpRight, CalendarHeart, Camera, Check, Dices, Plus } from "lucide-react";
 import { HomeMotionScene } from "@/components/home-motion-scene";
 import { HomeDecodeLabel, HomeMotionFrame } from "@/components/home-motion";
 import { compactCalendarLabel } from "@/components/calendar-format";
@@ -14,6 +14,7 @@ import { daysTogether, nextOccurrence, shanghaiToday } from "@/lib/local-date";
 import { upcomingEvents } from "@/modules/calendar/queries";
 import type { CalendarEventDto } from "@/modules/calendar/schema";
 import "@/components/space-home.css";
+import "@/app/mahjong/mahjong.css";
 
 export default function HomePage() {
   const { session } = useSession();
@@ -60,7 +61,7 @@ export default function HomePage() {
     </section>
     <div className="space-dashboard" id="our-today">
       {error ? <StatusMessage tone="error">部分内容暂时无法同步，继续显示上一次读取的记录。</StatusMessage> : null}
-      <div className="space-dashboard__heading"><div><p className="eyebrow">OUR EVERYDAY</p><h2>日子很长，我们慢慢来。</h2></div><Link href="/settings#pairing" className="space-pair-link"><span className="space-pair-link__dots"><i/><i/></span>{solo?"邀请另一半":"已配对"}<ArrowUpRight size={16}/></Link></div>
+      <div className="space-dashboard__heading"><div><p className="eyebrow">OUR EVERYDAY</p><h2>日子很长，我们慢慢来。</h2></div><div className="space-dashboard__heading-actions"><Link href="/mahjong" className="space-mahjong-entry"><Dices size={18}/><span><small>FOUR SEATS</small>麻将室</span><ArrowUpRight size={15}/></Link><Link href="/settings#pairing" className="space-pair-link"><span className="space-pair-link__dots"><i/><i/></span>{solo?"邀请另一半":"已配对"}<ArrowUpRight size={16}/></Link></div></div>
       <div className="space-today">
         <Link className="space-today__anniversary" href="/anniversaries" aria-label="纪念日"><span className="eyebrow"><CalendarHeart size={14}/> 下一个纪念日</span><h3>{next?next.item.title:"留一个值得期待的日子"}</h3><p>{next?next.next.replaceAll("-","."):"第一次相见、下一次旅行，都值得纪念。"}</p><div><strong>{next?Math.max(0,daysTogether(today,next.next)-1):"—"}</strong><span>{next?"天后":"等待记录"}</span><ArrowUpRight size={23}/></div></Link>
         <section className="space-today__agenda"><header><h3>下一场约定</h3><Link href="/calendar" aria-label="打开日历"><ArrowUpRight size={20}/></Link></header>{upcoming.length?upcoming.map(event=><Link key={event.id} href={`/calendar/${event.id}`} className="space-agenda-row"><span>{compactCalendarLabel(event)}</span><strong>{event.title}</strong><small>{event.location||"留一段只属于彼此的时间"}</small></Link>):<div className="space-agenda-empty"><span>MAKE TIME FOR US</span><p>找一天见面，<br/>把期待写进日历。</p><Link href="/calendar/new">安排一次约会 <Plus size={15}/></Link></div>}</section>
