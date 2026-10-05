@@ -50,7 +50,7 @@
 
 ### Task 3: 三麻/电脑界面和浏览器闭环
 
-**Files:** Modify `src/components/mahjong/mahjong-client.tsx`, `src/app/mahjong/mahjong.css`; optionally split `mahjong-rules.tsx` for concise rules dialog; Modify `tests/e2e/mahjong.spec.ts`; Create `tests/e2e/mahjong-bots.spec.ts`.
+**Files:** Modify `src/components/mahjong/mahjong-client.tsx`, `src/app/mahjong/mahjong.css`; optionally split `mahjong-rules.tsx` for concise rules dialog; Modify `tests/e2e/mahjong.spec.ts`; Create `tests/e2e/mahjong-bots.spec.ts` and focused authenticated nuki runtime/socket test; narrowly add typed optional `RoomStore.gameFactory` / `runMahjongServer.rooms` dependency injection for a physically valid deterministic test wall, with unchanged production defaults and no HTTP/env fixture hook.
 **Interfaces:** Consume Task 2 room/command/member contracts and Task 1 nuki choice/player count. Variant selector independent from east/hanchan; dynamic capacity drives ready counts, seats, score rows and relative positions.
 
 - [ ] Write real isolated-browser RED cases: two humans plus one computer Sanma, solo Sanma plus two computers, solo Yonma plus three; nonhost cannot change bots; adding/removing/filling reflected across pages; third seat limit.
