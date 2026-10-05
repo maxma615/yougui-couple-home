@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowDown, ArrowUpRight, CalendarHeart, Camera, Check, Plus } from "lucide-react";
-import { SpaceScene } from "@/components/space-scene";
+import { HomeMotionScene } from "@/components/home-motion-scene";
+import { HomeDecodeLabel, HomeMotionFrame } from "@/components/home-motion";
 import { compactCalendarLabel } from "@/components/calendar-format";
 import type { Anniversary, ItemList, Moment, Todo } from "@/components/home-types";
 import { ErrorState, LoadingState, StatusMessage } from "@/components/ui";
@@ -38,13 +39,14 @@ export default function HomePage() {
 
   return <>
     <section className="space-home" aria-label={`${session.home.name}主视觉`}>
-      <SpaceScene />
+      <HomeMotionScene />
+      <HomeMotionFrame />
       <header className="space-home__top"><span>有归 <i>/</i> 情侣空间</span><span>{session.home.name}</span></header>
       <div className="space-home__copy">
-        <p className="eyebrow">A PLACE FOR THE TWO OF US</p>
-        <h1>在这里，<br/><em>只属于我们。</em></h1>
+        <p className="eyebrow"><HomeDecodeLabel text="A PLACE FOR THE TWO OF US" delay={360} /></p>
+        <h1><span className="space-home__title-line"><span>在这里，</span></span><span className="space-home__title-line"><span><em>只属于我们。</em></span></span></h1>
         <p className="space-home__intro">让每一个普通的日子，<br/>都有值得留下的瞬间。</p>
-        <div className="space-home__actions"><Link className="button" href="/moments/new"><Plus size={17}/>添加照片</Link><Link className="space-home__text-link" href="/moments">走进回忆 <ArrowUpRight size={18}/></Link></div>
+        <div className="space-home__actions"><Link className="button" href="/moments/new"><Plus size={17}/><HomeDecodeLabel text="添加照片" delay={900} /></Link><Link className="space-home__text-link" href="/moments"><HomeDecodeLabel text="走进回忆" delay={960} /> <ArrowUpRight size={18}/></Link></div>
       </div>
       {cover ? <div className="space-home__photographs">
         {photographs.filter(item=>item.id!==cover.id).slice(0,2).map((item,index)=><button key={item.id} className={`space-home__floating space-home__floating--${index+1}`} onClick={()=>setSelectedId(item.id)} aria-label={`查看封面：${item.title}`}>
@@ -54,7 +56,7 @@ export default function HomePage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}<img src={`/api/photos/${cover.photos[0].id}`} alt={cover.title} fetchPriority="high"/><span><small>OUR MEMORIES</small>{cover.title}<ArrowUpRight size={18}/></span>
         </Link>
       </div> : <Link className="space-home__first-photo" href="/moments/new"><Camera size={21}/><span>第一张照片，等你们来放。</span><ArrowUpRight size={17}/></Link>}
-      <footer className="space-home__foot"><div><span className="space-home__day-label">相爱的第</span><strong>{totalDays.toLocaleString("zh-CN")}</strong><span>天</span><small>{session.home.members.map(member=>member.displayName).join(" 与 ")}<br/>SINCE {session.home.startDate.replaceAll("-",".")}</small></div><a href="#our-today" className="space-home__scroll" aria-label="查看今天"><span>向下，看看今天</span><ArrowDown size={18}/></a></footer>
+      <footer className="space-home__foot"><div><span className="space-home__day-label">相爱的第</span><strong>{totalDays.toLocaleString("zh-CN")}</strong><span>天</span><small>{session.home.members.map(member=>member.displayName).join(" 与 ")}<br/>SINCE {session.home.startDate.replaceAll("-",".")}</small></div><a href="#our-today" className="space-home__scroll" aria-label="查看今天"><span><HomeDecodeLabel text="向下，看看今天" delay={1060} /></span><ArrowDown size={18}/></a></footer>
     </section>
     <div className="space-dashboard" id="our-today">
       {error ? <StatusMessage tone="error">部分内容暂时无法同步，继续显示上一次读取的记录。</StatusMessage> : null}
