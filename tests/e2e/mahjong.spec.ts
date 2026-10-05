@@ -115,7 +115,7 @@ test("四位来自两个情侣空间的成员联机摸切、同步并刷新恢�
   }
 });
 
-test("房主必须在确认对话框中再次确认后才能解散牌桌", async ({ browser, page }) => {
+test("房主确认解散后返回大厅，服务仍运行时不误报有牌局", async ({ browser, page }) => {
   const player = await userFixture("牌桌房主");
   await addSession(page.context(), player.id);
   let hostRoomId: string | null = null;
@@ -136,9 +136,22 @@ test("房主必须在确认对话框中再次确认后才能解散牌桌", async
     await expect(page.getByTestId("mahjong-room-code")).toBeVisible();
 
     await page.getByRole("button", { name: "解散牌桌" }).click();
+    const finishResponse = page.waitForResponse((response) => response.url().endsWith("/api/mahjong") && response.request().method() === "POST");
     await dialog.getByRole("button", { name: "解散牌桌" }).click();
-    await expect(page.getByRole("heading", { name: /今晚，\s*来一场。/ })).toBeVisible();
+    const finished = await (await finishResponse).json();
+    expect(finished.room).toBeNull();
+    expect(finished.serviceRunning).toBe(true);
     hostRoomId = null;
+    await expect(page.getByRole("heading", { name: /今晚，\s*来一场。/ })).toBeVisible();
+    await expect(page.locator(".mahjong-service-note")).not.toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /今晚，\s*来一场。/ })).toBeVisible();
+    const state = await page.context().request.get(new URL("/api/mahjong", origin()).toString());
+    expect(state.status()).toBe(200);
+    const refreshed = await state.json();
+    expect(refreshed.room).toBeNull();
+    expect(refreshed.serviceRunning).toBe(true);
+    await expect(page.locator(".mahjong-service-note")).not.toBeVisible();
   } finally {
     if (hostRoomId) {
       try {
