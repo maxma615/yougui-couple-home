@@ -9,6 +9,10 @@ services:
   db:
     logging: *bounded-logs
   app:
+    # Validated with the production site and full mixed games on the 2 vCPU ECS.
+    cpus: 1.0
+    mem_limit: 768m
+    memswap_limit: 768m
     logging: *bounded-logs
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]

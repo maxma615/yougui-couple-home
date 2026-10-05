@@ -1,0 +1,294 @@
+{
+  "applicationSource": "3735cad13556fdaec43cdc0aef313f8a4dc8dd16",
+  "image": "yougui-app:3735cad-sanma-qa",
+  "imageId": "sha256:bb37e12f299da8bbd281a2b6f553b38da3400623b0212474afd228ff652067e9",
+  "measuredAt": "2026-10-06T03:03:34+08:00",
+  "combined": {
+    "kind": "sanma-linux-combined",
+    "node": "v24.21.0",
+    "platform": "linux",
+    "arch": "x64",
+    "baseline": {
+      "cpu.max": "100000 100000",
+      "cpu.stat": "usage_usec 3702255\nuser_usec 3244540\nsystem_usec 457715\ncore_sched.force_idle_usec 0\nnr_periods 43\nnr_throttled 24\nthrottled_usec 790851\nnr_bursts 0\nburst_usec 0",
+      "memory.max": "805306368",
+      "memory.current": "188272640",
+      "memory.peak": "188272640",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "memory.swap.max": "0",
+      "memory.swap.current": "0"
+    },
+    "end": {
+      "cpu.max": "100000 100000",
+      "cpu.stat": "usage_usec 8858345\nuser_usec 8065090\nsystem_usec 793254\ncore_sched.force_idle_usec 0\nnr_periods 121\nnr_throttled 71\nthrottled_usec 3402392\nnr_bursts 0\nburst_usec 0",
+      "memory.max": "805306368",
+      "memory.current": "228667392",
+      "memory.peak": "240193536",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "memory.swap.max": "0",
+      "memory.swap.current": "0"
+    },
+    "games": [
+      {
+        "variant": "sanma",
+        "elapsedMs": 2598.543318,
+        "rankingCount": 3,
+        "states": 56,
+        "completed": 75,
+        "computed": 75,
+        "fallbacks": 0,
+        "failures": 0,
+        "timeouts": 0,
+        "cancellations": 2,
+        "workerStarts": 3,
+        "workerStops": 3,
+        "maxQueue": 2,
+        "peakWorkers": 1,
+        "unexpectedErrors": 0,
+        "heapLimitBytes": 62914560,
+        "rssBytes": 195219456,
+        "decisionMs": {
+          "count": 75,
+          "median": 0.8465180000002874,
+          "p95": 11.681231999999909,
+          "max": 49.704931999999644
+        },
+        "roundTripMs": {
+          "count": 75,
+          "median": 2.743333000000348,
+          "p95": 45.3462499999996,
+          "max": 52.95865800000047
+        },
+        "workerReleaseMs": 9.908261000000493,
+        "isolatedIdleOverrideMs": 1000,
+        "idleServerClosed": true
+      },
+      {
+        "variant": "yonma",
+        "elapsedMs": 3589.598835,
+        "rankingCount": 4,
+        "states": 154,
+        "completed": 187,
+        "computed": 187,
+        "fallbacks": 0,
+        "failures": 0,
+        "timeouts": 0,
+        "cancellations": 5,
+        "workerStarts": 6,
+        "workerStops": 6,
+        "maxQueue": 3,
+        "peakWorkers": 1,
+        "unexpectedErrors": 0,
+        "heapLimitBytes": 62914560,
+        "rssBytes": 195977216,
+        "decisionMs": {
+          "count": 187,
+          "median": 1.2713029999995342,
+          "p95": 10.359548999999788,
+          "max": 52.8023290000001
+        },
+        "roundTripMs": {
+          "count": 187,
+          "median": 2.4858400000002803,
+          "p95": 30.781637000000046,
+          "max": 53.28088199999911
+        },
+        "workerReleaseMs": 10.111426999999821,
+        "isolatedIdleOverrideMs": 1000,
+        "idleServerClosed": true
+      }
+    ],
+    "siteLatency": {
+      "count": 39,
+      "median": 7.699409000000742,
+      "p95": 23.801383999999416,
+      "max": 47.809189999999944
+    },
+    "authenticatedPageLatency": {
+      "count": 8,
+      "median": 15.70052399999986,
+      "p95": 156.82767199999944,
+      "max": 156.82767199999944
+    },
+    "siteFailures": 0,
+    "peakSiteRss": 141676544,
+    "peakGameProcessRssIncludingWorker": 196173824,
+    "peakCombinedCgroupBytes": 239902720,
+    "finalSample": {
+      "at": 1791227025330,
+      "siteRss": 141676544,
+      "gameProcessRss": 184602624,
+      "cgroupBytes": 228667392
+    },
+    "sampleCount": 39,
+    "injectedTimeoutBudgetMs": 200,
+    "injectedTimeoutIncludingStartupMs": 242.86858699999902,
+    "injectedTimeoutMs": 204.1125800000009,
+    "cancellationMs": 9.855197000000771,
+    "ordinaryFallbacks": 0
+  },
+  "host": {
+    "samples": [
+      {
+        "at": 1791227014.3456588,
+        "MemAvailable": 1031311360,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 138.4121769997364
+      },
+      {
+        "at": 1791227015.4102287,
+        "MemAvailable": 969633792,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 35.3745769998568
+      },
+      {
+        "at": 1791227016.47265,
+        "MemAvailable": 979513344,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 34.86485099983838
+      },
+      {
+        "at": 1791227017.5446756,
+        "MemAvailable": 938029056,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 37.599111999952584
+      },
+      {
+        "at": 1791227018.6091678,
+        "MemAvailable": 881348608,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 33.52664999965782
+      },
+      {
+        "at": 1791227019.6618092,
+        "MemAvailable": 874622976,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 31.199570999888238
+      },
+      {
+        "at": 1791227020.7161283,
+        "MemAvailable": 883146752,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 30.920410000362608
+      },
+      {
+        "at": 1791227021.7895572,
+        "MemAvailable": 882868224,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 28.45460600019578
+      },
+      {
+        "at": 1791227022.8728228,
+        "MemAvailable": 882925568,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 33.83199599920772
+      },
+      {
+        "at": 1791227023.9261143,
+        "MemAvailable": 884125696,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 26.66343000055349
+      },
+      {
+        "at": 1791227024.9806426,
+        "MemAvailable": 891695104,
+        "SwapTotal": 2147479552,
+        "SwapFree": 2147479552,
+        "publicStatus": 200,
+        "publicLatencyMs": 30.487045999507245
+      }
+    ]
+  },
+  "limitations": [
+    "Accelerated human responses enter RoomStore directly; authenticated socket verifies server updates.",
+    "RSS from worker_threads is whole game process RSS; shared pages mean process RSS values must not be summed as physical memory.",
+    "Isolated idle is shortened to 1000ms; default production ten-minute idle awaits live publication stage.",
+    "No concurrent photo upload/stress or full test suite; authenticated Mahjong SSR and health requests exercise website during games.",
+    "injectedTimeoutMs observes timeout count/fallback after task post with 10ms polling; not exact worker exit latency. 200ms timer and late-result validation enforce the decision budget.",
+    "Cold isolated Next baseline is not the older production app steady-state baseline; daily backup restarted production before measurement."
+  ],
+  "restore": {
+    "kind": "sanma-production-empty-restore",
+    "backupId": "20261005T190312Z-a790395ae034",
+    "createdAt": "2026-10-05T19:03:14.787Z",
+    "totalBytes": 137443711,
+    "emptyTargetVerified": true,
+    "tables": {
+      "users": {
+        "count": 3,
+        "canonicalHashEqual": true
+      },
+      "homes": {
+        "count": 1,
+        "canonicalHashEqual": true
+      },
+      "home_members": {
+        "count": 2,
+        "canonicalHashEqual": true
+      },
+      "anniversaries": {
+        "count": 3,
+        "canonicalHashEqual": true
+      },
+      "todos": {
+        "count": 1,
+        "canonicalHashEqual": true
+      },
+      "moments": {
+        "count": 1,
+        "canonicalHashEqual": true
+      },
+      "photos": {
+        "count": 28,
+        "canonicalHashEqual": true
+      },
+      "photo_cleanup_queue": {
+        "count": 0,
+        "canonicalHashEqual": true
+      },
+      "calendar_events": {
+        "count": 0,
+        "canonicalHashEqual": true
+      },
+      "home_events": {
+        "count": 38,
+        "canonicalHashEqual": true
+      },
+      "schema_migrations": {
+        "count": 7,
+        "canonicalHashEqual": true
+      }
+    },
+    "passwordHashesIncludedAndEqual": true,
+    "sourceUnchanged": true,
+    "sessions": 0,
+    "liveInvites": 0,
+    "storage": {
+      "valid": 28,
+      "pendingCleanup": 0,
+      "unknownOrphans": 0,
+      "brokenReferences": 0,
+      "hashMismatches": 0
+    }
+  }
+}
