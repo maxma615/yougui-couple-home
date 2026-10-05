@@ -58,7 +58,7 @@ function opaqueIdentifier(value: string): string {
 }
 
 export function enforceRateLimit(
-  scope: "login" | "invite" | "password" | "admin",
+  scope: "login" | "invite" | "password" | "admin" | "mahjong",
   account: string,
   request: Request,
   options: RateLimitOptions = {},

@@ -26,6 +26,8 @@ RUN groupadd --gid 10001 yougui \
 USER 10001:10001
 
 EXPOSE 3000
+# The game child binds only on demand; Caddy routes its Socket.IO path.
+EXPOSE 3100
 
 ENTRYPOINT []
 CMD ["sh", "-c", "npm run migrate && node_modules/.bin/next start --hostname 0.0.0.0 --port 3000"]

@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
     incomingRequests: false,
     browserToTerminal: false,
   },
+  async rewrites() {
+    // Socket.IO and this rewrite omit the trailing slash. Next's default
+    // slash redirect otherwise closes WebSocket upgrades before proxying.
+    return [{ source: "/mahjong/socket.io", destination: `http://127.0.0.1:${process.env.MAHJONG_PORT ?? 3100}/mahjong/socket.io` }];
+  },
 };
 
 export default nextConfig;
