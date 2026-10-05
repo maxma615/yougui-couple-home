@@ -6,12 +6,19 @@ declare module "@kobalab/majiang-core" {
     constructor(tiles?: string[]);
     static fromString(value: string): Shoupai;
     _zimo: string | null;
+    _bingpai: Record<string, number[]>;
+    readonly menqian: boolean;
     _fulou: string[];
     lizhi: boolean;
     toString(): string;
     clone(): Shoupai;
     zimo(tile: string): Shoupai;
     dapai(tile: string): Shoupai;
+    fulou(meld: string): Shoupai;
+    gang(meld: string): Shoupai;
+    get_dapai(check?: boolean): string[] | null;
+    get_peng_mianzi(tile: string): string[] | null;
+    get_gang_mianzi(tile?: string): string[] | null;
   }
   class Shan {
     constructor(rule: Rule);
@@ -53,6 +60,9 @@ declare module "@kobalab/majiang-core" {
     allow_hule(wind?: number): boolean;
     allow_pingju(): boolean;
   }
-  const Majiang: { Game: typeof Game; Shan: typeof Shan; Shoupai: typeof Shoupai; rule(values?: Rule): Rule };
+  type HuleResult = { hupai?: { name: string; fanshu: number | string; baojia?: string }[]; fu?: number; fanshu?: number; damanguan?: number; defen: number };
+  type HuleOptions = { rule?: Rule; zhuangfeng?: number; menfeng?: number; lizhi?: number; yifa?: boolean; qianggang?: boolean; lingshang?: boolean; haidi?: number; tianhu?: number; baopai?: string[]; fubaopai?: string[] };
+  type Util = { xiangting(hand: Shoupai): number; xiangting_guoshi(hand: Shoupai): number; tingpai(hand: Shoupai): string[] | null; hule_param(options?: HuleOptions): unknown; hule(hand: Shoupai, ron: string | null, params: unknown): HuleResult | undefined };
+  const Majiang: { Game: typeof Game; Shan: typeof Shan; Shoupai: typeof Shoupai; Util: Util; rule(values?: Rule): Rule };
   export default Majiang;
 }
