@@ -397,3 +397,32 @@ button.mahjong-tile.is-locked { opacity: .85; }
   .mahjong-river__tile { width: 14px; height: 19px; }
   .mahjong-tile { width: 24px; }
 }
+
+/* Three real seats share the same felt and tile language as the four-seat table. */
+.mahjong-rules-trigger { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; border: 0; padding: 7px 0; color: var(--mj-muted); background: none; font-size: 10px; cursor: pointer; }
+.mahjong-variant-picker { margin-bottom: 16px; }
+.mahjong-seat-grid.is-sanma { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mahjong-seat-bot-button { grid-column: 1 / -1; justify-self: start; margin-top: 12px; border: 1px solid var(--mj-hairline); border-radius: 5px; padding: 5px 8px; color: var(--mj-gold); background: var(--mj-gold-soft); font-size: 10px; cursor: pointer; }
+.mahjong-seat-bot-button:disabled { opacity: .5; cursor: wait; }
+.mahjong-game.is-sanma .mahjong-table { grid-template-columns: 1fr minmax(0, .7fr) 1fr; grid-template-rows: 94px 210px auto; grid-template-areas: "west . east" ". center ." "own own own"; }
+.mahjong-game.is-sanma .mahjong-river--1 { top: 29%; right: 10%; width: 25%; }
+.mahjong-game.is-sanma .mahjong-river--2 { top: 29%; left: 10%; width: 25%; }
+.mahjong-game.is-sanma .mahjong-river--0 { bottom: 33%; }
+.mahjong-player__nuki { display: flex; align-items: center; gap: 4px; margin: 6px 0 0 33px; color: #d2c6a9; font-size: 9px; }
+.mahjong-player__nuki > span { display: grid; width: 17px; height: 21px; place-items: center; border-radius: 2px; color: #233027; background: #e5e1d5; }
+.mahjong-settlement-panel__delta.is-sanma { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mahjong-rules { width: min(620px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; }
+.mahjong-rules__close { float: right; }
+.mahjong-rules ul { margin: 16px 0; padding-left: 18px; color: #c5c2b8; font-size: 12px; line-height: 1.8; }
+.mahjong-rules li + li { margin-top: 9px; }
+@media (max-width: 640px) {
+  .mahjong-rules-trigger { font-size: 9px; }
+  .mahjong-seat-grid.is-sanma { grid-template-columns: 1fr; }
+  .mahjong-seat-grid.is-sanma .mahjong-seat-card { min-height: 82px; }
+  .mahjong-game.is-sanma .mahjong-table { grid-template-columns: 1fr 1fr; grid-template-rows: auto 161px auto; grid-template-areas: "west east" "center center" "own own"; }
+  .mahjong-game.is-sanma .mahjong-river--1 { top: 104px; right: 6px; width: 28%; }
+  .mahjong-game.is-sanma .mahjong-river--2 { top: 104px; left: 6px; width: 28%; transform: none; }
+  .mahjong-game.is-sanma .mahjong-river--0 { bottom: 156px; left: 50%; width: 88%; }
+  .mahjong-player__nuki { margin-left: 28px; font-size: 8px; }
+  .mahjong-game__exit { display: inline-flex; grid-column: 2; grid-row: 2; justify-self: end; }
+}

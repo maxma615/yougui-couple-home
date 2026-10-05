@@ -54,7 +54,11 @@ export class RoomStore {
   private commands = new Map<string, string>();
   private listeners = new Set<() => void>();
   private readonly now: () => number;
-  constructor(options: { now?: () => number } = {}) { this.now = options.now ?? Date.now; }
+  private readonly gameFactory: (variant: GameVariant, mode: GameMode, names: string[]) => RiichiGame | SanmaGame;
+  constructor(options: { now?: () => number; gameFactory?: (variant: GameVariant, mode: GameMode, names: string[]) => RiichiGame | SanmaGame } = {}) {
+    this.now = options.now ?? Date.now;
+    this.gameFactory = options.gameFactory ?? ((variant, mode, names) => variant === "sanma" ? new SanmaGame(mode, names) : new RiichiGame(mode, names));
+  }
   get size() { return this.rooms.size; }
 
   subscribe(listener: () => void) {
@@ -226,9 +230,7 @@ export class RoomStore {
           member.ready = command.ready; break;
         case "start":
           if (room.status !== "lobby" || room.members.length !== (room.variant === "sanma" ? 3 : 4) || !room.members.every(m => m.ready)) throw new AppError(409, "all_ready_required", "需要席位补齐且全部真人准备");
-          room.game = room.variant === "sanma"
-            ? new SanmaGame(room.mode, room.members.map(m => m.displayName))
-            : new RiichiGame(room.mode, room.members.map(m => m.displayName));
+          room.game = this.gameFactory(room.variant, room.mode, room.members.map(m => m.displayName));
           room.status = "playing"; break;
         case "respond":
           if (room.status !== "playing" || !room.game) throw new AppError(409, "no_active_game", "当前没有进行中的对局");

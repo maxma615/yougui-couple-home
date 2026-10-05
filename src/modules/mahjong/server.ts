@@ -21,10 +21,10 @@ function asRequest(message: IncomingMessage, origin: string): Request {
   } as RequestInit);
 }
 
-export async function runMahjongServer(options: { port: number; idleMs?: number; sweepMs?: number; host?: string; botDelayMs?: number } ) {
+export async function runMahjongServer(options: { port: number; idleMs?: number; sweepMs?: number; host?: string; botDelayMs?: number; rooms?: RoomStore } ) {
   const config = loadConfig();
   const database = new Pool({ connectionString: config.databaseUrl, max: 2 });
-  const rooms = new RoomStore();
+  const rooms = options.rooms ?? new RoomStore();
   const limits = new RateLimiter();
   let lastRoomActivity = Date.now();
   let shuttingDown = false;
