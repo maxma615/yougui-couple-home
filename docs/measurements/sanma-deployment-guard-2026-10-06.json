@@ -1,0 +1,41 @@
+{
+  "kind": "sanma-private-deployment-guard-regressions",
+  "completedAt": "2026-10-06T03:35:00+08:00",
+  "fixtureAppImage": "yougui-app:48005f6-ecs",
+  "fixtureGatewayImage": "yougui-caddy:2.11.7",
+  "applicationSourceChanged": false,
+  "productionGateActivated": false,
+  "scope": "Real isolated old Next/CLI routes, independent ch_* DB, loopback-only test gateway; no real accounts or production mutations.",
+  "exitCode": 0,
+  "checks": {
+    "foreignLeaseCannotRestoreGate": true,
+    "oldApplicationRestartAndGatewayRollbackHealthy": true,
+    "delayedBodyCannotCreateAfterEmptyGuard": true,
+    "gateSurvivesCaddyRestartAndActualInodeRestores": true,
+    "gatePersistsAcrossActualAConfiguredBFutureCAndRollbackB": true,
+    "disposedNextNeverResumedQueuedCreate": true,
+    "pausedOriginalPostStatus": 503,
+    "forwardedCreateDrainBlocksThenActiveGuardRejects": true,
+    "activeRoomSurvivesAbortAndOriginalSessionRetained": true,
+    "parentAliveWhileNextStopped": true,
+    "closedProxyClientStillBlockedOnDbCannotPassEmptyGuard": true,
+    "unhealthyExistingChildFailsClosed": true,
+    "abortRestoresSameNextAndGateway": true
+  },
+  "helperSha256": {
+    "sanma-process-guard.mjs": "5e976c5a2a2e0e993fea2fcbe1318a81db76ad1ea3e4bf1b8f3e1607202df70d",
+    "sanma-active-guard.ts": "c81f5a9bae869420b1a10aad4ac7a0c0ed222252adcc06c60c82311af351162b",
+    "sanma-barrier.py": "e616a1d10cc731b9e44abec749411cf74173b6303016376b1b6748ce5b8e320a",
+    "sanma-publish.sh": "1036499a6c0e6e8959a213220aafff33ec4ce96893aa913a5e55b51a2352f11b",
+    "sanma-gate-fixture.ts": "91cf60f3d713257acecc7f912948a186d5ee5fc375b1ef2d1f7096e539b5bb61",
+    "sanma-gate-control.ts": "d075e672bce133f9f8c8eece50465beb27ae6409fc7a1284f0febcfb049ad9df",
+    "sanma-gate-proof.py": "b5b5756ba5d344f3dec1f77db8030cb473124d04fc3097719ec10e8f9e791cd6",
+    "Caddyfile.gate-qa": "9a97aa5b75377bfe21f822b1ac053fef032b5c0ae1158c961a133b1ac4266542"
+  },
+  "notes": [
+    "Temporary fixture sessions view uses an advisory wait only for game auth, so the unchanged old route can exercise pending DB work.",
+    "A paused original POST returned503; resume restores the original room and session, not a promise of preserving HTTP response success.",
+    "Readiness predicate initially needed retry for Caddy reset and known game warmup; fixture initially omitted production trusted-IP header. Original failing logs retained.",
+    "Whole publisher script is prepared and syntax checked, not executed against production. Component rollback proof restarts the isolated old app, preserves expected image and restores its gateway with owned lease."
+  ]
+}
