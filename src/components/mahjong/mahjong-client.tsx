@@ -366,6 +366,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFin
   const discardChoices = game.choices.filter((choice) => choice.type === "discard");
   const riichiChoices = game.choices.filter((choice) => choice.type === "riichi");
   const otherChoices = game.choices.filter((choice) => !["discard", "riichi"].includes(choice.type));
+  const tsumoChoice = otherChoices.find(choice => choice.type === "tsumo");
   const allowedChoices = riichiMode ? riichiChoices : discardChoices;
   const ownMember = room.members.find((member) => member.seat === ownSeat);
 
@@ -384,6 +385,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFin
 
     <div className="mahjong-table" data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
       <div className="mahjong-table__grain" aria-hidden="true"/>
+      <svg className="mahjong-table__seams" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"><path d="M170 90H830L940 600H60ZM170 90L442 285M830 90L558 285M60 600L442 375M940 600L558 375"/><path d="M182 98H818L925 590H75Z"/></svg>
       {Array.from({ length: capacity - 1 }, (_, index) => index + 1).map(offset => {
         const player = byRelative(offset);
         const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
@@ -395,7 +397,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFin
         <strong>{roundTitle(game)}</strong>
         <span className="mahjong-table__wall">余 <b>{game.remainingTiles}</b></span>
         <small>本场 {game.honba}　·　供托 {game.riichiSticks}</small>
-        {game.players.map(player => <span key={player.seat} className={`mahjong-center-seat mahjong-center-seat--${relativeSeat(player.seat)}${game.turnSeat === player.seat ? " is-active" : ""}`}>{windNames[player.wind]}</span>)}
+        {game.players.map(player => <span key={player.seat} className={`mahjong-center-seat mahjong-center-seat--${relativeSeat(player.seat)}${game.turnSeat === player.seat ? " is-active" : ""}`}><span>{windNames[player.wind]}</span><b>{player.score}</b></span>)}
       </div>
       {game.players.map((player) => <River key={player.seat} player={player} offset={relativeSeat(player.seat)} />)}
       <div className="mahjong-table__own"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
@@ -407,8 +409,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFin
     </div>
 
     {!isFinished ? <div className="mahjong-action-dock" aria-label="可执行操作">
-      {riichiChoices.length ? <button type="button" className={`mahjong-button mahjong-button--riichi${riichiMode ? " is-selected" : ""}`} aria-pressed={riichiMode} disabled={busy} onClick={() => setRiichiMode((value) => !value)}><Sparkles size={16}/>{riichiMode ? "选择立直牌" : "立直"}</button> : null}
-      {otherChoices.map((choice) => <button key={choice.id} type="button" className={`mahjong-button ${["ron", "tsumo"].includes(choice.type) ? "mahjong-button--win" : choice.type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`} disabled={busy} data-choice-id={choice.id} data-choice-type={choice.type} onClick={() => onChoice(choice)}>{choice.type === "tsumo" || choice.type === "ron" ? <Sparkles size={15}/> : null}{choiceNames[choice.type]}{choice.value ? <small>{choiceDescription(choice.value)}</small> : null}</button>)}
+      {!game.settlement ? <button type="button" className="mahjong-button mahjong-button--win mahjong-button--tsumo" disabled={busy || !tsumoChoice} data-choice-id={tsumoChoice?.id} data-choice-type={tsumoChoice?.type} title={tsumoChoice ? "点击自摸和牌" : game.turnSeat !== ownSeat ? "等待你的摸牌回合" : "当前没有合法自摸选项"} onClick={() => tsumoChoice && onChoice(tsumoChoice)}>自摸</button> : null}
+      {!game.settlement ? <button type="button" className={`mahjong-button mahjong-button--riichi${riichiMode ? " is-selected" : ""}`} aria-pressed={riichiMode} disabled={busy || !riichiChoices.length} title={riichiChoices.length ? "选择高亮牌切出并宣告立直" : ownPlayer?.riichi ? "已经立直" : "当前没有合法立直选项"} onClick={() => setRiichiMode((value) => !value)}>{riichiMode ? "选择立直牌" : "立直"}</button> : null}
+      {otherChoices.filter(choice => choice.type !== "tsumo").map((choice) => <button key={choice.id} type="button" className={`mahjong-button ${choice.type === "ron" ? "mahjong-button--win" : choice.type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`} disabled={busy} data-choice-id={choice.id} data-choice-type={choice.type} onClick={() => onChoice(choice)}>{choiceNames[choice.type]}{choice.value ? <small>{choiceDescription(choice.value)}</small> : null}</button>)}
       {!otherChoices.length && !discardChoices.length && !riichiChoices.length ? <div className="mahjong-action-dock__wait"><LoaderCircle size={15} className="mahjong-spin"/>等待其他玩家行动</div> : null}
       {riichiMode ? <button type="button" className="mahjong-action-dock__cancel" onClick={() => setRiichiMode(false)}>返回普通切牌</button> : null}
       {game.settlement ? <div className="mahjong-settlement" role="status"><span>{game.settlement.name}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
@@ -425,14 +428,14 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
   const Heading = canInspect ? "button" : "div";
   const relativeNames = capacity === 3 ? ["你", "下家", "上家"] : ["你", "下家", "对家", "上家"];
   return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
-    <Heading className="mahjong-player__head" {...(canInspect ? {type:"button" as const, onClick:onInspect, "aria-label":`查看${member?.displayName || "牌友"}的公开副露`} : {})}><span className="mahjong-player__wind">{windNames[player.wind] || "東"}</span><div><strong>{member?.displayName || (player.seat === ownSeat ? "你" : "牌友")}</strong><small>{relativeNames[offset] || "牌友"}{member?.kind === "bot" ? " · 电脑" : ""}{player.nuki !== undefined ? <span className="mahjong-player__nuki" aria-label={`公开拔北数量：${player.nuki}`} data-testid={`nuki-${player.seat}`}><span>北</span> × {player.nuki}</span> : null}</small></div><b>{player.score.toLocaleString()}</b>{canInspect ? <span className="mahjong-player__zoom" aria-hidden="true"><Expand size={10}/></span> : null}{player.riichi ? <i className="mahjong-player__riichi">立直</i> : null}</Heading>
-    <div className="mahjong-player__hidden" aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
+    <Heading className="mahjong-player__head" {...(canInspect ? {type:"button" as const, onClick:onInspect, "aria-label":`查看${member?.displayName || "牌友"}的公开副露`} : {})}><span className="mahjong-player__wind" data-avatar={player.seat % 4} data-wind={windNames[player.wind] || "東"}>{windNames[player.wind] || "東"}</span><div><strong>{member?.displayName || (player.seat === ownSeat ? "你" : "牌友")}</strong><small>{relativeNames[offset] || "牌友"}{member?.kind === "bot" ? " · 电脑" : ""}{player.nuki !== undefined ? <span className="mahjong-player__nuki" aria-label={`公开拔北数量：${player.nuki}`} data-testid={`nuki-${player.seat}`}><span>北</span> × {player.nuki}</span> : null}</small></div><b>{player.score.toLocaleString()}</b>{canInspect ? <span className="mahjong-player__zoom" aria-hidden="true"><Expand size={10}/></span> : null}{player.riichi ? <i className="mahjong-player__riichi">立直</i> : null}</Heading>
+    <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
       {Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => <i key={index}/>) }
       <span>{player.handCount}</span>
     </div>
     {offset !== 0 && player.melds.length ? <div className="mahjong-player__melds" role="group" aria-label={`${member?.displayName || "牌友"}的副露`}>
       {player.melds.map((meld, index) => <MeldView key={`${index}-${meld}`} meld={meld}/>) }
-    </div> : null}
+    </div> : null}</div>
     {member?.kind === "human" && !member.connected ? <small className="mahjong-player__offline">暂时离线 · 座位保留</small> : null}
   </div>;
 }
@@ -463,7 +466,7 @@ function MeldView({ meld }: { meld: string }) {
 }
 
 function River({ player, offset }: { player: PublicPlayer; offset: number }) {
-  return <div className={`mahjong-river mahjong-river--${offset}`} data-testid={`river-${player.seat}`} aria-label={`${windNames[player.wind] || "東"}家河牌`}>
+  return <div className={`mahjong-river mahjong-river--${offset}${player.discards.length > 18 ? " is-long" : ""}`} data-testid={`river-${player.seat}`} aria-label={`${windNames[player.wind] || "東"}家河牌`}>
     {player.discards.map((tile, index) => <span className={`mahjong-river__tile${tile.includes("_") ? " is-tsumogiri" : ""}${tile.includes("*") ? " is-riichi" : ""}`} data-tile={tileKey(tile)} key={`${index}-${tile}`} title={`${tileName(tile)}${tile.includes("*") ? " · 立直" : ""}`}><TileFace value={tile}/></span>)}
   </div>;
 }

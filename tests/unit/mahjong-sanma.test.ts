@@ -74,6 +74,33 @@ function fixture(hands:Record<number,string>,draws:string[],reserve:string[]=[],
 function act(game:SanmaGame,seat:number,id:string) {const v=game.view(seat);game.respond(seat,v.decisionId,id);}
 function passAll(game:SanmaGame) {for(let s=0;s<3;s++)if(game.view(s).choices.some(c=>c.type==="pass"))act(game,s,"pass");}
 
+function screenshotCase() {
+  const hands = {
+    0: "m199p6789s123z123",
+    1: "p23345s456678z44",
+    2: "m119p23789s246z12"
+  };
+  const available = sanmaTiles();
+  const take = (tile: string) => {
+    const index = available.indexOf(tile);
+    if (index < 0) throw new Error(`Impossible screenshot fixture tile: ${tile}`);
+    return available.splice(index, 1)[0];
+  };
+  for (const hand of [hands[0], hands[1], hands[2]]) for (const tile of tiles(hand)) take(tile);
+  const reserve = ["z5", "z5", "z6", "z6"];
+  reserve.forEach(take);
+  const indicators = ["z5"];
+  indicators.forEach(take);
+  const draws = [take("m1")];
+  for (let i = 0; i < 28; i++) {
+    const index = available.findIndex(tile => tile !== "p1" && tile !== "p4");
+    if (index < 0) throw new Error("Not enough safe fixture draws");
+    draws.push(available.splice(index, 1)[0]);
+  }
+  draws.push(take("p1"));
+  return { hands, draws, reserve, indicators };
+}
+
 describe("Sanma special rules with physical fixtures",()=>{
   it("draws all eight replacements without ever consuming any indicator or duplicating a tile",()=>{
     const ordered=sanmaTiles(),wall=new SanmaWall(ordered),dealt=Array.from({length:40},()=>wall.draw());
@@ -154,6 +181,71 @@ describe("Sanma special rules with physical fixtures",()=>{
 });
 
 describe("Sanma score boundaries and late-hand rules",()=>{
+  it("offers closed tsumo for the reported South-seat hand at 25 tiles and scores pinfu",()=>{
+    const { hands, draws, reserve, indicators } = screenshotCase();
+    const game = new SanmaGame("east", names, {
+      dealer: 0,
+      wallFactory: () => fixture(hands, draws, reserve, indicators).wallFactory()
+    });
+
+    // The dealer discards the first m1; West can pon it, moving the later
+    // South turn to exactly 25 live tiles while leaving South's hand untouched.
+    act(game, 0, "discard:m1_");
+    expect(game.view(2).choices.some(choice => choice.id === "pon:m111+")).toBe(true);
+    act(game, 2, "pon:m111+");
+    const caller = game.view(2);
+    const callDiscard = caller.choices.find(choice => choice.type === "discard")!;
+    game.respond(2, caller.decisionId, callDiscard.id);
+    passAll(game);
+
+    let reached = false;
+    for (let step = 0; step < 100; step++) {
+      const south = game.view(1);
+      if (south.turnSeat === 1 && south.remainingTiles === 25 && south.drawnTile === "p1") {
+        reached = true;
+        break;
+      }
+      const responder = [0, 1, 2].find(seat => game.view(seat).choices.some(choice => choice.type === "pass"));
+      if (responder !== undefined) {
+        act(game, responder, "pass");
+        continue;
+      }
+      const actor = south.turnSeat;
+      const current = game.view(actor);
+      const discard = current.choices.find(choice => choice.type === "discard" && choice.value?.endsWith("_"))
+        ?? current.choices.find(choice => choice.type === "discard");
+      expect(discard, `seat ${actor} should have a legal discard`).toBeDefined();
+      game.respond(actor, current.decisionId, discard!.id);
+    }
+
+    expect(reached).toBe(true);
+    const south = game.view(1);
+    expect(south.hand.slice().sort()).toEqual(tiles("p123345s456678z44").sort());
+    expect(south.players[1]).toMatchObject({ wind: 1, score: 35000, riichi: false, nuki: 0, melds: [] });
+    expect(south.remainingTiles).toBe(25);
+    expect(south.choices.some(choice => choice.type === "tsumo")).toBe(true);
+
+    game.respond(1, south.decisionId, "tsumo");
+    const settlement = game.view(1).settlement!;
+    expect(settlement.yaku.map(yaku => yaku.name)).toEqual(expect.arrayContaining(["門前清自摸和", "平和"]));
+    expect(settlement.fu).toBe(20);
+    expect(settlement.han).toBe(2);
+  });
+
+  it("offers and accepts a legal riichi discard from the same closed tenpai shape",()=>{
+    const game = new SanmaGame("east", names, fixture({ 1: "p23345s456678z44" }, ["z1", "s1"]));
+    act(game, 0, "discard:z1_");
+    passAll(game);
+
+    const south = game.view(1);
+    expect(south.drawnTile).toBe("s1");
+    expect(south.choices.some(choice => choice.id === "riichi:s1_")).toBe(true);
+    game.respond(1, south.decisionId, "riichi:s1_");
+    passAll(game);
+    expect(game.view(1).players[1].riichi).toBe(true);
+    expect(game.view(1).riichiSticks).toBe(1);
+  });
+
   it("counts one/nine man dora and extracted North dora but cannot win on nuki bonuses alone",()=>{
     const hand=Majiang.Shoupai.fromString("m999p123456s789z11");
     const score=scoreSanma(hand,null,{menfeng:1,baopai:["m1","z3"],nuki:2})!;

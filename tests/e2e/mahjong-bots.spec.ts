@@ -1,4 +1,5 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
 import { addSession, checkNoOverflow, mutationHeaders, origin, userFixture } from "./fixtures";
 import type { MahjongResponse } from "../../src/modules/mahjong/types";
@@ -122,6 +123,10 @@ for (const variant of ["sanma", "yonma"] as const) test(`手机${variant}竖屏�
     await expect(page.getByLabel("请横屏打牌")).toBeHidden();
     const board = page.getByTestId("mahjong-board"), dora = page.getByTestId("mahjong-dora");
     await expect(board).toBeVisible();
+    const portraits = await page.request.get(new URL('/images/mahjong-seat-portraits-v1.webp', origin()).toString());
+    expect(portraits.status()).toBe(200);
+    expect(createHash('sha256').update(await portraits.body()).digest('hex')).toBe(createHash('sha256').update(await readFile('public/images/mahjong-seat-portraits-v1.webp')).digest('hex'));
+    expect(await page.locator('.mahjong-player__wind[data-avatar]').first().evaluate(el => getComputedStyle(el).backgroundImage)).toContain('mahjong-seat-portraits-v1.webp');
     const state = await (await page.request.get(new URL("/api/mahjong", origin()).toString())).json() as MahjongResponse;
     await expect(dora.locator("[data-tile-face]")).toHaveCount(state.room!.game!.doraIndicators.length);
     expect(await dora.locator("[data-tile-face]").evaluateAll(els => els.map(el => el.getAttribute("data-tile-face")))).toEqual(state.room!.game!.doraIndicators);
@@ -140,7 +145,13 @@ for (const variant of ["sanma", "yonma"] as const) test(`手机${variant}竖屏�
     await expect.poll(async () => { await actHumans([page]); return page.locator('.mahjong-river:not(.mahjong-river--0) [data-tile]').count(); }, {timeout: 30_000}).toBeGreaterThan(0);
     await expect(page.locator("[data-choice-type]:enabled").first()).toBeVisible();
     await page.screenshot({path: testInfo.outputPath(`${variant}-landscape-table.png`), animations:"disabled"});
-    await page.setViewportSize({width: 1365, height: 900});
+    await page.setViewportSize({width: 1280, height: 720});
+    for (const label of ['自摸', '立直']) {
+      const button = page.getByRole('button', {name:label, exact:true});
+      if (await page.locator('.mahjong-settlement-panel').count()) break;
+      const rect = await button.boundingBox();
+      expect(rect!.y).toBeGreaterThanOrEqual(0); expect(rect!.y + rect!.height).toBeLessThanOrEqual(720);
+    }
     await page.screenshot({path: testInfo.outputPath(`${variant}-real-table-desktop.png`), animations:"disabled", fullPage:true});
     await dissolve(page); roomId = undefined;
   } finally {if (roomId) await command(page.context(), {action:"finish", roomId});}

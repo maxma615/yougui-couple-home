@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { RiichiGame } from "@/modules/mahjong/engine";
 import Majiang from "@kobalab/majiang-core";
 
-function fixture(hands: Record<number, string>, drawn: string) {
-  return { dealer: 0, wallFactory: (rule: ConstructorParameters<typeof Majiang.Shan>[0]) => {
+function fixture(hands: Record<number, string>, drawn: string, dealer = 0) {
+  return { dealer, wallFactory: (rule: ConstructorParameters<typeof Majiang.Shan>[0]) => {
     const wall = new Majiang.Shan(rule), available = wall._pai.slice();
     const take = (tile: string) => { const i = available.indexOf(tile); if (i < 0) throw new Error("Impossible test tile"); available.splice(i,1); return tile; };
     const dealt: string[][] = [[],[],[],[]];
@@ -13,7 +13,8 @@ function fixture(hands: Record<number, string>, drawn: string) {
     }
     take(drawn);
     for(let seat=0;seat<4;seat++) if(!dealt[seat].length) dealt[seat]=available.splice(0,13);
-    wall._pai=[...available,...[...dealt.flat(),drawn].reverse()];
+    const dealOrder = Array.from({ length: 4 }, (_, wind) => dealt[(dealer + wind) % 4]);
+    wall._pai=[...available,...[...dealOrder.flat(),drawn].reverse()];
     wall._baopai=[wall._pai[4]]; wall._fubaopai=[wall._pai[9]];
     return wall;
   } };
@@ -75,6 +76,31 @@ describe("riichi authoritative game", () => {
     expect(after.players.find(p=>p.seat===0)!.score).toBe(24000);
     expect(after.riichiSticks).toBe(1);
     expect(after.players.reduce((sum,p)=>sum+p.score,0)+1000*after.riichiSticks).toBe(100000);
+  });
+  it("maps real tsumo and riichi choices to the right player through every dealer rotation", () => {
+    for (const dealer of [0, 1, 2, 3]) {
+      const winning = new RiichiGame("east", ["A", "B", "C", "D"], fixture({ [dealer]: "m123p123s123z1112" }, "z2", dealer));
+      const tsumoView = winning.view(dealer);
+      expect(tsumoView.turnSeat).toBe(dealer);
+      expect(tsumoView.choices.some(choice => choice.type === "tsumo")).toBe(true);
+      for (const seat of [0, 1, 2, 3].filter(seat => seat !== dealer)) {
+        expect(winning.view(seat).choices).toEqual([]);
+      }
+      winning.respond(dealer, tsumoView.decisionId, "tsumo");
+      expect(winning.view(dealer).settlement?.winnerSeat).toBe(dealer);
+
+      const declaring = new RiichiGame("east", ["A", "B", "C", "D"], fixture({ [dealer]: "m123p123s123z1112" }, "p9", dealer));
+      const riichiView = declaring.view(dealer);
+      expect(riichiView.choices.some(choice => choice.type === "riichi" && choice.value === "p9_")).toBe(true);
+      declaring.respond(dealer, riichiView.decisionId, "riichi:p9_");
+      for (const seat of [0, 1, 2, 3]) {
+        const view = declaring.view(seat);
+        const pass = view.choices.find(choice => choice.type === "pass");
+        if (pass) declaring.respond(seat, view.decisionId, pass.id);
+      }
+      expect(declaring.view(dealer).players.find(player => player.seat === dealer)?.riichi).toBe(true);
+      expect(declaring.view(dealer).riichiSticks).toBe(1);
+    }
   });
   it("settles a dealer heavenly-hand tsumo using the actual core's yakuman scoring", () => {
     const game=new RiichiGame("east",["A","B","C","D"],fixture({0:"m123p123s123z1112"},"z2"));

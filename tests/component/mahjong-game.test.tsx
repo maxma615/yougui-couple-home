@@ -130,3 +130,25 @@ it("opens readable public meld details without making a game decision or reveali
   fireEvent.click(screen.getByRole("button", {name:"关闭副露详情", hidden:true}));
   expect(document.querySelector(".mahjong-public-melds")).toBeNull();
 });
+
+it("keeps self draw and riichi controls visible but unavailable outside a legal decision", () => {
+  const view = fixtureGame().view(0);
+  view.choices = []; view.turnSeat = 1; view.drawnTile = null;
+  const onChoice = show(view);
+  const tsumo = screen.getByRole("button", {name:"自摸"});
+  const riichi = screen.getByRole("button", {name:"立直"});
+  expect((tsumo as HTMLButtonElement).disabled).toBe(true);
+  expect((riichi as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(tsumo); fireEvent.click(riichi);
+  expect(onChoice).not.toHaveBeenCalled();
+});
+
+it("forwards the actual legal tsumo choice after a closed North replacement win", () => {
+  const game = fixtureGame(), initial = game.view(0);
+  game.respond(0, initial.decisionId, initial.choices.find(c=>c.type === "nuki")!.id);
+  const winning = game.view(0), tsumo = winning.choices.find(c=>c.type === "tsumo");
+  expect(tsumo).toBeDefined();
+  const onChoice = show(winning);
+  fireEvent.click(screen.getByRole("button", {name:"自摸"}));
+  expect(onChoice).toHaveBeenCalledWith(tsumo);
+});
