@@ -37,7 +37,7 @@ for (const engine of [chromium, webkit]) {
     const html = renderToStaticMarkup(<GameRoom room={room} host busy={false} ownSeat={0} connected={connected} onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
     const height = ({667:375,844:390,1280:720,1440:810} as Record<number,number>)[width];
     await page.setViewportSize({width, height});
-    const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css"].map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
+    const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css"].map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
     await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
     await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
     await page.emulateMedia({reducedMotion:"reduce"});
@@ -62,7 +62,7 @@ for (const engine of [chromium, webkit]) {
       const button = page.getByRole('button', {name:label, exact:true});
       const rect = await button.boundingBox();
       assert.ok(rect && rect.y >= 0 && rect.y + rect.height <= height, `${engine.name()} ${width}: ${label} outside viewport`);
-      assert.equal(await button.isEnabled(), true);
+      assert.equal(await button.isEnabled(), connected, 'stale actions cannot submit while disconnected');
     }
     // Five simultaneous response types must fit beside the public river, not over it.
     // Multiple chi/kan alternatives use the actual grouped action JSX.

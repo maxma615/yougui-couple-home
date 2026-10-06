@@ -6,6 +6,22 @@ import { sanmaPayment, tenpaiPayment, scoreSanma } from "@/modules/mahjong/sanma
 
 const names = ["A", "B", "C"];
 describe("genuine three-seat Sanma", () => {
+  it("publishes an opaque game identity and advances its hand identity after settlement", () => {
+    const game = new SanmaGame("east", names, fixture({ 0: "p123456789s123z2" }, ["z2"]));
+    const opening = game.view(0);
+    expect(opening.gameInstanceId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(opening.handId).toBe(1);
+    expect(opening.choices.some(choice => choice.type === "tsumo")).toBe(true);
+    game.respond(0, opening.decisionId, "tsumo");
+    for (const seat of [0, 1, 2]) {
+      const view = game.view(seat);
+      game.respond(seat, view.decisionId, "ack");
+    }
+    const nextHand = game.view(0);
+    expect(nextHand.gameInstanceId).toBe(opening.gameInstanceId);
+    expect(nextHand.handId).toBe(2);
+  });
+
   it("uses exactly 108 physical tiles and a 14-tile dead wall", () => {
     const tiles = sanmaTiles();
     expect(tiles).toHaveLength(108);

@@ -35,6 +35,7 @@ function secureWall(rule: NonNullable<Rule>) {
  */
 export class RiichiGame extends Majiang.Game {
   private readonly gameId = randomUUID();
+  private handId = 0;
   private step = 0;
   private pending = new Map<number, Choice[]>();
   private settlement: Settlement | null = null;
@@ -58,6 +59,7 @@ export class RiichiGame extends Majiang.Game {
     this._status = type;
     this._reply = [{}, {}, {}, {}];
     this.step++;
+    if (type === "qipai") this.handId++;
     this.pending.clear();
     const model = this._model;
     if (type === "qipai") this.settlement = null;
@@ -143,6 +145,8 @@ export class RiichiGame extends Majiang.Game {
     const hand = model.shoupai[wind];
     const drawn = hand._zimo && hand._zimo.length === 2 ? hand._zimo : null;
     return {
+      gameInstanceId: this.gameId,
+      handId: this.handId,
       decisionId: `${this.gameId}:${this.step}`, phase: this._status,
       roundWind: model.zhuangfeng, roundNumber: model.jushu + 1, honba: model.changbang,
       riichiSticks: model.lizhibang, remainingTiles: model.shan.paishu, doraIndicators: model.shan.baopai.slice(),

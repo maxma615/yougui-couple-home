@@ -234,6 +234,21 @@ test("横屏点击公开副露放大、ESC关闭，不发送出牌请求", async
   expect(posts).toEqual([]);
 });
 
+// Display-only fixtures provide an Engine.IO/Socket.IO connection handshake.
+// Their command/geometry assertions are separate from actual-server Socket tests.
+async function displayConnection(page:Page, getView:()=>MahjongResponse) {
+  await page.routeWebSocket(/\/mahjong\/socket\.io(?:\/|\?)/, socket=>{
+    socket.send('0'+JSON.stringify({sid:'display-only',upgrades:[],pingInterval:25000,pingTimeout:20000,maxPayload:1000000}));
+    socket.onMessage(message=>{
+      if(message==='40'){
+        socket.send('40'+JSON.stringify({sid:'display-only'}));
+        socket.send('42'+JSON.stringify(['mahjong:state',getView()]));
+      }
+      if(message==='2')socket.send('3');
+    });
+  });
+}
+
 // Real engine + physical North replacement, bridged through a display API fixture.
 // Actual Socket rooms and account permission remain covered by the live tests above.
 test("拔北确认后北牌保留、合法自摸出现，刷新仍能确认拔北（显示 API 夹具）", async ({page},testInfo) => {
@@ -249,9 +264,11 @@ test("拔北确认后北牌保留、合法自摸出现，刷新仍能确认拔�
       expect(body.decisionId).toBe(game.view(0).decisionId);
       game.respond(0,body.decisionId,body.choiceId); view.game=game.view(0); view.version++;
     }
-    await route.fulfill({json:{room:view,serviceRunning:false} satisfies MahjongResponse});
+    await route.fulfill({json:{room:view,serviceRunning:true} satisfies MahjongResponse});
   });
+  await displayConnection(page,()=>({room:view,serviceRunning:true}));
   await page.setViewportSize({width:844,height:390}); await page.goto('/mahjong');
+  await expect(page.locator('.mahjong-link-state')).toHaveClass(/is-connected/);
   await expect(page.getByRole('button',{name:'自摸',exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'拔北',exact:true}).click();
   const north=page.getByTestId('nuki-tiles-0').locator('[data-tile-face="z4"]');
@@ -282,9 +299,11 @@ test("多个杠牌方案按需展开，取消不出牌，选中后提交原始�
       expect(body.decisionId).toBe(view.game!.decisionId); submitted.push(body.choiceId);
       view.game={...view.game!,choices:[],decisionId:'after-call'}; view.version++;
     }
-    await route.fulfill({json:{room:view,serviceRunning:false} satisfies MahjongResponse});
+    await route.fulfill({json:{room:view,serviceRunning:true} satisfies MahjongResponse});
   });
+  await displayConnection(page,()=>({room:view,serviceRunning:true}));
   await page.setViewportSize({width:667,height:375}); await page.goto('/mahjong');
+  await expect(page.locator('.mahjong-link-state')).toHaveClass(/is-connected/);
   await expect(page.getByRole('button',{name:'杠',exact:true})).toHaveCount(1);
   await page.getByRole('button',{name:'杠',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'选择杠牌'});

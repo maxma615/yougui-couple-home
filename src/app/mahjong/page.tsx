@@ -5,6 +5,7 @@ import "./mahjong.css";
 import "./mahjong-river.css";
 import "./mahjong-meld.css";
 import "./mahjong-interaction.css";
+import "./mahjong-discard-motion.css";
 
 export const metadata: Metadata = {
   title: "麻将室 · 有归",

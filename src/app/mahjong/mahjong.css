@@ -200,7 +200,6 @@
 .mahjong-river__tile .mahjong-tile { width: 100%; height: 100%; border-radius: 2px; padding: 1px; box-shadow: 0 2px 0 #b8b7a4, 0 3px 3px #0005; }
 .mahjong-river__tile.is-tsumogiri { filter: brightness(.89); }
 .mahjong-river__tile.is-riichi .mahjong-tile { transform: rotate(90deg) scale(.76); outline: 1px solid #debe75; }
-.mahjong-river__tile:last-child { animation: mahjong-discard-in 180ms ease-out both; }
 .mahjong-table__own { position: absolute; z-index: 3; bottom: 2%; left: 3%; width: 94%; }
 .mahjong-table__own > .mahjong-player { position: absolute; bottom: calc(var(--hand-w) * 1.5 + 10px); left: 0; width: 22%; padding: 6px 8px; }
 .mahjong-table__own > .mahjong-player .mahjong-player__hidden { display: none; }

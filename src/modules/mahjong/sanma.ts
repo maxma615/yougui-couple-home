@@ -42,6 +42,7 @@ const direction = (from: number, to: number) => (from - to + 3) % 3 === 1 ? "+" 
  * no model, wall or opponent hand is returned through the public DTO. */
 export class SanmaGame {
   private readonly id = randomUUID();
+  private handId = 0;
   private step = 0;
   private readonly initialDealer: number;
   private readonly wallFactory: () => SanmaWall;
@@ -85,6 +86,7 @@ export class SanmaGame {
   }
 
   private startHand() {
+    this.handId++;
     this.wall = this.wallFactory();
     this.uninterrupted = true;
     this.settlement = null;
@@ -457,6 +459,8 @@ export class SanmaGame {
     if (!Number.isInteger(seat) || seat < 0 || seat > 2) throw new AppError(403, "seat_required", "你没有牌桌席位");
     const hand = this.players[seat].hand;
     return {
+      gameInstanceId: this.id,
+      handId: this.handId,
       decisionId: `${this.id}:${this.step}`,
       phase: this.phase,
       roundWind: Math.floor(Math.min(this.round, this.mode === "east" ? 2 : 5) / 3),

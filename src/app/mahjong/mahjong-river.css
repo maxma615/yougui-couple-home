@@ -25,9 +25,3 @@
   top: calc(100% - var(--river-w) / 2);
   transform: translate(-50%, -50%) rotate(90deg);
 }
-.mahjong-river--rows .mahjong-river__tile.is-latest {
-  animation: mahjong-discard-in 180ms ease-out both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .mahjong-river--rows .mahjong-river__tile.is-latest { animation: none; }
-}

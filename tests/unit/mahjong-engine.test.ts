@@ -21,6 +21,21 @@ function fixture(hands: Record<number, string>, drawn: string, dealer = 0) {
 }
 
 describe("riichi authoritative game", () => {
+  it("publishes an opaque game identity and advances its hand identity after settlement", () => {
+    const game = new RiichiGame("east", ["A", "B", "C", "D"], fixture({ 0: "m123p123s123z1112" }, "z2"));
+    const opening = game.view(0);
+    expect(opening.gameInstanceId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(opening.handId).toBe(1);
+    game.respond(0, opening.decisionId, "tsumo");
+    for (const seat of [0, 1, 2, 3]) {
+      const view = game.view(seat);
+      game.respond(seat, view.decisionId, "ack");
+    }
+    const nextHand = game.view(0);
+    expect(nextHand.gameInstanceId).toBe(opening.gameInstanceId);
+    expect(nextHand.handId).toBe(2);
+  });
+
   it("deals four real hands but never exposes another player's concealed tiles or the wall", () => {
     const game = new RiichiGame("east", ["A", "B", "C", "D"]);
     const views = [0, 1, 2, 3].map(seat => game.view(seat));
