@@ -37,7 +37,7 @@ for (const engine of [chromium, webkit]) {
     const html = renderToStaticMarkup(<GameRoom room={room} host busy={false} ownSeat={0} connected={connected} onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
     const height = ({667:375,844:390,1280:720,1440:810} as Record<number,number>)[width];
     await page.setViewportSize({width, height});
-    const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css"].map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
+    const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css"].map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
     await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
     await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
     await page.emulateMedia({reducedMotion:"reduce"});
@@ -45,7 +45,7 @@ for (const engine of [chromium, webkit]) {
     assert.equal(await page.getByTestId("mahjong-dora").locator("[data-tile-face]").count(), 5);
     const covered = await page.evaluate(() => {
       const hidden:string[]=[];
-      for (const el of document.querySelectorAll(".mahjong-river__tile, .mahjong-player__head strong, .mahjong-player__melds [data-tile-face], .mahjong-hand-public-melds [data-tile-face], .mahjong-table__dora [data-tile-face], .mahjong-nuki-tray [data-tile-face]")) {
+      for (const el of document.querySelectorAll(".mahjong-river__tile, .mahjong-player__head strong, .mahjong-player__melds [data-tile-face], .mahjong-hand-public-melds [data-tile-face], .mahjong-table__dora [data-tile-face], .mahjong-nuki-tray [data-tile-face], .mahjong-center-seat > span, .mahjong-center-seat > b, .mahjong-table__center > strong, .mahjong-table__wall, .mahjong-table__counters")) {
         const r=el.getBoundingClientRect(), hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
         if (!hit || !el.contains(hit)) hidden.push(`${el.closest('[data-testid]')?.getAttribute('data-testid')}: ${el.textContent || el.getAttribute('data-tile-face')} covered by ${hit?.className}`);
       }
