@@ -69,6 +69,7 @@ test("四位来自两个情侣空间的成员联机摸切、同步并刷新恢�
     ]);
     await expect(pages[0].getByRole("button", { name: "开始对局" })).toBeEnabled();
     await pages[0].getByRole("button", { name: "开始对局" }).click();
+    await Promise.all(pages.map(page => (page.viewportSize()?.width || 0) < (page.viewportSize()?.height || 0) ? page.setViewportSize({ width: 844, height: 390 }) : Promise.resolve()));
     await Promise.all(pages.map((page) => expect(page.getByTestId("mahjong-board")).toBeVisible()));
     await Promise.all(pages.map((page) => expect(page.locator(".mahjong-link-state.is-connected")).toHaveText("实时同步")));
     for (const name of ["海盐一", "海盐二", "晚风一", "晚风二"]) {

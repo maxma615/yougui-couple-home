@@ -1,0 +1,56 @@
+// Public display stress fixtures exercise maximum footprints, separately from real-game tests.
+import { readFileSync } from "node:fs";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import assert from "node:assert/strict";
+import { chromium, webkit } from "@playwright/test";
+import { GameRoom, PublicMeldDialog } from "../../src/components/mahjong/mahjong-client";
+import type { GameView, RoomView } from "../../src/modules/mahjong/types";
+
+let passed = 0;
+for (const engine of [chromium, webkit]) {
+ const browser = await engine.launch({headless:true});
+ try {
+  const page = await browser.newPage();
+  for (const variant of ["sanma", "yonma"] as const) for (const width of [667, 844]) {
+    const capacity = variant === "sanma" ? 3 : 4;
+    const game: GameView = {
+      decisionId: "display-fixture", phase: "dapai", roundWind: 0, roundNumber: 1, honba: 2,
+      remainingTiles: 8, riichiSticks: 2, turnSeat: 0, drawnTile: null,
+      hand: ["p9"], choices: [], settlement: null, ranking: null,
+      doraIndicators: ["p1", "s2", "z1", "p4", "m9"],
+      players: Array.from({length:capacity}, (_,seat) => ({seat, wind:seat, score:35000, handCount:1,
+        discards:Array.from({length:24}, (_,i) => `p${i % 9 + 1}`),
+        melds:["p111+", "p222+", "s333+", "s444+"], riichi:true, ...(variant === "sanma" ? {nuki:2} : {})})),
+    };
+    const room: RoomView = {id:"display", code:"ABCDEFGH", hostUserId:"a", mode:"east", variant,
+      status:"playing", version:1, mySeat:0, game,
+      members:game.players.map(p => ({userId:String(p.seat),seat:p.seat,displayName:`牌友${p.seat}`,kind:"human",ready:true,connected:true})),
+    };
+    const noop = () => {};
+    const html = renderToStaticMarkup(<GameRoom room={room} host busy={false} ownSeat={0} connected onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
+    await page.setViewportSize({width, height:width === 667 ? 375 : 390});
+    const css = readFileSync("src/app/mahjong/mahjong.css", "utf8");
+    await page.setContent(`<style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
+    await page.emulateMedia({reducedMotion:"reduce"});
+    assert.equal(await page.getByTestId("mahjong-dora").locator("[data-tile-face]").count(), 5);
+    const covered = await page.evaluate(() => {
+      const hidden:string[]=[];
+      for (const el of document.querySelectorAll(".mahjong-river__tile, .mahjong-player__head strong, .mahjong-player__melds [data-tile-face], .mahjong-hand-public-melds [data-tile-face], .mahjong-table__dora [data-tile-face]")) {
+        const r=el.getBoundingClientRect(), hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+        if (!hit || !el.contains(hit)) hidden.push(`${el.closest('[data-testid]')?.getAttribute('data-testid')}: ${el.textContent || el.getAttribute('data-tile-face')}`);
+      }
+      return hidden;
+    });
+    assert.deepEqual(covered, [], `${engine.name()} ${variant} ${width}: covered public information`);
+    const detail = renderToStaticMarkup(<PublicMeldDialog player={game.players[1]} member={room.members[1]} onClose={noop}/>);
+    await page.evaluate(html => {document.querySelector('.mahjong-page')!.insertAdjacentHTML('beforeend', html);document.querySelector<HTMLDialogElement>('.mahjong-public-melds')!.showModal();}, detail);
+    const faceSize = await page.locator('.mahjong-public-melds [data-tile-face]').first().boundingBox();
+    assert.ok(faceSize && faceSize.width >= 39 && faceSize.height >= 56, 'zoomed public faces remain readable');
+    assert.equal(await page.getByRole('dialog', {name:'牌友1的公开副露'}).isVisible(), true);
+    await page.evaluate(() => document.querySelector<HTMLDialogElement>('.mahjong-public-melds')!.close());
+    passed++; console.log(`PASS ${engine.name()} ${variant} ${width}: 24 rivers, five indicators, four melds`);
+  }
+ } finally {await browser.close();}
+}
+console.log(`${passed}/8 layout cases passed.`);
