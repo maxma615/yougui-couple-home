@@ -54,3 +54,16 @@ Lighting/mood: Soft, even portrait lighting; elegant, warm, calm.
 Color palette: Restrained harmonious tones; the four distinct backgrounds specified above.
 Constraints: All designs must be original, with no named or existing characters and no resemblance to recognizable game characters. No game logos, no words, no watermark, no mahjong tiles, no table, no interface elements. Sharp clean quadrant boundaries with no dividing lines.
 ```
+
+
+## 2026-10-07 00:38 候选完成，尚未发布
+
+本轮运行源码固定为 `8dd99a02fa2599e3db6b704d01ef1626e762fce0`，Build ID `nfbKSyQWyJ_y4O3oLvd9u`。候选镜像 `yougui-app:8dd99a0-ecs` 已在原 ECS 准备完成，不可变 ID 为 `sha256:0c5747b9703a3eb5bedeb04ed57a1354c027f451a81b16ce102fcd67978902ee`；候选目录 `/srv/yougui/releases/8dd99a0` 已暂存，但 current 仍为 `/srv/yougui/releases/a6056a3`，尚未切换线上版本。
+
+Linux 候选内逐项校验 328 个源码文件和 431 个编译文件，共 759 个，全部 SHA-256 匹配，额外旧编译文件为 0。源清单摘要为 `48a0740e6f4842e9b25c67a7333917bb598d9864113d43c4bbe3461f908708bf`，编译清单摘要为 `a5a9aeb81aa1e00de9c253c23fc5c22f04095cfec40ac859183c251e75949c69`。原创头像文件 SHA-256 为 `4bddca5e3b2afc3e0d11582b5a27e8b0f5b1c6d19073a02aaf85cbcfbe379282`。协调任务也独立核对了本地候选的全部 759 个文件。镜像沿用原 Linux 原生依赖，没有在 ECS 执行 npm 安装或 Next 编译；首次上传退出 1 且未保留错误流，原因不明，唯一一次保留完整私有错误日志的重传退出 0，远端归档哈希通过。
+
+发布阻挡来自真实牌桌。10 月 6 日 23:17:07，用两枚短期专用会话只读检查全部普通成员：一张三麻处于 playing，1 位真人和 2 位电脑，真人在线，处于摸牌决策阶段；另一位成员没有牌桌。检查前后麻将进程和实例身份一致，检查会话已全部撤销，原会话集合未变。没有建桌、开 Socket、解散、退出他人或修改任何牌局。用户尚未确认正常结束该牌局，因此未启用屏障、暂停进程、执行停站备份或切换版本；也不通过轮询等待用户。该状态是最后一次明确检查结果，不声称牌局此后始终未变。
+
+当前安全交付范围是可核对候选与本地源码：`b5431e0..8dd99a0` 的 11 个归属文件均在比较主目录旧基线后同步，逐项哈希一致；原有 `next-env.d.ts` 差异保持不变，SHA-256 仍为 `95a382eaf09f902f766b471435c883e7354f80b2a2f480f9e045baec250831ce`，未对主目录暂存或提交。协调任务已独立复核这 11 个文件及该差异。本节随后仅作独立文档提交并同步本文件，不改变候选运行源码或 Build ID。
+
+待用户正常结束牌桌后，仍需重新执行已复审的权威空桌保护流程，生成新鲜一致性备份和受保护站外副本，再发布并验证线上页面、资源及头像的 HTTP/哈希；这些尚未执行，不把候选通过写成线上通过。Android 实机全屏、方向锁定与操作流畅度限制仍按前文保留。
