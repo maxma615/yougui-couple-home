@@ -616,7 +616,7 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 .mahjong-game .mahjong-table-feedback.is-draw { color: #e4edf1; }
 .mahjong-game .mahjong-table-feedback.is-discard { color: #f1e7d1; }
 .mahjong-game:not(.is-finished) .mahjong-action-dock:empty { display: none; }
-button.mahjong-tile.is-new, .mahjong-game .mahjong-tile.is-new, .mahjong-game button.mahjong-tile.is-drawn {
+.mahjong-game button.mahjong-tile.is-draw-arriving {
   animation: mahjong-tile-arrive 220ms cubic-bezier(.2, .75, .25, 1) both;
 }
 @media (max-height:600px) and (orientation:landscape) {
@@ -654,5 +654,5 @@ button.mahjong-tile.is-new, .mahjong-game .mahjong-tile.is-new, .mahjong-game bu
 }
 @media (prefers-reduced-motion: reduce) {
   .mahjong-game .mahjong-table-feedback { animation: none; opacity: 1; transform: translateX(-50%); }
-  .mahjong-game .mahjong-tile.is-new, .mahjong-game button.mahjong-tile.is-drawn { animation: none; }
+  .mahjong-game button.mahjong-tile.is-draw-arriving { animation: none; }
 }
