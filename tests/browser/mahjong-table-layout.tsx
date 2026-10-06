@@ -21,7 +21,7 @@ for (const engine of [chromium, webkit]) {
       doraIndicators: ["p1", "s2", "z1", "p4", "m9"],
       players: Array.from({length:capacity}, (_,seat) => ({seat, wind:seat, score:35000, handCount:1,
         discards:Array.from({length:24}, (_,i) => `p${i % 9 + 1}`),
-        melds:["p111+", "p222+", "s333+", "s444+"], riichi:true, ...(variant === "sanma" ? {nuki:2} : {})})),
+        melds:["p111+", "p222+", "s333+", "s444+"], riichi:true, ...(variant === "sanma" ? {nuki:seat === 0 ? 4 : 2} : {})})),
     };
     const room: RoomView = {id:"display", code:"ABCDEFGH", hostUserId:"a", mode:"east", variant,
       status:"playing", version:1, mySeat:0, game,
@@ -34,10 +34,11 @@ for (const engine of [chromium, webkit]) {
     const css = readFileSync("src/app/mahjong/mahjong.css", "utf8");
     await page.setContent(`<style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
     await page.emulateMedia({reducedMotion:"reduce"});
+    await page.evaluate(()=>document.querySelector(".mahjong-game")!.insertAdjacentHTML("afterbegin",'<div class="mahjong-screen-hint" role="status" aria-label="屏幕方向提示">请旋转手机</div>'));
     assert.equal(await page.getByTestId("mahjong-dora").locator("[data-tile-face]").count(), 5);
     const covered = await page.evaluate(() => {
       const hidden:string[]=[];
-      for (const el of document.querySelectorAll(".mahjong-river__tile, .mahjong-player__head strong, .mahjong-player__melds [data-tile-face], .mahjong-hand-public-melds [data-tile-face], .mahjong-table__dora [data-tile-face]")) {
+      for (const el of document.querySelectorAll(".mahjong-river__tile, .mahjong-player__head strong, .mahjong-player__melds [data-tile-face], .mahjong-hand-public-melds [data-tile-face], .mahjong-table__dora [data-tile-face], .mahjong-nuki-tray [data-tile-face]")) {
         const r=el.getBoundingClientRect(), hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
         if (!hit || !el.contains(hit)) hidden.push(`${el.closest('[data-testid]')?.getAttribute('data-testid')}: ${el.textContent || el.getAttribute('data-tile-face')} covered by ${hit?.className}`);
       }
@@ -45,6 +46,9 @@ for (const engine of [chromium, webkit]) {
     });
     await page.screenshot({path:`.local/table-new-${engine.name()}-${variant}-${width}-${connected}.png`});
     assert.deepEqual(covered, [], `${engine.name()} ${variant} ${width}: covered public information`);
+    if (variant === "sanma") {
+      for (const player of game.players) assert.equal(await page.getByTestId(`nuki-tiles-${player.seat}`).locator('[data-tile-face="z4"]').count(), player.nuki);
+    } else assert.equal(await page.locator(".mahjong-nuki-tray").count(),0);
     const boardBounds = await page.getByTestId('mahjong-board').boundingBox();
     assert.equal(boardBounds?.y, 0, 'reconnect or orientation hints must not shift the viewport table');
     for (const label of ["自摸", "立直"]) {
@@ -53,6 +57,23 @@ for (const engine of [chromium, webkit]) {
       assert.ok(rect && rect.y >= 0 && rect.y + rect.height <= height, `${engine.name()} ${width}: ${label} outside viewport`);
       assert.equal(await button.isEnabled(), true);
     }
+    // Five simultaneous response types must fit beside the public river, not over it.
+    // Multiple chi/kan alternatives use the actual grouped action JSX.
+    const responseGame:GameView={...game,choices:[{id:"ron",type:"ron"},{id:"kan:p1111",type:"kan",value:"p1111"},{id:"kan:s2222",type:"kan",value:"s2222"},{id:"pon:p111+",type:"pon",value:"p111+"},{id:"chi:p123-",type:"chi",value:"p123-"},{id:"chi:p234-",type:"chi",value:"p234-"},{id:"pass",type:"pass"}]};
+    const response=renderToStaticMarkup(<GameRoom room={{...room,game:responseGame}} host busy={false} ownSeat={0} connected={connected} onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
+    await page.evaluate(html=>{const parsed=new DOMParser().parseFromString(html,'text/html');document.querySelector('.mahjong-action-dock')!.replaceWith(parsed.querySelector('.mahjong-action-dock')!);},response);
+    assert.equal(await page.locator('.mahjong-action-dock > button').count(),5);
+    const actionOverlap=await page.evaluate(()=>{
+      const issues:string[]=[];
+      const targets=document.querySelectorAll('.mahjong-river--0 .mahjong-river__tile,.mahjong-table__own .mahjong-nuki-tray,.mahjong-hand [data-tile-face],.mahjong-hand-public-melds [data-tile-face]');
+      for(const button of document.querySelectorAll('.mahjong-action-dock > button')){
+        const b=button.getBoundingClientRect(),hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);
+        if(b.left<0||b.top<0||b.right>innerWidth||b.bottom>innerHeight||!hit||!button.contains(hit)) issues.push('response action outside viewport or not clickable');
+        for(const target of targets){const t=target.getBoundingClientRect();if(b.left<t.right&&b.right>t.left&&b.top<t.bottom&&b.bottom>t.top)issues.push(`response action covers ${target.className}`);}
+      }
+      return issues;
+    });
+    assert.deepEqual(actionOverlap,[],`${engine.name()} ${variant} ${width}: five response actions cover own public information`);
     const detail = renderToStaticMarkup(<PublicMeldDialog player={game.players[1]} member={room.members[1]} onClose={noop}/>);
     await page.evaluate(html => {document.querySelector('.mahjong-page')!.insertAdjacentHTML('beforeend', html);document.querySelector<HTMLDialogElement>('.mahjong-public-melds')!.showModal();}, detail);
     const faceSize = await page.locator('.mahjong-public-melds [data-tile-face]').first().boundingBox();

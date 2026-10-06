@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
 import { addSession, checkNoOverflow, mutationHeaders, origin, userFixture } from "./fixtures";
+import {northReplacementFixture} from "../fixtures/mahjong-view-game";
 import type { MahjongResponse } from "../../src/modules/mahjong/types";
 
 async function command(context: BrowserContext, input: object) {
@@ -146,9 +147,7 @@ for (const variant of ["sanma", "yonma"] as const) test(`手机${variant}竖屏�
     await expect(page.locator("[data-choice-type]:enabled").first()).toBeVisible();
     await page.screenshot({path: testInfo.outputPath(`${variant}-landscape-table.png`), animations:"disabled"});
     await page.setViewportSize({width: 1280, height: 720});
-    for (const label of ['自摸', '立直']) {
-      const button = page.getByRole('button', {name:label, exact:true});
-      if (await page.locator('.mahjong-settlement-panel').count()) break;
+    for (const button of await page.locator('.mahjong-action-dock button').all()) {
       const rect = await button.boundingBox();
       expect(rect!.y).toBeGreaterThanOrEqual(0); expect(rect!.y + rect!.height).toBeLessThanOrEqual(720);
     }
@@ -182,4 +181,66 @@ test("横屏点击公开副露放大、ESC关闭，不发送出牌请求", async
   expect(rect!.width).toBeGreaterThanOrEqual(39);
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
   expect(posts).toEqual([]);
+});
+
+// Real engine + physical North replacement, bridged through a display API fixture.
+// Actual Socket rooms and account permission remain covered by the live tests above.
+test("拔北确认后北牌保留、合法自摸出现，刷新仍能确认拔北（显示 API 夹具）", async ({page},testInfo) => {
+  const user=await userFixture("拔北牌友"); await addSession(page.context(),user.id);
+  const game=northReplacementFixture();
+  const view:NonNullable<MahjongResponse['room']>={id:"north-display-fixture",code:"ABCDEFGH",hostUserId:user.id,variant:"sanma",mode:"east",status:"playing",version:1,mySeat:0,
+    members:[0,1,2].map(seat=>({userId:seat ? `bot:${seat}` : user.id,kind:seat ? "bot" : "human",displayName:seat ? `电脑${seat}` : "拔北牌友",seat,ready:true,connected:true})),game:game.view(0)};
+  const submitted:unknown[]=[];
+  await page.route('**/api/mahjong',async route=>{
+    if(route.request().method()==='POST') {
+      const body=route.request().postDataJSON(); submitted.push(body);
+      expect(body.action).toBe('respond'); expect(body.roomId).toBe(view.id);
+      expect(body.decisionId).toBe(game.view(0).decisionId);
+      game.respond(0,body.decisionId,body.choiceId); view.game=game.view(0); view.version++;
+    }
+    await route.fulfill({json:{room:view,serviceRunning:false} satisfies MahjongResponse});
+  });
+  await page.setViewportSize({width:844,height:390}); await page.goto('/mahjong');
+  await expect(page.getByRole('button',{name:'自摸',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'拔北',exact:true}).click();
+  const north=page.getByTestId('nuki-tiles-0').locator('[data-tile-face="z4"]');
+  await expect(north).toHaveCount(1); await expect(north).toBeVisible();
+  await expect(page.getByRole('button',{name:'拔北',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'自摸',exact:true})).toBeEnabled();
+  await expect(page.getByRole('status',{name:'牌桌动作'})).toHaveCount(0,{timeout:5000});
+  await expect(north).toBeVisible();
+  expect(submitted).toHaveLength(1);
+  await page.screenshot({path:testInfo.outputPath('sanma-north-persistent-mobile.png'),animations:'disabled'});
+  await page.reload(); await expect(north).toHaveCount(1); await expect(north).toBeVisible();
+  await page.getByRole('button',{name:'查看拔北牌友的公开副露'}).click();
+  const dialog=page.getByRole('dialog',{name:'拔北牌友的公开副露'});
+  await expect(dialog.getByRole('group',{name:'已拔北 1 张'}).locator('[data-tile-face="z4"]')).toHaveCount(1);
+  await page.keyboard.press('Escape'); expect(submitted).toHaveLength(1);
+});
+
+// Display fixture: native choice dialog only submits the explicitly selected original legal option.
+test("多个杠牌方案按需展开，取消不出牌，选中后提交原始选项（显示 API 夹具）", async ({page}) => {
+  const user=await userFixture("选杠牌友"); await addSession(page.context(),user.id);
+  const first={id:"kan:p1111",type:"kan" as const,value:"p1111"},second={id:"kan:s2222",type:"kan" as const,value:"s2222"};
+  const view:NonNullable<MahjongResponse['room']>={id:"call-display-fixture",code:"ABCDEFGH",hostUserId:user.id,variant:"sanma",mode:"east",status:"playing",version:1,mySeat:0,
+    members:[0,1,2].map(seat=>({userId:seat ? `bot:${seat}` : user.id,kind:seat ? "bot" : "human",displayName:`牌友${seat}`,seat,ready:true,connected:true})),game:northReplacementFixture().view(0)};
+  view.game!.choices=[first,second]; const submitted:string[]=[];
+  await page.route('**/api/mahjong',async route=>{
+    if(route.request().method()==='POST') {
+      const body=route.request().postDataJSON(); expect(body.action).toBe('respond'); expect(body.roomId).toBe(view.id);
+      expect(body.decisionId).toBe(view.game!.decisionId); submitted.push(body.choiceId);
+      view.game={...view.game!,choices:[],decisionId:'after-call'}; view.version++;
+    }
+    await route.fulfill({json:{room:view,serviceRunning:false} satisfies MahjongResponse});
+  });
+  await page.setViewportSize({width:667,height:375}); await page.goto('/mahjong');
+  await expect(page.getByRole('button',{name:'杠',exact:true})).toHaveCount(1);
+  await page.getByRole('button',{name:'杠',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'选择杠牌'});
+  await expect(dialog).toBeVisible(); await expect(dialog.locator('[data-tile-face="p1"]')).toHaveCount(4);
+  await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); expect(submitted).toEqual([]);
+  await page.getByRole('button',{name:'杠',exact:true}).click();
+  await dialog.locator('[data-choice-id="kan:s2222"]').click();
+  await expect(dialog).toHaveCount(0); await expect(page.getByRole('button',{name:'杠',exact:true})).toHaveCount(0);
+  expect(submitted).toEqual([second.id]);
 });
