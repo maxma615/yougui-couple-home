@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 
 import { MahjongClient } from "@/components/mahjong/mahjong-client";
 import "./mahjong.css";
+import "./mahjong-river.css";
+import "./mahjong-meld.css";
+import "./mahjong-interaction.css";
 
 export const metadata: Metadata = {
   title: "麻将室 · 有归",

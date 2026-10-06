@@ -25,7 +25,14 @@ async function create(page: Page, variant: "sanma" | "yonma") {
 async function actHumans(pages: Page[]) {
   for (const page of pages) {
     const action = page.locator('[data-choice-type="pass"]:enabled, [data-choice-type="discard"]:enabled, [data-choice-type="ack"]:enabled').first();
-    if (await action.count()) await action.click();
+    if (await action.count()) {
+      const type = await action.getAttribute("data-choice-type");
+      await action.click();
+      if (type === "discard") {
+        await expect(action).toHaveAttribute("aria-pressed", "true");
+        await action.click();
+      }
+    }
   }
 }
 async function dissolve(page: Page) {
@@ -106,6 +113,50 @@ for (const variant of ["sanma", "yonma"] as const) test(`单人${variant === "sa
     await dissolve(page); roomId = undefined;
     await page.reload();
     await expect(page.locator(".mahjong-service-note")).toHaveCount(0);
+  } finally { if (roomId) await command(page.context(), { action: "finish", roomId }); }
+});
+
+test("真人拖动一张合法手牌到桌心后才提交对应的真实弃牌 Choice", async ({ page }) => {
+  const user = await userFixture("拖动切牌"); await addSession(page.context(), user.id);
+  let roomId: string | undefined;
+  try {
+    const room = await create(page, "sanma"); roomId = room.id;
+    await page.getByRole("button", { name: "电脑补齐空位" }).click();
+    await page.getByRole("button", { name: "准备好了" }).click();
+    await page.getByRole("button", { name: "开始对局" }).click();
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(page.locator(".mahjong-player")).toHaveCount(3);
+    await page.route("**/api/mahjong", route => route.request().method() === "GET" ? route.abort("blockedbyclient") : route.continue());
+
+    const discard = page.locator('[data-choice-type="discard"]:enabled').first();
+    // The randomly assigned dealer may be a bot. Answer any intervening call
+    // before waiting for our first turn; otherwise a legal pass holds the game.
+    await expect.poll(async () => {
+      if (await discard.count()) return true;
+      const pass = page.locator('[data-choice-type="pass"]:enabled').first();
+      if (await pass.count()) await pass.click();
+      return false;
+    }, { timeout: 30_000 }).toBe(true);
+    await expect(discard).toBeVisible();
+    const choiceId = await discard.getAttribute("data-choice-id");
+    expect(choiceId).toBeTruthy();
+    const source = await discard.boundingBox();
+    const target = await page.locator(".mahjong-table__center").boundingBox();
+    expect(source).not.toBeNull(); expect(target).not.toBeNull();
+    const ownRiver = page.getByTestId(`river-${room.mySeat}`).locator("[data-tile]");
+    const before = await ownRiver.count();
+    const actionResponse = page.waitForResponse(response => response.url().endsWith("/api/mahjong") && response.request().method() === "POST");
+
+    await page.mouse.move(source!.x + source!.width / 2, source!.y + source!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(target!.x + target!.width / 2, target!.y + target!.height / 2, { steps: 8 });
+    await expect(page.getByTestId("mahjong-board")).toHaveClass(/is-discard-target/);
+    await page.mouse.up();
+
+    const response = await actionResponse;
+    expect(response.ok(), await response.text()).toBe(true);
+    expect(response.request().postDataJSON()).toMatchObject({ action: "respond", choiceId });
+    await expect.poll(() => ownRiver.count(), { timeout: 10_000 }).toBe(before + 1);
   } finally { if (roomId) await command(page.context(), { action: "finish", roomId }); }
 });
 

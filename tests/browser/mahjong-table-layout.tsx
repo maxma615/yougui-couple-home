@@ -26,7 +26,7 @@ for (const engine of [chromium, webkit]) {
       hand: ["p9"], choices: [{id:"tsumo",type:"tsumo"},{id:"riichi:p9",type:"riichi",value:"p9"}], settlement: null, ranking: null,
       doraIndicators: ["p1", "s2", "z1", "p4", "m9"],
       players: Array.from({length:capacity}, (_,seat) => ({seat, wind:seat, score:35000, handCount:1,
-        discards:Array.from({length:24}, (_,i) => `p${i % 9 + 1}`),
+        discards:Array.from({length:24}, (_,i) => `p${i % 9 + 1}${i === 3 ? "*" : ""}`),
         melds:["p111+", "p222+", "s333+", "s444+"], riichi:true, ...(variant === "sanma" ? {nuki:seat === 0 ? 4 : 2} : {})})),
     };
     const room: RoomView = {id:"display", code:"ABCDEFGH", hostUserId:"a", mode:"east", variant,
@@ -37,7 +37,7 @@ for (const engine of [chromium, webkit]) {
     const html = renderToStaticMarkup(<GameRoom room={room} host busy={false} ownSeat={0} connected={connected} onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
     const height = ({667:375,844:390,1280:720,1440:810} as Record<number,number>)[width];
     await page.setViewportSize({width, height});
-    const css = readFileSync("src/app/mahjong/mahjong.css", "utf8");
+    const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css"].map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
     await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
     await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
     await page.emulateMedia({reducedMotion:"reduce"});

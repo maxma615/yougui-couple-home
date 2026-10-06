@@ -87,9 +87,20 @@ test("四位来自两个情侣空间的成员联机摸切、同步并刷新恢�
     for (const page of pages) {
       await page.route("**/api/mahjong", (route) => route.request().method() === "GET" ? route.abort("blockedbyclient") : route.continue());
     }
-    await turnPage.locator('[data-choice-type="discard"]').first().click();
+    const discard = turnPage.locator('[data-choice-type="discard"]').first();
+    const choiceId = await discard.getAttribute("data-choice-id");
+    const ownRiver = turnPage.getByTestId(`river-${turnSeat}`).locator("[data-tile]");
+    const riverBeforeSelection = await ownRiver.count();
+    await discard.click();
+    await expect(discard).toHaveAttribute("aria-pressed", "true");
+    await expect(ownRiver).toHaveCount(riverBeforeSelection);
+    const discardResponse = turnPage.waitForResponse(response => response.url().endsWith("/api/mahjong") && response.request().method() === "POST");
+    await discard.click();
+    const response = await discardResponse;
+    expect(response.ok(), await response.text()).toBe(true);
+    expect(response.request().postDataJSON().choiceId).toBe(choiceId);
 
-    await Promise.all(pages.map((page) => expect(page.getByTestId(`river-${turnSeat}`).locator("[data-tile]")).toHaveCount(1)));
+    await Promise.all(pages.map((page) => expect(page.getByTestId(`river-${turnSeat}`).locator("[data-tile]")).toHaveCount(riverBeforeSelection + 1)));
     await pages[0].screenshot({ path: testInfo.outputPath("mahjong-desktop.png"), animations: "disabled", fullPage: true });
     await pages[1].screenshot({ path: testInfo.outputPath("mahjong-mobile.png"), animations: "disabled", fullPage: true });
     const mobilePage = pages[1];

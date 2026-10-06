@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, Expand, LoaderCircle, Radio, RefreshCw, Sparkles, Swords, Smartphone, Wifi, WifiOff, X } from "lucide-react";
 
 import { apiRequest, errorMessage } from "@/components/api-client";
@@ -10,6 +10,8 @@ import { SessionProvider, useSession } from "@/hooks/use-session";
 import type { Choice, GameMode, GameVariant, GameView, MahjongCommand, MahjongResponse, PublicPlayer, RoomMember, RoomView } from "@/modules/mahjong/types";
 import { MahjongRules } from "./mahjong-rules";
 import { TileFace, tileKey, tileName } from "./mahjong-tile";
+import { MahjongRiver as River } from "./mahjong-river";
+import { MahjongMeld as MeldView } from "./mahjong-meld";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
 
@@ -358,7 +360,112 @@ export function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFin
   const [inspectedSeat, setInspectedSeat] = useState<number | null>(null);
   const [riichiMode, setRiichiMode] = useState(false);
   const [pendingCallType, setPendingCallType] = useState<Choice["type"] | null>(null);
+  const [selectedHandTile, setSelectedHandTile] = useState<{ tileId: string; choiceId: string } | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ tileId: string; x: number; y: number } | null>(null);
+  const [overDiscardTarget, setOverDiscardTarget] = useState(false);
+  const [choiceSubmitted, setChoiceSubmitted] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const selectedHandTileRef = useRef<{ tileId: string; choiceId: string } | null>(null);
+  const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
+  const submittedChoiceRef = useRef(false);
+  const suppressPointerClickRef = useRef(false);
+  const wasBusyRef = useRef(busy);
+  const clearHandSelection = useCallback(() => {
+    selectedHandTileRef.current = null;
+    setSelectedHandTile(null);
+  }, []);
   useEffect(() => { setRiichiMode(false); setPendingCallType(null); }, [game?.decisionId, room.id]);
+  useEffect(() => {
+    clearHandSelection();
+    activeTilePointerRef.current = null;
+    submittedChoiceRef.current = false;
+    setChoiceSubmitted(false);
+    setDragPreview(null);
+    setOverDiscardTarget(false);
+    suppressPointerClickRef.current = false;
+  }, [clearHandSelection, game?.decisionId, room.id]);
+  useEffect(() => {
+    if (busy || !connected) {
+      clearHandSelection();
+      activeTilePointerRef.current = null;
+      setDragPreview(null);
+      setOverDiscardTarget(false);
+    }
+    if (wasBusyRef.current && !busy) {
+      submittedChoiceRef.current = false;
+      setChoiceSubmitted(false);
+    }
+    wasBusyRef.current = busy;
+  }, [busy, connected, clearHandSelection]);
+
+  const submitHandChoice = (choice: Choice) => {
+    if (busy || !connected || submittedChoiceRef.current) return;
+    submittedChoiceRef.current = true;
+    setChoiceSubmitted(true);
+    clearHandSelection();
+    onChoice(choice);
+  };
+  const activateHandTile = (tileId: string, choice: Choice, event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (busy || !connected || submittedChoiceRef.current) return;
+    if (suppressPointerClickRef.current && event.detail > 0) {
+      suppressPointerClickRef.current = false;
+      return;
+    }
+    const selected = selectedHandTileRef.current;
+    if (selected?.tileId === tileId && selected.choiceId === choice.id) {
+      submitHandChoice(choice);
+      return;
+    }
+    const next = { tileId, choiceId: choice.id };
+    selectedHandTileRef.current = next;
+    setSelectedHandTile(next);
+  };
+  const startHandPointer = (tileId: string, choice: Choice, event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (busy || !connected || submittedChoiceRef.current || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
+    suppressPointerClickRef.current = false;
+    activeTilePointerRef.current = {
+      pointerId: event.pointerId ?? 0, tileId, choice,
+      startX: event.clientX, startY: event.clientY, dragged: false, element: event.currentTarget,
+    };
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* Pointer capture is unavailable in some embedded browsers. */ }
+  };
+  const moveHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = activeTilePointerRef.current;
+    if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
+    const dx = event.clientX - active.startX, dy = event.clientY - active.startY;
+    if (!active.dragged && Math.hypot(dx, dy) >= 12) active.dragged = true;
+    if (active.dragged) {
+      setDragPreview({ tileId, x: dx, y: dy });
+      const center = tableRef.current?.querySelector(".mahjong-table__center");
+      const target = document.elementFromPoint?.(event.clientX, event.clientY);
+      setOverDiscardTarget(Boolean(center && target && center.contains(target)));
+    }
+  };
+  const endHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = activeTilePointerRef.current;
+    if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
+    const dx = event.clientX - active.startX, dy = event.clientY - active.startY;
+    const dragged = active.dragged || Math.hypot(dx, dy) >= 12;
+    const center = tableRef.current?.querySelector(".mahjong-table__center");
+    const target = document.elementFromPoint?.(event.clientX, event.clientY);
+    const landedInTable = Boolean(center && target && center.contains(target));
+    activeTilePointerRef.current = null;
+    setDragPreview(null);
+    setOverDiscardTarget(false);
+    try { active.element.releasePointerCapture?.(event.pointerId); } catch { /* The pointer may already have been released. */ }
+    if (!dragged) return;
+    suppressPointerClickRef.current = true;
+    window.setTimeout(() => { suppressPointerClickRef.current = false; }, 0);
+    if (landedInTable) submitHandChoice(active.choice);
+  };
+  const cancelHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = activeTilePointerRef.current;
+    if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
+    activeTilePointerRef.current = null;
+    setDragPreview(null);
+    setOverDiscardTarget(false);
+    try { active.element.releasePointerCapture?.(event.pointerId); } catch { /* Cancellation already released the pointer. */ }
+  };
   if (!game) return <section className="mahjong-empty-game"><LoaderCircle size={20} className="mahjong-spin"/>正在载入牌局…</section>;
   const isFinished = room.status === "finished";
   const capacity = game.players.length;
@@ -391,7 +498,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFin
       return <div className="mahjong-ranking__row" key={row.seat}><span>0{row.rank}</span><strong>{member?.displayName || (player?.seat === ownSeat ? ownMember?.displayName || "你" : "牌友")}</strong><b>{row.score.toLocaleString()} 点</b></div>;
     })}</div><div className="mahjong-ranking__actions">{host ? <button type="button" className="mahjong-button mahjong-button--gold" disabled={busy} onClick={onRematch}><RefreshCw size={16}/>再开一场</button> : <span>等待房主发起下一场</span>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散牌桌</button> : null}</div></section> : null}
 
-    <div className="mahjong-table" data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
+    <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
       <div className="mahjong-table__grain" aria-hidden="true"/>
       {feedback ? <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
       <svg className="mahjong-table__seams" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"><path d="M170 90H830L940 600H60ZM170 90L442 285M830 90L558 285M60 600L442 375M940 600L558 375"/><path d="M182 98H818L925 590H75Z"/></svg>
@@ -411,8 +518,13 @@ export function GameRoom({ room, busy, host, ownSeat, connected, onChoice, onFin
       {game.players.map((player) => <River key={player.seat} player={player} offset={relativeSeat(player.seat)} />)}
       <div className="mahjong-table__own"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
         <div className="mahjong-hand-block"><div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
-          {hand.map((tile, index) => <HandActionTile key={`hand-${index}-${tile}`} value={tile} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(tile) && !choice.value.endsWith("_"))} disabled={busy} onChoice={onChoice}/ >)}
-          {game.drawnTile ? <span className="mahjong-drawn-wrap"><i>摸</i><HandActionTile key={game.decisionId} value={game.drawnTile} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={busy} drawn onChoice={onChoice}/></span> : null}
+          {hand.map((tile, index) => {
+            const tileId = `hand:${index}:${tile}`;
+            const choices = allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(tile) && !choice.value.endsWith("_"));
+            const choice = choices[0];
+            return <HandActionTile key={tileId} tileId={tileId} value={tile} choices={choices} disabled={busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
+          })}
+          {game.drawnTile ? <span className="mahjong-drawn-wrap"><i>摸</i><HandActionTile key={game.decisionId} tileId={`drawn:${game.decisionId}:${game.drawnTile}`} value={game.drawnTile} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={busy || !connected || choiceSubmitted} drawn selected={Boolean(selectedHandTile?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` && selectedHandTile.choiceId === allowedChoices.find(choice => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))?.id)} drag={dragPreview?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` ? dragPreview : null} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/></span> : null}
         </div>{ownPlayer?.melds.length ? <div className="mahjong-hand-public-melds" role="group" aria-label="你的公开副露">{ownPlayer.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}</div></div>
       </div>
     </div>
@@ -469,33 +581,12 @@ function CallChoiceDialog({ type, choices, busy, onClose, onChoice }: { type: Ch
     <button type="button" className="mahjong-icon-button mahjong-public-melds__close" aria-label="关闭选牌" onClick={onClose}><X size={18}/></button>
     <p className="mahjong-kicker">YOUR CALL</p><h2>{title}</h2>
     <div className="mahjong-call-options">{choices.map(choice => {
-      const match = choice.value?.match(/^([mpsz])(\d+)/);
+      const match = choice.value?.match(/^([mpsz])([0-9+\-=]+)$/);
       return <button key={choice.id} type="button" className="mahjong-button mahjong-button--action" disabled={busy} data-choice-id={choice.id} data-choice-type={type} aria-label={choice.value ? choiceDescription(choice.value) : choiceNames[type]} onClick={() => onChoice(choice)}>
-        {match ? [...match[2]].map((number,index) => <TileFace key={index} value={`${match[1]}${number}`}/>) : choiceDescription(choice.value || choiceNames[type])}
+        {match ? [...match[2].replace(/\D/g, "")].map((number,index) => <TileFace key={index} value={`${match[1]}${number}`}/>) : choiceDescription(choice.value || choiceNames[type])}
       </button>;
     })}</div>
   </dialog>;
-}
-
-function MeldView({ meld }: { meld: string }) {
-  const match = meld.match(/^([mpsz])([0-9+\-=]+)$/);
-  if (!match) return <span className="mahjong-meld" aria-label="公开副露"><small>副露</small></span>;
-  const suit = match[1];
-  const digits = match[2].replace(/\D/g, "");
-  const called = /[+\-=]/.test(match[2]);
-  const closedKan = digits.length === 4 && !called;
-  const kind = digits.length === 4 ? closedKan ? "暗杠" : "杠" : digits.length === 3 && (suit === "z" || /^([0-9])\1\1$/.test(digits.replace(/0/g,"5"))) ? "碰" : "吃";
-  return <span className={`mahjong-meld${closedKan ? " is-closed" : ""}`} aria-label={`${kind}${closedKan ? "，暗牌" : ""}`} title={kind}>
-    <small>{kind}</small><span className="mahjong-meld__tiles">{digits.split("").map((number, index) => closedKan
-      ? <i className="mahjong-meld__back" aria-hidden="true" key={`${index}-${number}`}/>
-      : <TileFace value={`${suit}${number}`} key={`${index}-${number}`} />)}</span>
-  </span>;
-}
-
-function River({ player, offset }: { player: PublicPlayer; offset: number }) {
-  return <div className={`mahjong-river mahjong-river--${offset}${player.discards.length > 18 ? " is-long" : ""}`} data-testid={`river-${player.seat}`} aria-label={`${windNames[player.wind] || "東"}家河牌`}>
-    {player.discards.map((tile, index) => <span className={`mahjong-river__tile${tile.includes("_") ? " is-tsumogiri" : ""}${tile.includes("*") ? " is-riichi" : ""}`} data-tile={tileKey(tile)} key={`${index}-${tile}`} title={`${tileName(tile)}${tile.includes("*") ? " · 立直" : ""}`}><TileFace value={tile}/></span>)}
-  </div>;
 }
 
 function indicatorBonus(value: string, variant: GameVariant) {
@@ -514,14 +605,24 @@ function displayShortTile(value: string) {
 }
 
 function choiceDescription(value: string) {
-  const match = value.match(/^([mpsz])(\d+)/);
+  const match = value.match(/^([mpsz])([0-9+\-=]+)$/);
   if (!match) return value;
-  return [...match[2]].map((number) => displayShortTile(`${match[1]}${number}`)).join(" ");
+  return [...match[2].replace(/\D/g, "")].map((number) => displayShortTile(`${match[1]}${number}`)).join(" ");
 }
 
-function HandActionTile({ value, choices, disabled, drawn = false, onChoice }: { value: string; choices: Choice[]; disabled: boolean; drawn?: boolean; onChoice: (choice: Choice) => void }) {
+function HandActionTile({ tileId, value, choices, disabled, drawn = false, selected = false, drag, onActivate, onPointerStart, onPointerMove, onPointerEnd, onPointerCancel }: {
+  tileId: string; value: string; choices: Choice[]; disabled: boolean; drawn?: boolean; selected?: boolean;
+  drag: { tileId: string; x: number; y: number } | null;
+  onActivate: (tileId: string, choice: Choice, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onPointerStart: (tileId: string, choice: Choice, event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerMove: (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerEnd: (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerCancel: (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => void;
+}) {
   const choice = choices[0];
-  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${choice ? " is-playable" : " is-locked"}`} type="button" disabled={!choice || disabled} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} onClick={() => choice && onChoice(choice)}/>;
+  const dragging = Boolean(drag);
+  const style = drag ? { "--mahjong-drag-x": `${drag.x}px`, "--mahjong-drag-y": `${drag.y}px` } as CSSProperties : undefined;
+  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)}/>;
 }
 
 function SettlementPanel({ game, room }: { game: GameView; room: RoomView }) {

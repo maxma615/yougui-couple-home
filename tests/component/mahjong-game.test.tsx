@@ -9,7 +9,7 @@ import type { GameView, RoomView } from "@/modules/mahjong/types";
 
 const screenDescriptors = [
   [document.documentElement, "requestFullscreen"], [document, "exitFullscreen"],
-  [document, "fullscreenElement"], [window.screen, "orientation"],
+  [document, "fullscreenElement"], [document, "elementFromPoint"], [window.screen, "orientation"],
   [HTMLDialogElement.prototype, "showModal"],
 ].map(([target, key]) => ({ target: target as object, key: key as string, descriptor: Object.getOwnPropertyDescriptor(target as object, key as string) }));
 afterEach(() => {
@@ -165,6 +165,110 @@ it("shows only the offered response actions and sends the original option, inclu
   expect(onChoice).toHaveBeenLastCalledWith(view.choices[1]);
 });
 
+it("requires a second activation of the same physical tile before sending its legal discard", () => {
+  const view = fixtureGame().view(0);
+  view.hand = ["p1", "p1", "p2"];
+  view.drawnTile = null;
+  const discard = { id: "discard:p1", type: "discard" as const, value: "p1" };
+  view.choices = [discard];
+  const onChoice = show(view);
+  const copies = screen.getAllByRole("button", { name: "切出 一筒" });
+
+  fireEvent.click(copies[0]);
+  expect(onChoice).not.toHaveBeenCalled();
+  expect(copies[0].getAttribute("aria-pressed")).toBe("true");
+
+  fireEvent.click(copies[1]);
+  expect(onChoice).not.toHaveBeenCalled();
+  expect(copies[0].getAttribute("aria-pressed")).toBe("false");
+  expect(copies[1].getAttribute("aria-pressed")).toBe("true");
+
+  fireEvent.click(copies[1]);
+  expect(onChoice).toHaveBeenCalledTimes(1);
+  expect(onChoice).toHaveBeenCalledWith(discard);
+});
+
+it("clears a selected tile and disables submission while busy or disconnected", () => {
+  const view = fixtureGame().view(0);
+  view.hand = ["p1", "p2"];
+  view.drawnTile = null;
+  const discard = { id: "discard:p1", type: "discard" as const, value: "p1" };
+  view.choices = [discard];
+  const onChoice = vi.fn();
+  const props = { host: true, ownSeat: 0, onChoice, onFinish: () => {}, onRematch: () => {}, onLeave: () => {} };
+  const mounted = render(<GameRoom room={room(view)} busy={false} connected {...props}/>);
+  const tile = screen.getByRole("button", { name: "切出 一筒" });
+  fireEvent.click(tile);
+  expect(tile.getAttribute("aria-pressed")).toBe("true");
+
+  mounted.rerender(<GameRoom room={room(view)} busy={true} connected {...props}/>);
+  expect((tile as HTMLButtonElement).disabled).toBe(true);
+  expect(tile.getAttribute("aria-pressed")).toBe("false");
+  fireEvent.click(tile);
+  expect(onChoice).not.toHaveBeenCalled();
+
+  mounted.rerender(<GameRoom room={room(view)} busy={false} connected={false} {...props}/>);
+  expect((tile as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(tile);
+  expect(onChoice).not.toHaveBeenCalled();
+});
+
+it("submits a tile only after a real drag clears the distance threshold and lands inside the table", () => {
+  const view = fixtureGame().view(0);
+  view.hand = ["p1", "p2"];
+  view.drawnTile = null;
+  const discard = { id: "discard:p1", type: "discard" as const, value: "p1" };
+  view.choices = [discard];
+  const onChoice = show(view);
+  const tile = screen.getByRole("button", { name: "切出 一筒" });
+  const board = screen.getByTestId("mahjong-board");
+  Object.defineProperty(board, "getBoundingClientRect", { configurable: true, value: () => ({ x: 0, y: 0, left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, toJSON: () => ({}) }) });
+  const center = board.querySelector(".mahjong-table__center")!;
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: (x: number, y: number) => x >= 250 && x <= 350 && y >= 140 && y <= 220 ? center : document.body });
+
+  fireEvent.pointerDown(tile, { pointerId: 1, isPrimary: true, button: 0, clientX: 30, clientY: 350 });
+  fireEvent.pointerMove(tile, { pointerId: 1, isPrimary: true, button: 0, clientX: 34, clientY: 350 });
+  fireEvent.pointerUp(tile, { pointerId: 1, isPrimary: true, button: 0, clientX: 34, clientY: 350 });
+  fireEvent.click(tile);
+  expect(onChoice).not.toHaveBeenCalled();
+
+  fireEvent.pointerDown(tile, { pointerId: 2, isPrimary: true, button: 0, clientX: 30, clientY: 350 });
+  fireEvent.pointerMove(tile, { pointerId: 2, isPrimary: true, button: 0, clientX: 700, clientY: 500 });
+  expect(tile.classList.contains("is-dragging")).toBe(true);
+  fireEvent.pointerUp(tile, { pointerId: 2, isPrimary: true, button: 0, clientX: 700, clientY: 500 });
+  expect(onChoice).not.toHaveBeenCalled();
+
+  fireEvent.pointerDown(tile, { pointerId: 3, isPrimary: true, button: 0, clientX: 30, clientY: 350 });
+  fireEvent.pointerMove(tile, { pointerId: 3, isPrimary: true, button: 0, clientX: 300, clientY: 180 });
+  expect(tile.classList.contains("is-dragging")).toBe(true);
+  expect(board.classList.contains("is-discard-target")).toBe(true);
+  fireEvent.pointerUp(tile, { pointerId: 3, isPrimary: true, button: 0, clientX: 300, clientY: 180 });
+  expect(onChoice).toHaveBeenCalledTimes(1);
+  expect(onChoice).toHaveBeenCalledWith(discard);
+});
+
+it("cancels a drag without submitting even when the operating system cancels over the table center", () => {
+  const view = fixtureGame().view(0);
+  view.hand = ["p1"];
+  view.drawnTile = null;
+  const discard = { id: "discard:p1", type: "discard" as const, value: "p1" };
+  view.choices = [discard];
+  const onChoice = show(view);
+  const tile = screen.getByRole("button", { name: "切出 一筒" });
+  const board = screen.getByTestId("mahjong-board");
+  const center = board.querySelector(".mahjong-table__center")!;
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => center });
+
+  fireEvent.pointerDown(tile, { pointerId: 9, isPrimary: true, button: 0, clientX: 30, clientY: 350 });
+  fireEvent.pointerMove(tile, { pointerId: 9, isPrimary: true, button: 0, clientX: 300, clientY: 180 });
+  expect(board.classList.contains("is-discard-target")).toBe(true);
+  fireEvent.pointerCancel(tile, { pointerId: 9, isPrimary: true, button: 0, clientX: 300, clientY: 180 });
+
+  expect(onChoice).not.toHaveBeenCalled();
+  expect(board.classList.contains("is-discard-target")).toBe(false);
+  expect(tile.classList.contains("is-dragging")).toBe(false);
+});
+
 it("forwards the actual legal tsumo choice after a closed North replacement win", () => {
   const game = fixtureGame(), initial = game.view(0);
   game.respond(0, initial.decisionId, initial.choices.find(c=>c.type === "nuki")!.id);
@@ -201,7 +305,11 @@ it("opens riichi tile selection only with a legal option and sends the selected 
   const onChoice=show(before);
   fireEvent.click(screen.getByRole("button",{name:"立直"}));
   expect(onChoice).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button",{name:"立直后切出 北风"}));
+  const tile = screen.getByRole("button",{name:"立直后切出 北风"});
+  fireEvent.click(tile);
+  expect(onChoice).not.toHaveBeenCalled();
+  expect(tile.getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(tile);
   expect(onChoice).toHaveBeenCalledWith(legal);
 });
 
@@ -239,7 +347,22 @@ it("shows a red-five triplet as pon in both the public meld and its acknowledged
   vi.useFakeTimers(); const view=fixtureGame().view(0);
   const props={busy:false,host:true,ownSeat:0,connected:true,onChoice:()=>{},onFinish:()=>{},onRematch:()=>{},onLeave:()=>{}};
   const rendered=render(<GameRoom {...props} room={room(view)}/>);
-  rendered.rerender(<GameRoom {...props} room={room({...view,decisionId:'red-pon',players:view.players.map(p=>p.seat===1 ? {...p,melds:['p055+']} : p)})}/>);
+  rendered.rerender(<GameRoom {...props} room={room({...view,decisionId:'red-pon',players:view.players.map(p=>p.seat===1 ? {...p,melds:['p505+']} : p)})}/>);
   expect(screen.getByRole('status',{name:'牌桌动作'}).textContent).toContain('碰');
-  expect(document.querySelector('.mahjong-player__melds .mahjong-meld')?.getAttribute('aria-label')).toBe('碰');
+  expect(document.querySelector('.mahjong-player__melds .mahjong-meld')?.getAttribute('aria-label')).toBe('碰，来自下家');
+});
+
+it("shows all three tiles when a chi option's source marker is inside the sequence", () => {
+  Object.defineProperty(HTMLDialogElement.prototype,"showModal",{configurable:true,value:function(this:HTMLDialogElement){this.open=true;}});
+  const view=fixtureGame().view(0);
+  const first={id:"chi:p12-3",type:"chi" as const,value:"p12-3"};
+  view.choices=[first,{id:"chi:p2-34",type:"chi",value:"p2-34"},{id:"pass",type:"pass"}];
+  const onChoice=show(view);
+  fireEvent.click(screen.getByRole("button",{name:"吃"}));
+  const dialog=screen.getByRole("dialog",{name:"选择吃牌"});
+  const option=dialog.querySelector<HTMLButtonElement>('[data-choice-id="chi:p12-3"]')!;
+  expect([...option.querySelectorAll('[data-tile-face]')].map(tile=>tile.getAttribute('data-tile-face'))).toEqual(["p1","p2","p3"]);
+  expect(option.getAttribute('aria-label')).toBe('1筒 2筒 3筒');
+  fireEvent.click(option);
+  expect(onChoice).toHaveBeenCalledWith(first);
 });
