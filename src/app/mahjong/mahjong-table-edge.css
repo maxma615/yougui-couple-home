@@ -128,3 +128,11 @@
 .mahjong-page .mahjong-game .mahjong-nuki-tray > small {
   font-size: clamp(9px, min(1.1cqw, 1.8cqh), 10px);
 }
+
+/* Extra kan tiles lengthen the rotated rack. Reserve one back-tile depth
+   beneath the upper-left indicators on short landscape tables. */
+@media (max-height: 600px) and (orientation: landscape) {
+  .mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-opponent-rack {
+    top: calc(50% + min(1.4cqw, 2.9cqh, 22px));
+  }
+}
