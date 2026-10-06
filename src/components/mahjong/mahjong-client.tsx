@@ -380,7 +380,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
 }) {
   const game = room.game;
   const tableScreen = useTableScreen();
-  const feedback = useTableFeedback(game, room.members, ownSeat, room.id);
+  const feedback = useTableFeedback(game, room.members, ownSeat, room.id, {connected, canAnimate: motionCanAnimate});
   const [inspectedSeat, setInspectedSeat] = useState<number | null>(null);
   const [riichiMode, setRiichiMode] = useState(false);
   const [pendingCallType, setPendingCallType] = useState<Choice["type"] | null>(null);
