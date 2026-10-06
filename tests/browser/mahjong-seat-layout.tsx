@@ -8,7 +8,7 @@ import {GameRoom} from "../../src/components/mahjong/mahjong-client";
 import {RiichiGame} from "../../src/modules/mahjong/engine";
 import {SanmaGame} from "../../src/modules/mahjong/sanma";
 import type {RoomView} from "../../src/modules/mahjong/types";
-const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css", "mahjong-table-center.css"].map(f=>readFileSync("src/app/mahjong/"+f,"utf8")).join("\n");
+const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"].map(f=>readFileSync("src/app/mahjong/"+f,"utf8")).join("\n");
 let passed=0;
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true});
@@ -36,7 +36,17 @@ for(const engine of [chromium,webkit]){
      assert.ok(Math.abs(readout.a-Math.cos(angle))<.001&&Math.abs(readout.b-Math.sin(angle))<.001,"each score faces its relative table edge as observed in the official guide");
      assert.ok(readout.font>=8.99,"small landscape center scores must remain at least 9 CSS px");
      if(offset!==0)assert.equal(await page.locator(`.mahjong-table__position [data-motion-rack-seat="${p.seat}"] > i`).count(),p.handCount);
+     if(offset!==0 && (offset===1||capacity===3||offset===3)){
+      const rack=await page.locator(`.mahjong-table__position .mahjong-player[data-seat="${p.seat}"] .mahjong-opponent-rack`).boundingBox();
+      assert.ok(rack,"opponent's physical rack must be visible");
+      const board=await page.locator(".mahjong-table").boundingBox();
+      assert.ok(board,"table bounds must be measurable");
+      const x=(rack.x+rack.width/2-board.x)/board.width;
+      assert.ok(offset===1?x>.84:x<.16,"side hands must occupy the table's outer edge, as seen in the official whole-table screenshot");
+     }
     }
+    const nameFonts=await page.locator(".mahjong-player__head strong").evaluateAll(names=>names.map(el=>parseFloat(getComputedStyle(el).fontSize)));
+    assert.ok(nameFonts.every(size=>size>=9.99),"compact player cards must keep names at least 10 CSS px");
     const centerShape=await page.locator(".mahjong-table__center").evaluate(el=>{
      const b=el.getBoundingClientRect(),radius=getComputedStyle(el).borderTopLeftRadius;
      const pixels=parseFloat(radius)*(radius.includes("%")?Math.min(b.width,b.height)/100:1);

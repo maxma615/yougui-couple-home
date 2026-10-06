@@ -8,6 +8,7 @@ import { GameRoom, PublicMeldDialog } from "../../src/components/mahjong/mahjong
 import type { GameView, RoomView } from "../../src/modules/mahjong/types";
 
 let passed = 0;
+let partialMelds = 0;
 for (const engine of [chromium, webkit]) {
  const browser = await engine.launch({headless:true});
  try {
@@ -37,15 +38,24 @@ for (const engine of [chromium, webkit]) {
     const html = renderToStaticMarkup(<GameRoom room={room} host busy={false} ownSeat={0} connected={connected} onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
     const height = ({667:375,844:390,1280:720,1440:810} as Record<number,number>)[width];
     await page.setViewportSize({width, height});
-    const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css"].map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
-    await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
+    const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"].map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
+    await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
     await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
     await page.emulateMedia({reducedMotion:"reduce"});
     await page.evaluate(()=>document.querySelector(".mahjong-game")!.insertAdjacentHTML("afterbegin",'<div class="mahjong-screen-hint" role="status" aria-label="屏幕方向提示">请旋转手机</div>'));
     assert.equal(await page.getByTestId("mahjong-dora").locator("[data-tile-face]").count(), 5);
+    for(const heading of await page.locator("button.mahjong-player__head").all()) {
+      const bounds=await heading.boundingBox();
+      assert.ok(bounds && bounds.width>=43.99 && bounds.height>=43.99,"compact public-meld inspect buttons must retain 44 CSS px touch targets");
+      const clickable=await heading.evaluate(el=>{
+        const b=el.getBoundingClientRect(),table=document.querySelector('.mahjong-table')!.getBoundingClientRect();
+        return b.left>=table.left && b.right<=table.right && b.top>=table.top && b.bottom<=table.bottom && [[.1,.1],[.9,.1],[.1,.9],[.9,.9]].every(([x,y])=>el.contains(document.elementFromPoint(b.left+b.width*x,b.top+b.height*y)));
+      });
+      assert.ok(clickable,"the whole inspect button must stay within the table and remain clickable");
+    }
     const covered = await page.evaluate(() => {
       const hidden:string[]=[];
-      for (const el of document.querySelectorAll(".mahjong-river__tile, .mahjong-player__head strong, .mahjong-player__melds [data-tile-face], .mahjong-hand-public-melds [data-tile-face], .mahjong-table__dora [data-tile-face], .mahjong-nuki-tray [data-tile-face], .mahjong-center-seat > span, .mahjong-center-seat > b, .mahjong-table__center > strong, .mahjong-table__wall, .mahjong-table__counters")) {
+      for (const el of document.querySelectorAll(".mahjong-river__tile, .mahjong-table__position .mahjong-player__hidden > i, .mahjong-player__head strong, .mahjong-player__melds [data-tile-face], .mahjong-hand-public-melds [data-tile-face], .mahjong-table__dora [data-tile-face], .mahjong-nuki-tray [data-tile-face], .mahjong-center-seat > span, .mahjong-center-seat > b, .mahjong-table__center > strong, .mahjong-table__wall, .mahjong-table__counters")) {
         const r=el.getBoundingClientRect(), hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
         if (!hit || !el.contains(hit)) hidden.push(`${el.closest('[data-testid]')?.getAttribute('data-testid')}: ${el.textContent || el.getAttribute('data-tile-face')} covered by ${hit?.className}`);
       }
@@ -54,6 +64,8 @@ for (const engine of [chromium, webkit]) {
     await page.screenshot({path:`.local/table-new-${engine.name()}-${variant}-${width}-${connected}.png`});
     assert.deepEqual(covered, [], `${engine.name()} ${variant} ${width}: covered public information`);
     if (variant === "sanma") {
+      const labels=await page.locator(".mahjong-nuki-tray > small").evaluateAll(nodes=>nodes.map(node=>parseFloat(getComputedStyle(node).fontSize)));
+      assert.ok(labels.every(size=>size>=8.99),"extracted North counts must remain readable at least 9 CSS px");
       for (const player of game.players) assert.equal(await page.getByTestId(`nuki-tiles-${player.seat}`).locator('[data-tile-face="z4"]').count(), player.nuki);
     } else assert.equal(await page.locator(".mahjong-nuki-tray").count(),0);
     const boardBounds = await page.getByTestId('mahjong-board').boundingBox();
@@ -90,8 +102,27 @@ for (const engine of [chromium, webkit]) {
     await page.evaluate(() => document.querySelector('.mahjong-shell')!.insertAdjacentHTML('afterbegin','<div class="mahjong-notice" role="alert"><span>牌局已更新，请按当前牌面操作</span><button type="button" aria-label="关闭提示">×</button></div>'));
     const alertVisible = await page.getByRole('alert').evaluate(el => {const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});
     assert.equal(alertVisible,true,'server error notice must remain above the fixed table');
+    if(connected && width<=844) for(const meldCount of [1,2,3]) {
+      // Concealed tiles decrease by three per public group; never combine a
+      // full concealed rack with four melds in an impossible display fixture.
+      const partialGame:GameView={...game,players:game.players.map(player=>player.seat===0?player:{...player,handCount:13-3*meldCount,melds:player.melds.slice(0,meldCount)})};
+      const partial=renderToStaticMarkup(<GameRoom room={{...room,game:partialGame}} host busy={false} ownSeat={0} connected onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
+      await page.evaluate(html=>{const parsed=new DOMParser().parseFromString(html,'text/html');document.querySelector('.mahjong-game')!.replaceWith(parsed.querySelector('.mahjong-game')!);},partial);
+      await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image=>image.complete&&image.naturalWidth===300&&image.naturalHeight===400));
+      const hidden=await page.evaluate(()=>{
+        const issues:string[]=[];
+        for(const el of document.querySelectorAll(".mahjong-table__position .mahjong-player__hidden > i,.mahjong-table__position .mahjong-meld__slot,.mahjong-table__position .mahjong-nuki-tray [data-tile-face],.mahjong-table__dora [data-tile-face]")){
+          const b=el.getBoundingClientRect(),hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);
+          if(!hit||!el.contains(hit))issues.push(`${el.className} ${JSON.stringify({x:b.x,y:b.y,w:b.width,h:b.height})} covered by ${hit?.className}`);
+        }
+        return issues;
+      });
+      if(hidden.length) console.log(await page.evaluate(()=>Object.fromEntries([".mahjong-table",".mahjong-table__dora",".mahjong-action-dock",".mahjong-table__position--east .mahjong-opponent-rack",".mahjong-table__position--east .mahjong-player__hidden",".mahjong-table__position--east .mahjong-player__melds"].map(selector=>{const el=document.querySelector(selector)!;const b=el.getBoundingClientRect();return [selector,{x:b.x,y:b.y,w:b.width,h:b.height}]}))));
+      assert.deepEqual(hidden,[],`${engine.name()} ${variant} ${width}: ${meldCount} public groups with matching concealed counts must remain visible`);
+      partialMelds++;
+    }
     passed++; console.log(`PASS ${engine.name()} ${variant} ${width} connected=${connected}: rivers, indicators, melds, actions, notice`);
   }
  } finally {await browser.close();}
 }
-console.log(`${passed}/32 layout cases passed.`);
+console.log(`${passed}/32 layout cases passed; ${partialMelds}/24 partial-meld footprints passed.`);

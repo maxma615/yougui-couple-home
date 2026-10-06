@@ -1,7 +1,7 @@
 // Render authority-produced snapshots through the actual interactive table.
 // This checks animation geometry; real Socket submission is tested separately.
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { build } from "esbuild";
 import { chromium, webkit, type Page } from "@playwright/test";
 import Majiang from "@kobalab/majiang-core";
@@ -58,8 +58,8 @@ const root=createRoot(document.getElementById('root'));flushSync(()=>root.render
 window.motionApi.update=room=>flushSync(()=>setRoom(room));window.motionApi.connected=value=>flushSync(()=>setConnected(value));window.motionApi.quietUpdate=room=>flushSync(()=>{setCanAnimate(false);setRoom(room)});`;
 const bundle = await build({ stdin: { contents: harness, resolveDir: process.cwd(), loader: "tsx" }, bundle: true,
   platform: "browser", format: "iife", write: false, jsx: "automatic", define: { "process.env.NODE_ENV": '"development"' } });
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css"]
-  .filter(file => existsSync("src/app/mahjong/" + file)).map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
+const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"]
+  .map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
 const script = "globalThis.__name=(target,value)=>Object.defineProperty(target,\"name\",{value,configurable:true});globalThis.process={env:{NODE_ENV:\"development\"}};\n" + bundle.outputFiles[0].text;
 async function mount(page: Page, fixture: ReturnType<typeof scene>, width: number) {
   await page.evaluate(()=>(window as any).motionApi?.dispose?.());
