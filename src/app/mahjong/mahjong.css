@@ -212,7 +212,7 @@
 .mahjong-hand-public-melds .mahjong-tile, .mahjong-hand-public-melds .mahjong-meld__back { width: min(3cqw, 7cqh, 30px); height: min(4.2cqw, 9.8cqh, 42px); }
 .mahjong-hand { display: flex; align-items: end; justify-content: center; width: auto; gap: 3px; padding: 0 2px 7px; overflow: visible; }
 .mahjong-tile { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--hand-w, 39px); height: calc(var(--hand-w, 39px) * 1.46); padding: 3px; border: 1px solid #cecebc; border-radius: 5px; background: linear-gradient(105deg, #fdfdf5 0, #f6f4e9 45%, #e4e3d4 100%); box-shadow: inset 1px 1px 0 #fff, inset -2px -1px 2px #b6b7a647, 0 4px 0 #b6b4a0, 0 5px 0 #6a7273, 0 9px 9px #07101c60; line-height: 1; }
-.mahjong-tile__art { display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.mahjong-tile__art { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
 .mahjong-tile.is-red { border-color: #d2c2b0; }
 button.mahjong-tile { cursor: pointer; touch-action: manipulation; transition: transform 130ms, box-shadow 130ms; }
 button.mahjong-tile.is-playable:hover:not(:disabled), button.mahjong-tile.is-playable:focus-visible { transform: translateY(-7px); box-shadow: 0 4px 0 #c7bf9d, 0 7px 18px #0008; }

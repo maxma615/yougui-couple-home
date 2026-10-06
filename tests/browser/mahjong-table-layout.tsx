@@ -12,6 +12,12 @@ for (const engine of [chromium, webkit]) {
  const browser = await engine.launch({headless:true});
  try {
   const page = await browser.newPage();
+  // Stock faces are real public assets: exercise successful decoding rather than
+  // accepting image-less geometry from setContent on about:blank.
+  await page.route("https://mahjong.local/images/**", async route => {
+    const file = new URL(route.request().url()).pathname;
+    await route.fulfill({ status: 200, contentType: file.endsWith(".svg") ? "image/svg+xml" : "image/webp", body: readFileSync("public" + file) });
+  });
   for (const variant of ["sanma", "yonma"] as const) for (const width of [667, 844, 1280, 1440]) for (const connected of [true, false]) {
     const capacity = variant === "sanma" ? 3 : 4;
     const game: GameView = {
@@ -32,7 +38,8 @@ for (const engine of [chromium, webkit]) {
     const height = ({667:375,844:390,1280:720,1440:810} as Record<number,number>)[width];
     await page.setViewportSize({width, height});
     const css = readFileSync("src/app/mahjong/mahjong.css", "utf8");
-    await page.setContent(`<style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
+    await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
+    await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
     await page.emulateMedia({reducedMotion:"reduce"});
     await page.evaluate(()=>document.querySelector(".mahjong-game")!.insertAdjacentHTML("afterbegin",'<div class="mahjong-screen-hint" role="status" aria-label="屏幕方向提示">请旋转手机</div>'));
     assert.equal(await page.getByTestId("mahjong-dora").locator("[data-tile-face]").count(), 5);

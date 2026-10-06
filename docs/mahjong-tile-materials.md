@@ -1,24 +1,22 @@
-# Mahjong tile artwork materials
+# Standard Japanese riichi tile materials
 
-The tile faces combine original inline SVG artwork with a small set of glyph outlines from Noto Serif CJK JP. There are no Mahjong Soul images, extracted game assets, or runtime font dependencies in the tile component.
+## Current renderer: unchanged stock artwork
 
-## Licensed glyph outlines
+`TileFace` now uses the existing Regular SVG assets from [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles). It no longer draws pips, bamboo, birds, honors or numerals in application code.
 
-- Font: Noto Serif CJK JP Regular, upstream version 2.003.
-- Source project: [notofonts/noto-cjk](https://github.com/notofonts/noto-cjk), the official Noto CJK source repository.
-- Pinned source revision: `f8d157532fbfaeda587e826d4cd5b21a49186f7c`.
-- Font file: [`Serif/OTF/Japanese/NotoSerifCJKjp-Regular.otf`](https://github.com/notofonts/noto-cjk/blob/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/OTF/Japanese/NotoSerifCJKjp-Regular.otf).
-- Upstream license: [`Serif/LICENSE`](https://github.com/notofonts/noto-cjk/blob/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/LICENSE), SIL Open Font License 1.1. Upstream's [third-party notice](https://github.com/notofonts/noto-cjk/blob/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/README-third_party.md) states that Noto CJK versions 1.002 and later use OFL 1.1.
-- The exact source font copyright and attribution are available publicly at [`public/licenses/Noto-Serif-CJK-NOTICE.txt`](../public/licenses/Noto-Serif-CJK-NOTICE.txt).
-- Full license text is included at [`public/licenses/Noto-Serif-CJK-OFL.txt`](../public/licenses/Noto-Serif-CJK-OFL.txt).
-- Glyph data: `src/components/mahjong/tile-glyphs.ts` contains fitted SVG outlines for 一 through 九, 萬, 東、南、西、北、發、中. That file is distributed under OFL 1.1; the rest of the application remains under the repository license. The upstream font metadata credits © 2017–2024 Adobe; Noto is a Google trademark.
-- Downloaded OTF SHA-256: `d9854c7a8ef170b5a7932558856fd64eb8de0b007cd823fed6f9f514ad2803d3`.
-- Included license SHA-256: `6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2`.
+- Pinned upstream revision: `26e127ba2117f45cdce5ea0225748cc0cfad3169`.
+- Original directory: [Regular](https://github.com/FluffyStuff/riichi-mahjong-tiles/tree/26e127ba2117f45cdce5ea0225748cc0cfad3169/Regular).
+- Author: FluffyStuff; public domain / CC0 1.0 according to the original [LICENSE.md](https://github.com/FluffyStuff/riichi-mahjong-tiles/blob/26e127ba2117f45cdce5ea0225748cc0cfad3169/LICENSE.md).
+- Files: all34 ordinary Japanese tile faces, three red fives, Back and Blank (39 files). The Japanese white dragon is the upstream plain blank face, not a newly drawn border.
+- Assets are copied byte-for-byte under `public/images/mahjong-tiles/regular/`. No recoloring, trimming, conversion, AI generation or manual redrawing is applied.
+- Provenance, individual SHA-256 and upstream Git blob SHA are recorded in [manifest.json](../public/images/mahjong-tiles/manifest.json); downloads were checked against the pinned GitHub tree before writing.
+- Original license: [FluffyStuff-riichi-mahjong-tiles-LICENSE.md](../public/licenses/FluffyStuff-riichi-mahjong-tiles-LICENSE.md). Credit: [NOTICE](../public/licenses/FluffyStuff-riichi-mahjong-tiles-NOTICE.txt).
+- The37 rendered faces share the existing native button/accessibility behavior across hands, discards, melds, dora, North trays and dialogs. They use locally served image files, never a third-party CDN. Their original300×400 ratio is retained with `object-fit:contain`. No system font or external SVG references are needed.
 
-Only the vector outlines are shipped. They are converted to a fixed 60 × 84 viewBox during development and rendered as SVG paths, so characters remain identical on Windows, macOS, and Linux without loading a system or network font.
+The prior Noto glyph outlines and original tile-art implementation belong to the earlier release. Their historical OFL notice remains in the repository; the current renderer does not import those outlines. The license exception applies only to the stock assets; application code keeps its existing MIT license.
 
-## Original vector artwork
+## Verification scope
 
-The circle pips, nested rosette details, bamboo stalks and joints, one-bamboo bird, and white-dragon border are original inline SVG paths in `src/components/mahjong/mahjong-tile.tsx`. They are drawn for these tiles and are not copied from a commercial game. Red fives keep the same count and layout as ordinary fives, with vermilion primary marks and darker relief lines for legibility.
+The stock-asset test covers every face, distinct red fives, server suffix normalization, wind/dragon mapping, local file presence, accessible click behavior,39 original-file hashes and the exact original license text. Browser layout checks explicitly serve and decode the image files before asserting geometry, so missing images cannot pass a screenshot-less layout check.
 
-The existing `TileFace` names, `aria-label`, `data-tile-face`, back-face privacy, button semantics, click behavior, and CSS-controlled physical tile size are unchanged.
+This is the tile-material step of the continuing fidelity goal. It does not prove that table placement, motion, wall generation or Android behavior match Mahjong Soul. Those requirements retain separate acceptance gates.
