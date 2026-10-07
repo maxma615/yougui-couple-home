@@ -34,7 +34,8 @@
 
 **Files:**
 - Create: `src/components/mahjong/nuki-motion.ts`, `src/components/mahjong/use-nuki-motion.tsx`
-- Modify: `src/components/mahjong/mahjong-client.tsx`, `src/components/mahjong/use-discard-motion.tsx`, `src/components/mahjong/hand-reflow.ts`, `src/components/mahjong/use-hand-reflow.tsx`, `src/components/mahjong/use-draw-arrival.ts`, `src/app/mahjong/mahjong-discard-motion.css`
+- Modify: `src/components/mahjong/mahjong-client.tsx`, `src/components/mahjong/use-discard-motion.tsx`, `src/components/mahjong/use-hand-reflow.tsx`, `src/components/mahjong/use-draw-arrival.ts`, `src/app/mahjong/mahjong-discard-motion.css`
+- Reuse unchanged: `src/components/mahjong/hand-reflow.ts` occurrence matcher
 - Test: `tests/unit/mahjong-nuki-motion.test.ts`, `tests/component/mahjong-nuki-motion.test.tsx`, `tests/component/mahjong-draw-arrival.test.tsx`, `tests/browser/mahjong-nuki-sequence.tsx`
 
 **Interfaces:**
