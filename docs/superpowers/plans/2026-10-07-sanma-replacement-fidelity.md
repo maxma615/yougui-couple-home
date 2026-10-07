@@ -42,7 +42,9 @@
 
 **Files:** Bounded acceptance record, fidelity progress, owned-only guarded release helpers in ignored `.local/ecs-deploy/`.
 
-- [ ] Verify actual final source with relevant engine/full suite, type/build/secrets and native nuki/settlement/dora views. Do not rerun unchanged historical geometry matrices.
-- [ ] Build locally, freeze/archive exact source and build, COPY-only Linux candidate, verify actual candidate scoring on Linux.
-- [ ] Protected readiness and no-active-table switch; verify current image/Build ID, source/build hashes, public TLS/assets, data digests and unchanged cleaner/policy.
-- [ ] Documentary closeout and guarded owned-only sync preserving all foreign bytes and primary Git state. Keep full vendor RNG and Android acceptance explicitly open.
+- [x] Verify actual final source with relevant engine/full suite, type/build/secrets and native nuki/settlement/dora views. Do not rerun unchanged historical geometry matrices.
+- [x] Build locally, freeze/archive exact source and build, COPY-only Linux candidate, verify actual candidate scoring on Linux.
+- [x] Protected readiness and no-active-table switch; verify current image/Build ID, source/build hashes, public TLS/assets, data digests and unchanged cleaner/policy.
+- [x] Documentary closeout and guarded owned-only sync preserving all foreign bytes and primary Git state. Keep full vendor RNG and Android acceptance explicitly open.
+
+Actual product source f7baf30 / Build vwlHC1DNKEaLHvZWqwcIQ:519/59 full,4 actual E2E,10 native cases,46 actual Linux tests,129 public assets; image4420a8ba…,publisher exit0/barrier restored,data/cleaner/backup policy preserved. First8-path sync passed; documentary3-path closeout uses a separate baseline from that completed sync. See `docs/mahjong-sanma-replacement-acceptance.md` and ignored publication proof. Full vendor RNG/timing/Android objective remains active.

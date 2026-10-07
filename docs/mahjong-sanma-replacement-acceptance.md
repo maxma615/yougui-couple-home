@@ -1,6 +1,6 @@
 # 三麻补牌与杠宝牌验收
 
-日期：2026-10-07。范围：拔北补牌岭上役、大明杠与加杠的杠宝牌后翻，以及规则弹窗本场说明。此记录不将完整牌山算法、厂商逐帧反馈或 Android 实机列作已完成。
+日期：2026-10-07至2026-10-08。范围：拔北补牌岭上役、大明杠与加杠的杠宝牌后翻，以及规则弹窗本场说明。此记录不将完整牌山算法、厂商逐帧反馈或 Android 实机列作已完成。
 
 ## 一手规则与复现
 
@@ -22,6 +22,12 @@
 
 原生Chromium/WebKit各5个真实Choice场景共10项通过，844×390横屏：开放北补牌自摸、闭手北补牌精确结算、大明杠补牌自摸不计待翻dora、大明杠弃牌后公开、加杠弃牌后公开。北牌托盘保留1张，UI提交的Choice ID与引擎一致；所有页面无异常。最终证据 `.local/audit/mahjong-sanma-fidelity-native-1791388323111/`，root实际查看Chromium的6翻12000点结算图。此前无数值断言的首轮原生结果保留，不替代本轮证据。
 
-完整最终源验证及受保护发布待执行。验证使用隔离的合法测试 fixture，不创建生产假牌桌。部署继续遵守禁用备份策略，不备份或下载用户资料；清理容器、数据摘要与主目录其他任务字节须保持。
+最终源码 `f7baf30da91fa4b8b096b6e14713b552376232ba` 完整519项/59文件通过，4项真实三麻联机/电脑补位回归通过；构建、类型和秘密扫描通过。COPY-only镜像 `sha256:4420a8ba23051f9ecd89e0c84641784774defc4d36aca485f71872419af5a6ee`，Build `vwlHC1DNKEaLHvZWqwcIQ`，Linux/amd64独立只读容器实际46/46三麻测试通过。首轮Linux运行因Vitest无法在只读用户目录创建API token而未开始测试；原失败证据保留，临时XDG目录放入容器tmpfs后r02通过，不计作产品失败或通过数。
+
+已发布到上海ECS `i-uf6i9ie15g82dprialoy`，`/srv/yougui/releases/f7baf30`，地址 `https://8.133.186.15`。514源码与449构建文件逐项摘要、公网129资源、默认TLS及健康200通过。现有publisher actual exit0，屏障active1/held3/restored1；真实牌桌权威确认为空才切换。发布dispatch无stdout触发本地wrapper拒绝，保留原remote exit0记录，没有重复dispatch；实际publisher状态、运行镜像与完整live/final检查消除此歧义。
+
+12张表的数据摘要相同，7账号/3空间/5成员/29照片及清理器完整CID/image保持；APP继续1CPU/768MiB，无OOM，最后检查可用磁盘23,917,445,120字节。8个server helper与两个publisher摘要不变。禁用备份标记、masked/inactive timer/service和备份目录不存在均核对；没有备份或用户资料下载。验证只使用隔离合法fixture，不创建生产假牌桌。
+
+发布总证据 `.local/ecs-deploy/sanma-fidelity-f7baf30-publication-proof.json`；首次8文件同步 `.local/ecs-deploy/sanma-fidelity-f7baf30-primary-sync-proof.json` 保留512项foreign字节和primary HEAD/index/next-env。本记录、计划与进度的发布后文档提交另作3文件guarded closeout同步；实际运行的产品源码仍是f7baf30。
 
 公开 Akagi 固定提交 `cd68865f9e93eddcda6451cd18874a6f68c5fb49` 的 `action_new_round_three_player_real_payload` 样例包含庄家14张与剩余54，作者注释称第14张是首摸，可与本产品首摸后的54核对。这不是完整牌山与盐的预像，也不能证明 RNG 相同。官方韩文 FAQ 提到2024-02-28后的盐化SHA-256验牌，尚无完整输入/盐/摘要可验证向量，不能猜测私有算法。
