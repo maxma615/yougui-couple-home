@@ -5,7 +5,7 @@ import {acceptedPublicCallEvent} from './public-call-motion';
 import {measureDiscardElement,rectToFlight,type FlightView} from './use-discard-motion';
 type Measurement = NonNullable<ReturnType<typeof measureDiscardElement>>;
 type Baseline = {room:RoomView;connected:boolean;sources:Map<string,Measurement>};
-type Active = {id:string;decision:string;group:HTMLElement;emphasis:Animation|null;target?:HTMLElement;visibility:string;priority:string};
+type Active = {id:string;decision:string;group:HTMLElement;emphasis:Animation|null;target?:HTMLElement;visibility:string;priority:string;volume?:HTMLElement;volumeVisibility:string;volumePriority:string};
 function readRivers(table:HTMLElement|null) {
   const sources = new Map<string,Measurement>();
   table?.querySelectorAll<HTMLElement>('[data-discard-event-id]').forEach(wrapper=>{
@@ -35,6 +35,11 @@ export function usePublicCallMotion({room,ownSeat,connected,canAnimate,tableRef}
       else current.target.style.removeProperty('visibility');
       current.target=undefined;
     }
+    if(current?.volume){
+      if(current.volumeVisibility)current.volume.style.setProperty('visibility',current.volumeVisibility,current.volumePriority);
+      else current.volume.style.removeProperty('visibility');
+      current.volume=undefined;
+    }
     setFlight(null);
   },[]);
   const cancel = useCallback(()=>{
@@ -60,7 +65,7 @@ export function usePublicCallMotion({room,ownSeat,connected,canAnimate,tableRef}
       cancel();
       const group=table.querySelector<HTMLElement>(`[data-meld-seat="${event.seat}"][data-meld-index="${event.index}"]`);
       if(group?.dataset.meldValue===event.meld){
-        const current:Active={id:event.id,decision:room.game!.decisionId,group,emphasis:null,visibility:'',priority:''};
+        const current:Active={id:event.id,decision:room.game!.decisionId,group,emphasis:null,visibility:'',priority:'',volumeVisibility:'',volumePriority:''};
         active.current=current;group.dataset.publicCallActive=event.id;
         try{
           const emphasis=group.animate([
@@ -75,8 +80,11 @@ export function usePublicCallMotion({room,ownSeat,connected,canAnimate,tableRef}
         const source=event.source&&old!.sources.get(event.source.id),destination=target&&measureDiscardElement(target);
         if(active.current&&event.source&&source&&target&&destination
           &&target.closest<HTMLElement>('[data-tile-value]')?.dataset.tileValue===event.tile){
+          const volume=target.closest<HTMLElement>('[data-meld-volume]');
           current.target=target;current.visibility=target.style.getPropertyValue('visibility');current.priority=target.style.getPropertyPriority('visibility');
+          current.volume=volume??undefined;current.volumeVisibility=volume?.style.getPropertyValue('visibility')??'';current.volumePriority=volume?.style.getPropertyPriority('visibility')??'';
           target.style.setProperty('visibility','hidden');
+          volume?.style.setProperty('visibility','hidden');
           setFlight({event:{...event.source,id:event.id,seat:event.seat,index:event.index,tile:event.tile!},source:'public',sourceTileId:event.source.id,
             sourcePaint:source.paint,targetPaint:destination.paint,
             from:rectToFlight(source.rect,source.geometry),to:rectToFlight(destination.rect,destination.geometry)});

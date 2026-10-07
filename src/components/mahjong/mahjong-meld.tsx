@@ -170,6 +170,18 @@ function accessibleName(parsed: ParsedMeld) {
   return `${kindName(parsed.kind)}，来自${sourceNames[parsed.source!]}`;
 }
 
+function MeldVolume({ value, back = false }: { value?: string; back?: boolean }) {
+  return <span className="mahjong-meld__volume" data-meld-volume="true">
+    <span className={`mahjong-meld__cap${back ? " mahjong-meld__cap--back" : ""}`} data-meld-surface="cap">
+      {back ? <span className="mahjong-meld__back-cap"/> : <TileFace value={value!} className="mahjong-meld__face"/>}
+    </span>
+    <span className="mahjong-meld__contact" data-meld-surface="contact" aria-hidden="true"/>
+    {(["top", "right", "bottom", "left"] as const).map(side =>
+      <span className={`mahjong-meld__side mahjong-meld__side--${side}`} data-meld-side={side} key={side} aria-hidden="true"/>
+    )}
+  </span>;
+}
+
 function TileSlot({ value, sideways, called = false }: {
   value: string;
   sideways: boolean;
@@ -179,16 +191,16 @@ function TileSlot({ value, sideways, called = false }: {
     className={`mahjong-meld__slot${sideways ? " is-sideways" : ""}`}
     data-called={called || undefined}
     data-tile-value={value}
-  ><TileFace value={value} className="mahjong-meld__face"/></span>;
+  ><MeldVolume value={value}/></span>;
 }
 
 function KakanStack({ called, added }: { called: string; added: string }) {
   return <span className="mahjong-meld__stack">
     <span className="mahjong-meld__slot is-sideways" data-layer="added" data-tile-value={added}>
-      <TileFace value={added} className="mahjong-meld__face"/>
+      <MeldVolume value={added}/>
     </span>
     <span className="mahjong-meld__slot is-sideways" data-layer="called" data-called="true" data-tile-value={called}>
-      <TileFace value={called} className="mahjong-meld__face"/>
+      <MeldVolume value={called}/>
     </span>
   </span>;
 }
@@ -209,7 +221,7 @@ export function MahjongMeld({ meld, seat, index }: { meld: string; seat?: number
   >
     <div className="mahjong-meld__tiles">
       {parsed.slots.map((slot, index) => slot.type === "back"
-        ? <span className="mahjong-meld__back" aria-hidden="true" key={`back-${index}`}/>
+        ? <span className="mahjong-meld__back" aria-hidden="true" key={`back-${index}`}><MeldVolume back/></span>
         : slot.type === "stack"
           ? <KakanStack called={slot.called} added={slot.added} key={`stack-${index}`}/>
           : <TileSlot value={slot.value} sideways={slot.sideways} called={slot.called} key={`${slot.value}-${index}`}/>)

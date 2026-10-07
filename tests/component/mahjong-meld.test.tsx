@@ -36,6 +36,24 @@ it("exports the validated meld renderer", async () => {
   expect(module?.MahjongMeld).toBeTypeOf("function");
 });
 
+it.each([
+  ["p555+", 3, 3],
+  ["p5555+", 4, 4],
+  ["p5550", 4, 2],
+  ["p550=5", 4, 4],
+])("gives every %s physical tile a cap and four real side planes", async (meld, count, faceCount) => {
+  expectEngineMeld(meld);
+  const { container } = await renderMeld(meld);
+  const volumes = [...container.querySelectorAll<HTMLElement>("[data-meld-volume]")];
+  expect(volumes).toHaveLength(count);
+  expect(visibleFaces(container)).toHaveLength(faceCount);
+  for (const volume of volumes) {
+    expect(volume.querySelector('[data-meld-surface="cap"] .mahjong-meld__face, [data-meld-surface="cap"] .mahjong-meld__back-cap')).not.toBeNull();
+    expect([...volume.querySelectorAll<HTMLElement>("[data-meld-side]")]
+      .map(side => side.dataset.meldSide).sort()).toEqual(["bottom", "left", "right", "top"]);
+  }
+});
+
 it("puts the called chi tile first and preserves a called red five", async () => {
   const meld = "m340-";
   expectEngineMeld(meld);
