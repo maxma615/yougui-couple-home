@@ -20,7 +20,7 @@ it.each(["sanma","yonma"] as const)("explains hand value and fixed-seat actual t
  expect(within(panel).getByText("牌型点数")).toBeTruthy();
  expect(within(panel).getByText("1,600 点")).toBeTruthy();
  const rows=panel.querySelectorAll('[data-settlement-seat]');expect(rows.length).toBe(r.game!.players.length);
- rows.forEach((row,seat)=>{expect(row.getAttribute('data-settlement-seat')).toBe(String(seat));expect(row.textContent).toContain(`当前 ${r.game!.players[seat].score.toLocaleString()}`);});
+ rows.forEach((row,seat)=>{const before=r.game!.players[seat].score;const delta=r.game!.settlement!.delta[seat];expect(row.getAttribute('data-settlement-seat')).toBe(String(seat));expect(row.textContent).toContain(`结算前 ${before.toLocaleString("en-US")}`);expect(row.textContent).toContain(`结算后 ${(before+delta).toLocaleString("en-US")}`);});
  expect(rows[0].textContent).toContain(variant==="sanma"?"支付 −2,000":"支付 −2,200");
  expect(rows[1].textContent).toContain(variant==="sanma"?"获得 +3,000":"获得 +3,200");expect(rows[2].textContent).toContain("不变 0");
  expect(panel.textContent).toContain("本场 2");expect(panel.textContent).toContain("立直棒 1");
@@ -31,7 +31,8 @@ it("limits subsequent multi-ron to its current winner and current delta",()=>{
  const r=room("sanma");const {rerender,panel}=show(r);
  const next=structuredClone(r);next.version++;next.game!.decisionId="hule:2";next.game!.riichiSticks=0;next.game!.players[0].score=33000;next.game!.players[1].score=38000;next.game!.settlement!.winnerSeat=2;next.game!.settlement!.delta=[-2000,0,2000];
  rerender(<GameRoom room={next} ownSeat={0} connected busy={false} motionCanAnimate={false} host={false} onChoice={()=>{}} onFinish={()=>{}} onLeave={()=>{}} onRematch={()=>{}}/>);
- expect(within(panel).getByText("丙 · 荣和")).toBeTruthy();expect(panel.textContent).toContain("仅显示当前和牌者的本次结算");expect(panel.textContent).not.toContain("+3,000");expect(panel.textContent).toContain("获得 +2,000");expect(panel.textContent).not.toContain("总计");
+ expect(within(panel).getByText("丙 · 荣和")).toBeTruthy();expect(panel.textContent).toContain("全部席位确认后，本次收支才计入分数");expect(panel.textContent).not.toContain("+3,000");expect(panel.textContent).toContain("获得 +2,000");expect(panel.textContent).not.toContain("总计");
+ const rows=panel.querySelectorAll('[data-settlement-seat]');expect(rows[0].textContent).toContain("结算前 33,000");expect(rows[0].textContent).toContain("结算后 31,000");expect(rows[1].textContent).toContain("结算后 38,000");
 });
 it("identifies sanma tsumo loss and sends only the legal acknowledgement",()=>{const r=room("sanma","tsumo"),{panel,choice}=show(r);expect(panel.textContent).toContain("三麻采用自摸损");const ack=within(panel).getByRole("button",{name:"继续"});fireEvent.click(ack);expect(choice).toHaveBeenCalledExactlyOnceWith(r.game!.choices[0]);});
 it.each([[false,false],[true,true]])("disables acknowledgement when connected=%s busy=%s",(connected,busy)=>{const {panel,choice}=show(room("sanma"),connected,busy);const ack=within(panel).getByRole("button",{name:"继续"}) as HTMLButtonElement;expect(ack.disabled).toBe(true);fireEvent.click(ack);expect(choice).not.toHaveBeenCalled();});

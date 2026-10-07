@@ -688,11 +688,12 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 .mahjong-settlement-panel .mahjong-winning-hand > div:first-child, .mahjong-settlement-panel .mahjong-ura-indicators > small { font-size: 12px; }
 .mahjong-settlement-panel li { font-size: 12px; }
 .mahjong-settlement-panel li b { font-size: 12px; }
-.mahjong-settlement-panel__actions { grid-column: 1 / -1; position: sticky; bottom: -13px; display: flex; justify-content: flex-end; padding: 8px 0; background: #152139; }
+.mahjong-settlement-panel__actions { grid-column:1 / -1; position: static; bottom: auto; display: flex; flex: 0 0 auto; justify-content: flex-end; padding: 8px 0; background: #152139; }
 .mahjong-settlement-panel__actions button { min-width: 88px; min-height: 44px; font-size: 16px; }
-.mahjong-game:not(.is-finished) > .mahjong-settlement-panel { top: 43%; width: min(960px,94%); max-height: 72dvh; }
+.mahjong-game:not(.is-finished) > .mahjong-settlement-panel { top: 43%; width: min(960px,94%); max-height: 72dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.mahjong-settlement-panel__content { grid-column: 1 / -1; min-width: 0; min-height: 0; flex: 1 1 auto; display: grid; grid-template-columns: minmax(170px,.65fr) minmax(0,1.35fr); align-content: start; gap: 12px 18px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 @media (max-width: 900px) {
-  .mahjong-settlement-panel { grid-template-columns: 1fr; gap: 8px; }
+  .mahjong-settlement-panel__content { grid-template-columns: minmax(0,1fr); gap: 8px; }
   .mahjong-settlement-panel__heading { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 10px; }
   .mahjong-settlement-panel__heading .mahjong-kicker { display: none; }
   .mahjong-settlement-panel__heading h2 { font-size: 18px; }
@@ -700,7 +701,6 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
   .mahjong-settlement-panel__delta { gap: 6px; }
   .mahjong-settlement-panel__delta > span { padding: 6px; }
   .mahjong-settlement-panel__delta b { font-size: 14px; }
-  .mahjong-settlement-panel__actions { bottom: -11px; }
 }
 
 /* Original quiet blue/charcoal hierarchy; all tile art remains the licensed set. */
