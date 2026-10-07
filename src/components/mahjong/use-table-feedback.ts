@@ -4,16 +4,30 @@ import {useEffect, useRef, useState} from "react";
 import type {GameView, RoomMember} from "@/modules/mahjong/types";
 import {tileName} from "./mahjong-tile";
 
-type Feedback = {key:string; kind:string; text:string; seat?:number};
+export type TableActionLabel = "吃" | "碰" | "杠" | "拔北" | "立直" | "自摸" | "荣和" | "和牌" | "流局";
+export type TableFeedback = {key:string; kind:"draw"|"discard"|"call"|"riichi"|"nuki"|"win"; text:string; seat?:number; actionLabel?:TableActionLabel};
 type Snapshot = {room:string; gameInstanceId?:string; handId?:number; round:string; decision:string; settlementIdentity:string|null; players:{seat:number;nuki:number;riichi:boolean;discards:string[];melds:string[]}[]};
 type FeedbackSource = {connected:boolean; canAnimate:boolean};
+
+function callActionLabel(meld:string):TableActionLabel|undefined {
+  const digits=meld.match(/\d/g)??[];
+  if(digits.length===4) return "杠";
+  if(digits.length!==3) return undefined;
+  const ranks=digits.map(rank=>rank==="0"?"5":rank);
+  return ranks.every(rank=>rank===ranks[0])?"碰":"吃";
+}
+
+function legacyCallLabel(meld:string) {
+  const digits=meld.replace(/\D/g,"");
+  return digits.length===4 ? "杠" : /^(\d)\1\1$/.test(digits.replace(/0/g,"5")) || meld[0]==="z" ? "碰" : "吃";
+}
 
 // Feedback follows acknowledged public state, never an optimistic button press.
 export function useTableFeedback(game:GameView|null, members:RoomMember[], ownSeat:number, roomId:string, source:FeedbackSource = {connected:true,canAnimate:true}) {
   const previous=useRef<Snapshot|null>(null);
   const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const activeKind=useRef<string|null>(null);
-  const [feedback,setFeedback]=useState<Feedback|null>(null);
+  const [feedback,setFeedback]=useState<TableFeedback|null>(null);
   useEffect(() => {
     if (!game) {if(timer.current) clearTimeout(timer.current); timer.current=null; activeKind.current=null; previous.current=null; setFeedback(null); return;}
     const next:Snapshot={room:roomId,gameInstanceId:game.gameInstanceId,handId:game.handId,round:`${game.roundWind}:${game.roundNumber}:${game.honba}`,decision:game.decisionId,settlementIdentity:game.settlement ? `${game.settlement.kind}:${game.settlement.winnerSeat ?? ""}` : null,
@@ -36,23 +50,23 @@ export function useTableFeedback(game:GameView|null, members:RoomMember[], ownSe
     // GET refreshes and a socket's first snapshot establish state only. They may
     // contain actions that happened while this view was disconnected.
     if (!source.canAnimate) return;
-    let event:Omit<Feedback,'key'>|undefined;
+    let event:Omit<TableFeedback,'key'>|undefined;
     const actor=(seat:number)=>seat===ownSeat ? "你" : members.find(m=>m.seat===seat)?.displayName || "牌友";
     if (game.settlement && next.settlementIdentity!==old.settlementIdentity) {
       const winner=game.settlement.winnerSeat;
-      const winLabel = game.settlement.winMethod === "tsumo" ? "自摸" : game.settlement.winMethod === "ron" ? "荣和" : "和牌";
-      event={kind:"win",text:game.settlement.kind==="win" ? `${winner===undefined ? "" : `${actor(winner)} · `}${winLabel}` : "流局",seat:winner};
+      const actionLabel = game.settlement.kind==="draw" ? "流局" : game.settlement.winMethod === "tsumo" ? "自摸" : game.settlement.winMethod === "ron" ? "荣和" : "和牌";
+      event={kind:"win",text:game.settlement.kind==="win" ? `${winner===undefined ? "" : `${actor(winner)} · `}${actionLabel}` : actionLabel,seat:winner,actionLabel};
     }
     if (!event) for(const p of next.players) {
       const before=old.players.find(o=>o.seat===p.seat);
-      if (before && p.nuki>before.nuki) {event={kind:"nuki",text:`${actor(p.seat)} · 拔北`,seat:p.seat};break;}
-      if (before && p.riichi && !before.riichi) {event={kind:"riichi",text:`${actor(p.seat)} · 立直`,seat:p.seat};break;}
+      if (before && p.nuki>before.nuki) {event={kind:"nuki",text:`${actor(p.seat)} · 拔北`,seat:p.seat,actionLabel:"拔北"};break;}
+      if (before && p.riichi && !before.riichi) {event={kind:"riichi",text:`${actor(p.seat)} · 立直`,seat:p.seat,actionLabel:"立直"};break;}
     }
     if (!event) for(const p of next.players) {
       const before=old.players.find(o=>o.seat===p.seat);
       if (!before) continue;
       const meld=p.melds.find((m,i)=>m!==before.melds[i]);
-      if (meld) {const digits=meld.replace(/\D/g,"");event={kind:"call",text:`${actor(p.seat)} · ${digits.length===4 ? "杠" : /^(\d)\1\1$/.test(digits.replace(/0/g,"5")) || meld[0]==="z" ? "碰" : "吃"}`,seat:p.seat};break;}
+      if (meld) {const actionLabel=callActionLabel(meld);event={kind:"call",text:`${actor(p.seat)} · ${actionLabel??legacyCallLabel(meld)}`,seat:p.seat,...(actionLabel?{actionLabel}:{})};break;}
     }
     if (!event) for(const p of next.players) {
       const before=old.players.find(o=>o.seat===p.seat);

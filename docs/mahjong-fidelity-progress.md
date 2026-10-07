@@ -152,3 +152,7 @@ WebKit affine fallback、厂商相机/布局/完整鸣牌和和牌时序、牌�
 
 
 产品4fba66d / Build5zo1AlOoyUoyhKurMm8n2，440源码/432运行构建摘要匹配（明确排除仅构建缓存）。受保护发布器actual exit0且恢复入口；健康200/124公网资源SHA一致，12表/3会话/28照片和清理CID保持，新鲜29成员备份及站外tar实际完整校验。只回收冻结已核验的旧自有context/uploads，生产数据/镜像/备份保留；服务器剩余约1.24GB。主目录限定15 owned同步，430其它文件/索引/next-env以最终证明为准。完整构图/完整时序/私有牌山协议/真实Android仍继续，目标未完成。
+
+## 角色与大字宣告步骤（本地验证）
+
+连续官方片段终于捕到明确PON角色斜切宣告，逐帧媒体时间与SHA可核验；此前空白/错误帧排除。将小pill的特殊动作改为本产品原创头像和突出的大字宣告，独立actionLabel避免拆分姓名；900ms仍为产品参数。真实浏览器RED后36场吃/赤五碰/明杠/拔北/立直/补牌自摸GREEN；最后367/44、build/type/secrets360通过，原北牌累计、合法Choice与去重保留。联机26先于最终无actor头像修正，后者实际RED→GREEN且独立24项复核解除Important。发布尚未执行，不能把当前实现称已上线或整个目标完成；见[角色宣告验收](mahjong-call-announcement-acceptance.md)。

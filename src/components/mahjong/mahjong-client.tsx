@@ -16,6 +16,7 @@ import { MahjongRiver as River } from "./mahjong-river";
 import { MahjongMeld as MeldView } from "./mahjong-meld";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
+import { MahjongCallAnnouncement } from "./mahjong-call-announcement";
 import { useDrawArrival } from "./use-draw-arrival";
 import { winningHand, settlementTitle } from "./mahjong-winning-hand";
 
@@ -550,7 +551,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     })}</div><div className="mahjong-ranking__actions">{host ? <button type="button" className="mahjong-button mahjong-button--gold" disabled={busy} onClick={onRematch}><RefreshCw size={16}/>再开一场</button> : <span>等待房主发起下一场</span>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散牌桌</button> : null}</div></section> : null}
 
     <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
-      {feedback ? <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
+      {feedback ? feedback.actionLabel && ["call", "riichi", "nuki", "win"].includes(feedback.kind)
+        ? <MahjongCallAnnouncement key={feedback.key} feedback={feedback} members={room.members} ownSeat={ownSeat}/>
+        : <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
       <div className="mahjong-table__surface" data-testid="mahjong-table-surface">
         <div className="mahjong-table__grain" aria-hidden="true"/>
         <svg className="mahjong-table__seams" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"><path d="M170 90H830L940 600H60ZM170 90L442 285M830 90L558 285M60 600L442 375M940 600L558 375"/><path d="M182 98H818L925 590H75Z"/></svg>

@@ -58,7 +58,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
       if (pass) engine.respond(seat, view.decisionId, pass.id);
     }
     rerender({ current: engine.view(0) });
-    expect(result.current).toMatchObject({ kind: "nuki", text: "你 · 拔北" });
+    expect(result.current).toMatchObject({ kind: "nuki", text: "你 · 拔北", actionLabel: "拔北" });
     act(() => vi.advanceTimersByTime(250));
     const replacement = engine.view(0), discard = replacement.choices.find(choice => choice.type === "discard");
     expect(discard).toBeDefined();
@@ -67,7 +67,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     expect(after.players[0].discards).toHaveLength(1);
     expect(after.players[0].nuki).toBe(1);
     rerender({ current: after });
-    expect(result.current).toMatchObject({ kind: "nuki", text: "你 · 拔北" });
+    expect(result.current).toMatchObject({ kind: "nuki", text: "你 · 拔北", actionLabel: "拔北" });
     act(() => vi.advanceTimersByTime(649));
     expect(result.current?.kind).toBe("nuki");
     act(() => vi.advanceTimersByTime(1));
@@ -94,7 +94,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     const first = engine.view(0);
     expect(first.settlement?.winnerSeat).toBe(1);
     rerender({ current: first });
-    expect(result.current).toMatchObject({ kind: "win", seat: 1, text: "P1 · 荣和" });
+    expect(result.current).toMatchObject({ kind: "win", seat: 1, text: "P1 · 荣和", actionLabel: "荣和" });
     for (const seat of [0, 1, 2]) {
       act(() => vi.advanceTimersByTime(100));
       const view = engine.view(seat);
@@ -105,7 +105,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     const second = engine.view(0);
     expect(second.settlement?.winnerSeat).toBe(2);
     expect(second.decisionId).not.toBe(first.decisionId);
-    expect(result.current).toMatchObject({ key: second.decisionId, kind: "win", seat: 2, text: "P2 · 荣和" });
+    expect(result.current).toMatchObject({ key: second.decisionId, kind: "win", seat: 2, text: "P2 · 荣和", actionLabel: "荣和" });
     act(() => vi.advanceTimersByTime(899));
     expect(result.current?.seat).toBe(2);
     act(() => vi.advanceTimersByTime(1));
@@ -125,7 +125,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     });
     engine.respond(0, before.decisionId, "tsumo");
     rerender({ current: engine.view(0) });
-    expect(result.current).toMatchObject({ kind: "win", seat: 0, text: "你 · 自摸" });
+    expect(result.current).toMatchObject({ kind: "win", seat: 0, text: "你 · 自摸", actionLabel: "自摸" });
   });
 
   it("lets a new special action replace North feedback while an ordinary draw cannot", () => {
@@ -140,7 +140,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     expect(result.current?.kind).toBe("nuki");
     const riichi = { ...draw, decisionId: "riichi", players: draw.players.map(p => p.seat === 2 ? { ...p, riichi: true } : p) };
     rerender({ current: riichi });
-    expect(result.current).toMatchObject({ kind: "riichi", seat: 2 });
+    expect(result.current).toMatchObject({ kind: "riichi", seat: 2, actionLabel: "立直" });
     act(() => vi.advanceTimersByTime(900));
     rerender({ current: { ...riichi, decisionId: "next-draw", drawnTile: "p4" } });
     expect(result.current?.kind).toBe("draw");
@@ -204,7 +204,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
       players: game().players.map((player, seat) => seat === 1 ? { ...player, riichi: true } : player),
     });
     rerender({ currentGame: riichi, currentMembers: members() });
-    expect(result.current).toMatchObject({ kind: "riichi", text: "P1 · 立直" });
+    expect(result.current).toMatchObject({ kind: "riichi", text: "P1 · 立直", actionLabel: "立直" });
 
     act(() => vi.advanceTimersByTime(900));
     expect(result.current).toBeNull();
@@ -228,9 +228,12 @@ describe("useTableFeedback lifecycle and event recognition", () => {
   });
 
   it.each([
+    ["chi", "m123-", "吃"],
     ["red five pon", "p550-", "碰"],
-    ["red five kan", "p550-5", "杠"],
-  ])("recognizes %s from the canonical meld notation", (_label, meld, expected) => {
+    ["daiminkan", "p5555-", "杠"],
+    ["red five kakan", "p550=5", "杠"],
+    ["ankan", "p5555", "杠"],
+  ])("provides a separate %s action label from the canonical meld notation", (_label, meld, expected) => {
     const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(), 0, "room-a"), {
       initialProps: { current: game() },
     });
@@ -240,7 +243,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
       players: game().players.map((player, seat) => seat === 1 ? { ...player, melds: [meld] } : player),
     }) });
 
-    expect(result.current).toMatchObject({ kind: "call", text: `P1 · ${expected}` });
+    expect(result.current).toMatchObject({ kind: "call", text: `P1 · ${expected}`, actionLabel: expected });
   });
 
   it("baselines non-animating GET and reconnect snapshots, then accepts the next live event", () => {
@@ -264,7 +267,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
       players: game().players.map((player, seat) => seat === 1 ? { ...player, riichi: true } : player),
     });
     rerender({ currentGame: liveRiichi, options: { connected: true, canAnimate: true } });
-    expect(result.current).toMatchObject({ kind: "riichi", text: "P1 · 立直" });
+    expect(result.current).toMatchObject({ kind: "riichi", text: "P1 · 立直", actionLabel: "立直" });
   });
 
   it("keeps a live feedback through a connected quiet duplicate, then clears it on disconnect", () => {
@@ -277,7 +280,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
       players: game().players.map((player, seat) => seat === 1 ? { ...player, nuki: 1 } : player),
     });
     rerender({ currentGame: nuki, source: { connected: true, canAnimate: true } });
-    expect(result.current).toMatchObject({ kind: "nuki", text: "P1 · 拔北" });
+    expect(result.current).toMatchObject({ kind: "nuki", text: "P1 · 拔北", actionLabel: "拔北" });
 
     rerender({ currentGame: nuki, source: { connected: true, canAnimate: false } });
     expect(result.current).toMatchObject({ kind: "nuki", text: "P1 · 拔北" });
@@ -311,7 +314,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
       { 0: "m123p123s123z1134", 1: "m123p123s123z3345" }, "p9",
     ));
     const before = engine.view(1);
-    const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(["A", "B", "C", "D"]), 1, "room-a"), {
+    const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(["A", "B · 荣和", "C", "D"]), 0, "room-a"), {
       initialProps: { current: before },
     });
     const discard = engine.view(0).choices.find(choice => choice.type === "discard" && choice.value === "z3");
@@ -325,7 +328,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     const after = engine.view(1);
     expect(after.players.find(player => player.seat === 1)?.melds).toHaveLength(1);
     rerender({ current: after });
-    expect(result.current).toMatchObject({ kind: "call", text: "你 · 碰" });
+    expect(result.current).toMatchObject({ kind: "call", seat: 1, text: "B · 荣和 · 碰", actionLabel: "碰" });
   });
 });
 
