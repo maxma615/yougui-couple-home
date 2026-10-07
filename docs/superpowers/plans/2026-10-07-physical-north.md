@@ -1,6 +1,6 @@
 # Physical North Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Keep extracted North tiles tangible during travel and at their indexed public tray, without changing accepted game actions or replacement timing.
 
@@ -35,7 +35,7 @@
 - [x] Add regressions that fail on the flat baseline: persistent sides absent, flight depth absent, cap-only hiding leaves body visible; run the focused Vitest files and retain actual RED output.
 - [x] Implement the minimal cuboid, nuki depth measurement and whole-target visibility lifecycle; keep public count and accepted rules unchanged.
 - [x] Run focused Vitest and typecheck; execute real-engine nuki → replacement → legal settlement in Chromium/WebKit, plus tray count/orientation and lifecycle cases. Save composited frames and endpoint geometry.
-- [ ] Independent review of the final diff; resolve material findings and re-run covering checks.
+- [x] Independent review of the final diff; resolve material findings and re-run covering checks.
 
 ### Task 2: Validate and publish the exact revision
 
@@ -43,7 +43,11 @@
 
 **Interfaces:** Consumes Task 1 reviewed source, fresh parent 2a614ff manifest, exact build manifest and existing reviewed no-backup publisher. Produces source/build-bound Linux COPY-only image and actual public health/static SHA checks.
 
-- [ ] Commit only owned reviewed code/tests/docs; run `npm test -- --maxWorkers=2`, build/type/secrets and relevant real served Mahjong E2E once on that exact clean revision.
-- [ ] Freeze source/build/archive; check parent preservation and candidate SHA/path sets. Run protected readiness before any switch, keeping active-room guard and resource limits.
-- [ ] Publish using the unchanged no-backup publisher; verify current image/Build ID, health, data digests, helper/cleaner preservation, policy marker and public assets.
-- [ ] Sync only changed Mahjong/docs/test paths to primary after byte guards, preserving all foreign files, HEAD/index and next-env. Record actual results and remaining full vendor/Android limits.
+- [x] Commit only owned reviewed code/tests/docs; run `npm test -- --maxWorkers=2`, build/type/secrets and relevant real served Mahjong E2E once on that exact clean revision.
+- [x] Freeze source/build/archive; check parent preservation and candidate SHA/path sets. Run protected readiness before any switch, keeping active-room guard and resource limits.
+- [x] Publish using the unchanged no-backup publisher; verify current image/Build ID, health, data digests, helper/cleaner preservation, policy marker and public assets.
+- [x] Sync only changed Mahjong/docs/test paths to primary after byte guards, preserving all foreign files, HEAD/index and next-env. Record actual results and remaining full vendor/Android limits.
+
+## Actual closeout
+
+Published source `5e92d61773fb6b5811a70bebd43d9952b38c8c16`, Build `8sjW59hYM17ZjDg7de-KS`; full513/59, build/type/secrets and real served E2E16/16 passed. Both native engines passed legal North/replacement/tsumo, 24 layout cases and physical endpoint/depth. Caption occlusion was measured RED, fixed on the same Z plane with tile geometry unchanged, and independently reviewed. The actual no-backup publisher exited0, current Linux image/source/Next matched512/449 files, public defaultTLS129 assets passed, 12 table digests and cleaner/policy remained. Initial guarded primary sync covered9 owned paths and preserved509 foreign paths plus HEAD/index/next-env; final documentary closeout is strictly verified as docs-only. Full vendor RNG/timing and Android remain open in the overall active goal.
