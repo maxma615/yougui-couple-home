@@ -1,9 +1,10 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import type { RoomView } from "@/modules/mahjong/types";
 import { TileFace } from "./mahjong-tile";
+import { MahjongSolidFlightTile } from "./mahjong-solid-flight-tile";
 import { quadToMatrix3d } from "./projected-geometry";
 import {
   DiscardMotionTracker,
@@ -25,6 +26,7 @@ type FlightGeometry = Readonly<{
   angle: number;
   scale: number;
   quad?: MotionQuad;
+  depth?: number;
 }>;
 
 type FlightView = Readonly<{
@@ -253,6 +255,8 @@ function elementToFlight(element: HTMLElement, rect: DOMRect): FlightGeometry {
   const style = getComputedStyle(element);
   const width = borderBoxSize(element, style, "width") || element.offsetWidth || rect.width;
   const height = borderBoxSize(element, style, "height") || element.offsetHeight || rect.height;
+  const body = element.closest<HTMLElement>("[data-standing-body]");
+  const depth = body ? numeric(getComputedStyle(body).height) : undefined;
   const { angle, scale } = accumulatedTransform(element);
   return {
     left: rect.left + rect.width / 2,
@@ -262,6 +266,7 @@ function elementToFlight(element: HTMLElement, rect: DOMRect): FlightGeometry {
     angle,
     scale,
     quad: measureElementQuad(element, style),
+    ...(depth ? { depth } : {}),
   };
 }
 
@@ -387,7 +392,11 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
       }
       if (flight.source === "opponent") {
         const card = node.querySelector<HTMLElement>(".mahjong-discard-flight__card");
-        if (card) flip = card.animate([{ transform: "rotateY(0deg)" }, { transform: "rotateY(180deg)" }], { duration: 230, easing: "ease-in-out", fill: "forwards" });
+        const depth = flight.from.depth ?? flight.from.height * 0.4;
+        if (card) flip = card.animate([
+          { transform: "translateZ(0px) rotateY(0deg)" },
+          { transform: `translateZ(-${depth}px) rotateY(180deg)` },
+        ], { duration: 230, easing: "ease-in-out", fill: "forwards" });
       }
     } catch {
       movement?.cancel();
@@ -412,7 +421,8 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
     height: `${flight.from.height}px`,
     transform: flightTransform(flight.from),
     transformOrigin: projected ? "0 0" : "center",
-  };
+    "--flight-depth": `${flight.from.depth ?? flight.from.height * 0.4}px`,
+  } as CSSProperties;
   return typeof document === "undefined" ? null : createPortal(
     <div
       ref={element}
@@ -425,10 +435,17 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
       aria-hidden="true"
       style={style}
     >
-      <span className="mahjong-discard-flight__card">
-        {flight.source === "opponent" ? <span className="mahjong-discard-flight__back"/> : null}
-        <TileFace value={flight.event.tile} className={`mahjong-discard-flight__face${flight.event.tile.includes("_") ? " is-tsumogiri" : ""}${flight.event.tile.includes("*") ? " is-riichi" : ""}`}/>
-      </span>
+      {flight.source === "opponent" ? (
+        <span className="mahjong-discard-flight__stage">
+          <span className="mahjong-discard-flight__card">
+            <MahjongSolidFlightTile value={flight.event.tile}/>
+          </span>
+        </span>
+      ) : (
+        <span className="mahjong-discard-flight__card">
+          <TileFace value={flight.event.tile} className={`mahjong-discard-flight__face${flight.event.tile.includes("_") ? " is-tsumogiri" : ""}${flight.event.tile.includes("*") ? " is-riichi" : ""}`}/>
+        </span>
+      )}
     </div>,
     document.body,
   );

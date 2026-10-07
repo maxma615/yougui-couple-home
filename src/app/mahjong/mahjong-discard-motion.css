@@ -7,7 +7,8 @@
   border: 0;
   border-radius: 3px;
   transform-origin: center;
-  perspective: 900px;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   pointer-events: none;
   will-change: left, top, width, height, transform;
 }
@@ -15,12 +16,31 @@
 .mahjong-discard-flight,
 .mahjong-discard-flight * { box-sizing: border-box; }
 
+.mahjong-discard-flight__stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  perspective: 900px;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
 .mahjong-discard-flight__card {
   position: relative;
   display: block;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.mahjong-discard-flight__solid {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .mahjong-discard-flight__face,
@@ -45,6 +65,80 @@
 .mahjong-discard-flight__back {
   border-radius: 1px;
   box-shadow: none;
+}
+
+.mahjong-discard-flight__front {
+  position: absolute;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  backface-visibility: hidden;
+}
+
+.mahjong-discard-flight__side {
+  position: absolute;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.mahjong-discard-flight__front {
+  inset: 0;
+  transform-origin: center;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transform: translateZ(calc(-1 * var(--flight-depth))) rotateY(180deg);
+}
+
+.mahjong-discard-flight__front > .mahjong-discard-flight__face {
+  inset: 0;
+  transform: none;
+}
+
+.mahjong-discard-flight__side {
+  border: 1px solid #d0c6ad;
+  border-radius: 1px;
+  transform-style: preserve-3d;
+}
+
+.mahjong-discard-flight__side--top {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--flight-depth);
+  transform-origin: center top;
+  transform: rotateX(-90deg);
+  background: #f6f2e5;
+}
+
+.mahjong-discard-flight__side--bottom {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--flight-depth);
+  transform-origin: center bottom;
+  transform: rotateX(90deg);
+  background: #e9e4d3;
+}
+
+.mahjong-discard-flight__side--left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--flight-depth);
+  transform-origin: left center;
+  transform: rotateY(90deg);
+  background: #eee9d9;
+}
+
+.mahjong-discard-flight__side--right {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--flight-depth);
+  transform-origin: right center;
+  transform: rotateY(-90deg);
+  background: #e9e4d3;
 }
 
 .mahjong-discard-flight__face.is-riichi { outline: 1px solid #debe75; }
