@@ -39,6 +39,7 @@ describe("genuine three-seat Sanma", () => {
     expect(v.remainingTiles).toBe(54);
     expect(v.players.map(p => p.score)).toEqual([35000,35000,35000]);
     expect(v.players.map(p => p.wind).sort()).toEqual([0,1,2]);
+    expect(Object.keys(v.players[1]).sort()).toEqual(["discards","handCount","hasDrawnTile","melds","nuki","riichi","score","seat","wind"]);
     expect(() => game.view(3)).toThrow();
     expect(() => game.respond(0, v.decisionId, "discard:z1")).toThrow();
     expect(() => game.respond(1, v.decisionId, "chi:p123-")).toThrow();
@@ -143,6 +144,27 @@ describe("Sanma special rules with physical fixtures",()=>{
     const yaku=game.view(0).settlement!.yaku.map(y=>y.name);
     expect(yaku).toContain("抜きドラ");expect(yaku).not.toContain("天和");expect(yaku).not.toContain("嶺上開花");
   });
+  it("publishes a shared draw flag for a real replacement draw and clears it on discard",()=>{
+    const game=new SanmaGame("east",names,fixture({0:"p123456789s123z2"},["z4"],["z2"]));
+    const openingViews=[0,1,2].map(seat=>game.view(seat));
+    expect(openingViews[0].drawnTile).toBe("z4");
+    expect(openingViews.map(view=>view.players.map(player=>player.hasDrawnTile))).toEqual([[true,false,false],[true,false,false],[true,false,false]]);
+    expect(openingViews.every(view=>view.players.every(player=>typeof player.hasDrawnTile==="boolean"))).toBe(true);
+    expect(JSON.stringify(openingViews.map(view=>view.players)).includes("z4")).toBe(false);
+
+    act(game,0,"nuki");passAll(game);
+    const replacementViews=[0,1,2].map(seat=>game.view(seat));
+    expect(replacementViews[0].drawnTile).toBe("z2");
+    expect(replacementViews.map(view=>view.players.map(player=>player.hasDrawnTile))).toEqual([[true,false,false],[true,false,false],[true,false,false]]);
+    expect(JSON.stringify(replacementViews.map(view=>view.players)).includes("z2")).toBe(false);
+
+    const replacement=replacementViews[0],discard=replacement.choices.find(choice=>choice.type==="discard");
+    expect(discard).toBeDefined();
+    game.respond(0,replacement.decisionId,discard!.id);
+    const afterDiscardViews=[0,1,2].map(seat=>game.view(seat));
+    expect(afterDiscardViews.every(view=>view.players.find(player=>player.seat===0)?.hasDrawnTile===false)).toBe(true);
+    expect(afterDiscardViews.map(view=>view.players.map(player=>player.hasDrawnTile))).toEqual([0,1,2].map(()=>afterDiscardViews[0].players.map(player=>player.hasDrawnTile)));
+  });
   it("allows ordinary north robbery without adding chankan, and passed ron causes temporary furiten",()=>{
     const options=fixture({0:"m19p222s444z11444",1:"p123456789s123z4"},["s8"],["s9","s7"]);
     const game=new SanmaGame("east",names,options);
@@ -162,7 +184,14 @@ describe("Sanma special rules with physical fixtures",()=>{
     expect(game.view(1).settlement!.yaku.map(y=>y.name)).toContain("国士無双");
     const normal=new SanmaGame("east",names,fixture({0:"p444s234z1234567",1:"p23s123456789z22"},["p4"]));
     act(normal,0,"kan:p4444");expect(normal.view(1).choices.some(c=>c.type==="ron")).toBe(false);
-    expect(normal.view(0).phase).toBe("gangzimo");expect(normal.view(0).doraIndicators).toHaveLength(2);
+    const afterKan=normal.view(0);
+    expect(afterKan.phase).toBe("gangzimo");expect(afterKan.doraIndicators).toHaveLength(2);
+    const kanViews=[0,1,2].map(seat=>normal.view(seat));
+    expect(afterKan.drawnTile).toEqual(expect.any(String));
+    expect(kanViews.map(view=>view.players.map(player=>player.hasDrawnTile))).toEqual([[true,false,false],[true,false,false],[true,false,false]]);
+    expect(kanViews.map(view=>view.drawnTile)).toEqual([afterKan.drawnTile,null,null]);
+    expect(kanViews.every(view=>view.players.every(player=>typeof player.hasDrawnTile==="boolean"))).toBe(true);
+    expect(JSON.stringify(kanViews.map(view=>view.players))).not.toContain(afterKan.drawnTile!);
   });
   it("offers kokushi robbery of a north extraction",()=>{
     const game=new SanmaGame("east",names,fixture({1:"m19p19s19z1123567"},["z4"]));
@@ -210,6 +239,10 @@ describe("Sanma score boundaries and late-hand rules",()=>{
     expect(game.view(2).choices.some(choice => choice.id === "pon:m111+")).toBe(true);
     act(game, 2, "pon:m111+");
     const caller = game.view(2);
+    expect(caller.drawnTile).toBeNull();
+    expect(caller.players[2].hasDrawnTile).toBe(false);
+    const callViews=[0,1,2].map(seat=>game.view(seat));
+    expect(callViews.map(view=>view.players.map(player=>player.hasDrawnTile))).toEqual([[false,false,false],[false,false,false],[false,false,false]]);
     const callDiscard = caller.choices.find(choice => choice.type === "discard")!;
     game.respond(2, caller.decisionId, callDiscard.id);
     passAll(game);
@@ -413,7 +446,7 @@ it("does not charge a riichi declaration discard that another player immediately
 
 it("returns detached three-player public DTOs without concealed opponent hands or wall internals",()=>{
   const game=new SanmaGame("east",names,{dealer:0}),v=game.view(0),copy=structuredClone(v);
-  expect(Object.keys(v.players[1]).sort()).toEqual(["discards","handCount","melds","nuki","riichi","score","seat","wind"]);
+  expect(Object.keys(v.players[1]).sort()).toEqual(["discards","handCount","hasDrawnTile","melds","nuki","riichi","score","seat","wind"]);
   expect(JSON.stringify(v)).not.toMatch(/_bingpai|_pai|wallFactory|reserve/);
   v.hand.length=0;v.players[1].discards.push("z7");v.doraIndicators.length=0;v.choices.length=0;
   expect(game.view(0)).toEqual(copy);

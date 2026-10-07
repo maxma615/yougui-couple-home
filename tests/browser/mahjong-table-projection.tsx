@@ -32,9 +32,10 @@ function sanmaWall(actor: number, hand: string, draw: string) {
     };
     const dealtBySeat = Array.from({ length: 3 }, () => [] as string[]);
     dealtBySeat[actor] = tileList(hand).map(take);
+    const liveDraw = take(draw);
     for (let offset = 1; offset < 3; offset++) dealtBySeat[(actor + offset) % 3] = available.splice(0, 13);
     const orderedDeal = Array.from({ length: 3 }, (_, wind) => dealtBySeat[(actor + wind) % 3]).flat();
-    const liveDraw = take(draw), replacement = available.splice(0, 4), indicators = available.splice(0, 10);
+    const replacement = available.splice(0, 4), indicators = available.splice(0, 10);
     return new SanmaWall([...orderedDeal, liveDraw, ...available, ...replacement, ...indicators]);
   }};
 }
@@ -50,9 +51,9 @@ function riichiWall(actor: number, hand: string, draw: string) {
     };
     const dealtBySeat = Array.from({ length: 4 }, () => [] as string[]);
     dealtBySeat[actor] = tileList(hand).map(take);
+    take(draw);
     for (let offset = 1; offset < 4; offset++) dealtBySeat[(actor + offset) % 4] = available.splice(0, 13);
     const orderedDeal = Array.from({ length: 4 }, (_, wind) => dealtBySeat[(actor + wind) % 4]).flat();
-    take(draw);
     wall._pai = [...available, ...[...orderedDeal, draw].reverse()];
     wall._baopai = [wall._pai[4]];
     wall._fubaopai = [wall._pai[9]];
@@ -298,7 +299,8 @@ for (const engine of [chromium, webkit]) {
           intent.sourceGeometry.quad.bottomRight, intent.sourceGeometry.quad.bottomLeft];
         assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0, "a local choice alone must not start the server-confirmed flight");
       } else {
-        const source = page.locator(`[data-motion-rack-seat="${fixture.actor}"] > i`).last();
+        const sourceSelector = fixture.choice.value?.includes("_") ? "i.is-drawn" : "i:not(.is-drawn)";
+        const source = page.locator(`[data-motion-rack-seat="${fixture.actor}"] > ${sourceSelector}`).last();
         expectedSource = await source.evaluate(element => (window as any).mahjongPhysicalSamples(element, [[0,0],[1,0],[1,1],[0,1]]));
       }
 

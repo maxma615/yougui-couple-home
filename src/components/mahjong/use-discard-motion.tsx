@@ -34,6 +34,8 @@ type FlightView = Readonly<{
   to: FlightGeometry;
 }>;
 
+type OpponentRackGeometry = { closed?: FlightGeometry; drawn?: FlightGeometry };
+
 export function useDiscardMotion({
   room,
   ownSeat,
@@ -50,7 +52,7 @@ export function useDiscardMotion({
   tableRef: RefObject<HTMLDivElement | null>;
 }) {
   const tracker = useRef(new DiscardMotionTracker());
-  const previousRackRects = useRef(new Map<number, FlightGeometry>());
+  const previousRackRects = useRef(new Map<number, OpponentRackGeometry>());
   const environmentEpoch = useRef(0);
   const priorConnection = useRef(connected);
   const activeFlight = useRef<FlightView | null>(null);
@@ -60,12 +62,16 @@ export function useDiscardMotion({
   const captureRackRects = useCallback(() => {
     const table = tableRef.current;
     if (!table) return;
-    const next = new Map<number, FlightGeometry>();
+    const next = new Map<number, OpponentRackGeometry>();
     table.querySelectorAll<HTMLElement>("[data-motion-rack-seat] > i").forEach((element) => {
       const seat = Number(element.parentElement?.dataset.motionRackSeat);
       if (!Number.isInteger(seat) || seat === ownSeat) return;
       const rect = element.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) next.set(seat, elementToFlight(element, rect));
+      if (rect.width > 0 && rect.height > 0) {
+        const rack = next.get(seat) ?? {};
+        rack[element.dataset.motionDrawn === "true" ? "drawn" : "closed"] = elementToFlight(element, rect);
+        next.set(seat, rack);
+      }
     });
     previousRackRects.current = next;
   }, [ownSeat, tableRef]);
@@ -117,9 +123,12 @@ export function useDiscardMotion({
         .find((element) => element.dataset.discardEventId === eventId);
       const face = target?.querySelector<HTMLElement>(".mahjong-tile");
       const targetRect = face?.getBoundingClientRect();
-      const cachedSource = result.flight.source === "opponent"
+      const cachedRack = result.flight.source === "opponent"
         ? previousRackRects.current.get(result.flight.event.seat)
         : undefined;
+      const cachedSource = result.flight.event.tile.includes("_")
+        ? cachedRack?.drawn ?? cachedRack?.closed
+        : cachedRack?.closed;
       const sourceRect = result.flight.source === "own"
         ? result.flight.sourceRect
         : undefined;

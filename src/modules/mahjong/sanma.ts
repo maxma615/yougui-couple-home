@@ -477,6 +477,7 @@ export class SanmaGame {
         wind: this.wind(s),
         score: this.scores[s],
         handCount: concealedTiles(p.hand.toString()).length,
+        hasDrawnTile: p.hand._zimo?.length === 2,
         discards: p.discards.slice(),
         melds: p.hand._fulou.slice(),
         riichi: !!p.riichi,

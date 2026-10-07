@@ -545,6 +545,7 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 .mahjong-game .mahjong-player__hidden { position: static; width: max-content; gap: 1px; margin: 0; }
 .mahjong-game .mahjong-player__hidden i { width: min(1.75cqw,3.6cqh,27px); height: min(3.1cqw,5.4cqh,35px); border: 1px solid #f8d298; border-radius: 3px; background: linear-gradient(135deg, #ffffff35, transparent 48%), repeating-linear-gradient(45deg, #fff1cb18 0 2px, transparent 2px 5px), linear-gradient(#fff0cb 0 12%, #f4ad50 13% 81%, #cd772e 82% 92%, #944d2c 93%); box-shadow: inset 0 1px 0 #fff5d6, inset -2px 0 2px #8d482a6e, 0 2px 0 #a96234, 0 4px 0 #75432f, 0 6px 7px #0b1b2d55; }
 .mahjong-game .mahjong-player__hidden > span { display: none; }
+.mahjong-game .mahjong-player__hidden > i.is-drawn { margin-inline-start: min(.65cqw,1.25cqh,9px); }
 .mahjong-game .mahjong-table__position--north .mahjong-opponent-rack { left: 50%; top: 1%; transform: translateX(-50%) rotate(180deg); }
 .mahjong-game .mahjong-table__position--west .mahjong-opponent-rack { left: 22%; top: 32%; transform: translate(-50%,-50%) rotate(90deg); }
 .mahjong-game .mahjong-table__position--east .mahjong-opponent-rack { right: 22%; top: 32%; transform: translate(50%,-50%) rotate(-90deg); }

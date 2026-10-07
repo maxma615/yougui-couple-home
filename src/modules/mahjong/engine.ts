@@ -152,7 +152,7 @@ export class RiichiGame extends Majiang.Game {
       riichiSticks: model.lizhibang, remainingTiles: model.shan.paishu, doraIndicators: model.shan.baopai.slice(),
       turnSeat: model.lunban < 0 ? -1 : model.player_id[model.lunban],
       hand: concealedTiles(hand.toString()), drawnTile: drawn,
-      players: model.player_id.map((id, l) => ({ seat: id, wind: l, score: model.defen[id], handCount: concealedTiles(model.shoupai[l].toString()).length, discards: model.he[l]._pai.slice(), melds: model.shoupai[l]._fulou.slice(), riichi: !!model.shoupai[l].lizhi })),
+      players: model.player_id.map((id, l) => ({ seat: id, wind: l, score: model.defen[id], handCount: concealedTiles(model.shoupai[l].toString()).length, hasDrawnTile: !!model.shoupai[l]._zimo && model.shoupai[l]._zimo.length === 2, discards: model.he[l]._pai.slice(), melds: model.shoupai[l]._fulou.slice(), riichi: !!model.shoupai[l].lizhi })),
       choices: (this.pending.get(seat) ?? []).map(c => ({ ...c })),
       settlement: this.settlement ? structuredClone(this.settlement) : null,
       ranking: this._status === "jieju" ? model.defen.map((score, id) => ({ seat: id, score, rank: this._paipu.rank[id] })).sort((a, b) => a.rank - b.rank) : null,

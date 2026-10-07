@@ -92,6 +92,24 @@ it("shows only the legal North action, forwards its actual choice and renders pu
   expect(screen.getByTestId("nuki-tiles-0").querySelectorAll('[data-tile-face="z4"]')).toHaveLength(1);
   expect(screen.queryByRole("button", { name: "拔北" })).toBeNull();
 });
+
+it("separates an opponent's actual drawn back and rejoins the rack after a legal discard", () => {
+  const game = fixtureGame(), before = game.view(1), onChoice = vi.fn(), noop = () => {};
+  const props = (view: GameView) => ({ room: { ...room(view), mySeat: 1 }, ownSeat: 1, host: false,
+    busy: false, connected: true, motionCanAnimate: false, onChoice, onFinish: noop, onLeave: noop, onRematch: noop });
+  const { rerender } = render(<GameRoom {...props(before)}/>);
+  const rack = document.querySelector('[data-motion-rack-seat="0"]')!;
+  expect(rack.querySelectorAll('i')).toHaveLength(14);
+  expect(rack.querySelectorAll('i.is-drawn[data-motion-drawn="true"]')).toHaveLength(1);
+  expect(rack.querySelectorAll('[data-tile-face]')).toHaveLength(0);
+  const actor = game.view(0), discard = actor.choices.find(choice => choice.type === "discard");
+  expect(discard).toBeDefined();
+  game.respond(0, actor.decisionId, discard!.id);
+  rerender(<GameRoom {...props(game.view(1))}/>);
+  expect(rack.querySelectorAll('i')).toHaveLength(13);
+  expect(rack.querySelectorAll('i.is-drawn')).toHaveLength(0);
+  expect(onChoice).not.toHaveBeenCalled();
+});
 it("renders actual three-seat settlement deltas and final ranks from a complete legal game", () => {
   const game = new SanmaGame("east", ["A", "B", "C"], { dealer: 0, wallFactory: () => new SanmaWall(sanmaTiles()) });
   let settlement: GameView | undefined;

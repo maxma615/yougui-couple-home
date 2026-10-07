@@ -47,7 +47,7 @@ function scene(variant: GameVariant, actor: number, riichi = false) {
     members: Array.from({ length: capacity }, (_, seat) => ({ userId: `display-user-${seat}`, seat,
       displayName: seat === 0 ? "玩家" : `电脑${seat}`, kind: seat === 0 ? "human" : "bot", ready: true, connected: true })),
   };
-  return { room, after: { ...room, version: 2, game: game.view(0) }, choice: actor === 0 ? choice : null };
+  return { room, after: { ...room, version: 2, game: game.view(0) }, discardIsDrawn: choice.value?.includes("_") === true, choice: actor === 0 ? choice : null };
 }
 
 const harness = `import React, {useState} from 'react';
@@ -134,7 +134,8 @@ for (const engine of [chromium, webkit]) {
         const fixture = scene(variant, actor, riichi); await mount(page, fixture, width);
         let source: {x: number; y: number; width: number; height: number} | null = null;
         const rack = actor !== 0 ? await page.getByTestId(`player-${actor}`).locator(".mahjong-opponent-rack").boundingBox() : null;
-        const sourceCorners = actor !== 0 ? await page.locator(`[data-motion-rack-seat="${actor}"] > i`).last().evaluate(el => (window as any).mahjongPhysicalSamples(el,[[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[]) : null;
+        const sourceSelector = fixture.discardIsDrawn ? "i.is-drawn" : "i:not(.is-drawn)";
+        const sourceCorners = actor !== 0 ? await page.locator(`[data-motion-rack-seat="${actor}"] > ${sourceSelector}`).last().evaluate(el => (window as any).mahjongPhysicalSamples(el,[[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[]) : null;
         if (actor === 0) {
           if (riichi) await page.getByRole("button", { name: "立直", exact: true }).click();
           const tile = riichi ? page.locator('.is-drawn[data-choice-type="riichi"]')

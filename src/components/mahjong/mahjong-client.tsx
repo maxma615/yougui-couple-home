@@ -618,7 +618,10 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
   return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
     {includeIdentity ? <PlayerIdentity player={player} member={member} ownSeat={ownSeat} active={active} offset={offset} capacity={capacity} onInspect={onInspect}/> : null}
     {offset !== 0 ? <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
-      {Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => <i key={index}/>) }
+      {Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
+        const drawn = player.hasDrawnTile === true && index === Math.min(player.handCount, 14) - 1;
+        return <i key={index} className={drawn ? "is-drawn" : undefined} data-motion-drawn={drawn ? "true" : undefined}/>;
+      }) }
       <span>{player.handCount}</span>
     </div>
     {offset !== 0 && player.melds.length ? <div className="mahjong-player__melds" role="group" aria-label={`${member?.displayName || "牌友"}的副露`}>

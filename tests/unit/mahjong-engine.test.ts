@@ -43,10 +43,59 @@ describe("riichi authoritative game", () => {
     expect(views[0].remainingTiles).toBe(69);
     for (const v of views) {
       expect(v.players).toHaveLength(4);
-      expect(Object.keys(v.players[0]).sort()).toEqual(["discards", "handCount", "melds", "riichi", "score", "seat", "wind"]);
+      expect(Object.keys(v.players[0]).sort()).toEqual(["discards", "handCount", "hasDrawnTile", "melds", "riichi", "score", "seat", "wind"]);
       expect(JSON.stringify(v)).not.toContain('"_pai"');
       expect(v.players.map(p => p.score)).toEqual([25000, 25000, 25000, 25000]);
     }
+  });
+  it("publishes an opaque draw flag to every viewer across a real draw, discard and chi", () => {
+    const game = new RiichiGame("east", ["A", "B", "C", "D"], fixture({
+      0: "m123p345s123z1112",
+      1: "m456p12s456789z23",
+      2: "m789p789s789z4567",
+      3: "m111p222s333z5567",
+    }, "p9"));
+    const seats = [0, 1, 2, 3];
+    const opening = seats.map(seat => game.view(seat));
+    expect(opening.map(view => view.players.map(player => player.hasDrawnTile))).toEqual(
+      seats.map(() => [true, false, false, false]),
+    );
+    expect(opening.map(view => view.drawnTile)).toEqual(["p9", null, null, null]);
+    for (const view of opening) {
+      expect(view.players.every(player => typeof player.hasDrawnTile === "boolean")).toBe(true);
+      expect(view.players.every(player => !("drawnTile" in player) && !("hand" in player))).toBe(true);
+      expect(JSON.stringify(view.players)).not.toContain("p9");
+    }
+
+    const dealer = game.view(0);
+    const discard = dealer.choices.find(choice => choice.type === "discard" && choice.value === "p3");
+    expect(discard).toBeDefined();
+    game.respond(0, dealer.decisionId, discard!.id);
+    const afterDiscard = seats.map(seat => game.view(seat));
+    expect(afterDiscard.map(view => view.players.map(player => player.hasDrawnTile))).toEqual(
+      seats.map(() => [false, false, false, false]),
+    );
+
+    const chiView = game.view(1);
+    const chi = chiView.choices.find(choice => choice.type === "chi");
+    expect(chi).toBeDefined();
+    game.respond(1, chiView.decisionId, chi!.id);
+    const afterChi = seats.map(seat => game.view(seat));
+    expect(afterChi.map(view => view.players.map(player => player.hasDrawnTile))).toEqual(
+      seats.map(() => [false, false, false, false]),
+    );
+    expect(afterChi[1].drawnTile).toBeNull();
+
+    const callerDiscardView = game.view(1);
+    const callerDiscard = callerDiscardView.choices.find(choice => choice.type === "discard");
+    expect(callerDiscard).toBeDefined();
+    game.respond(1, callerDiscardView.decisionId, callerDiscard!.id);
+    const afterCallerDiscard = seats.map(seat => game.view(seat));
+    const sharedFlags = afterCallerDiscard[0].players.map(player => player.hasDrawnTile);
+    expect(sharedFlags[1]).toBe(false);
+    expect(afterCallerDiscard.map(view => view.players.map(player => player.hasDrawnTile))).toEqual(
+      seats.map(() => sharedFlags),
+    );
   });
   it("rejects non-turn, fabricated and stale choices without advancing the game", () => {
     const game = new RiichiGame("east", ["A", "B", "C", "D"]);
@@ -145,5 +194,13 @@ describe("riichi authoritative game", () => {
     expect(after.phase).toBe("gangzimo"); expect(after.doraIndicators).toHaveLength(2);
     expect(after.remainingTiles).toBe(68); expect(after.hand).toHaveLength(11);
     expect(after.players.find(p=>p.seat===0)!.melds).toEqual(["m1111"]);
+    const views=[0,1,2,3].map(seat=>game.view(seat));
+    expect(after.drawnTile).toEqual(expect.any(String));
+    expect(views.map(view=>view.players.map(player=>player.hasDrawnTile))).toEqual(
+      [0,1,2,3].map(()=>[true,false,false,false]),
+    );
+    expect(views.map(view=>view.drawnTile)).toEqual([after.drawnTile,null,null,null]);
+    expect(views.every(view=>view.players.every(player=>typeof player.hasDrawnTile==="boolean"))).toBe(true);
+    expect(JSON.stringify(views.map(view=>view.players))).not.toContain(after.drawnTile!);
   });
 });
