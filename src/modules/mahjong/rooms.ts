@@ -3,7 +3,8 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { RiichiGame } from "./engine";
 import { SanmaGame } from "./sanma";
-import type { GameMode, GameVariant, GameView, MahjongCommand, PlayerIdentity, RoomView } from "./types";
+import { SettlementSequenceGame } from "./settlement-sequence";
+import type { GameMode, GameVariant, GameView, MahjongCommand, MahjongGame, PlayerIdentity, RoomView } from "./types";
 
 const nonce = z.string().uuid();
 const commandSchema = z.discriminatedUnion("action", [
@@ -32,7 +33,7 @@ type Room = {
   status: RoomView["status"];
   version: number;
   members: Seat[];
-  game: RiichiGame | SanmaGame | null;
+  game: MahjongGame | null;
   lastActivity: number;
   disconnectedSince: number | null;
 };
@@ -230,7 +231,7 @@ export class RoomStore {
           member.ready = command.ready; break;
         case "start":
           if (room.status !== "lobby" || room.members.length !== (room.variant === "sanma" ? 3 : 4) || !room.members.every(m => m.ready)) throw new AppError(409, "all_ready_required", "需要席位补齐且全部真人准备");
-          room.game = this.gameFactory(room.variant, room.mode, room.members.map(m => m.displayName));
+          room.game = new SettlementSequenceGame(this.gameFactory(room.variant, room.mode, room.members.map(m => m.displayName)), room.variant === "sanma" ? 3 : 4, { now: this.now });
           room.status = "playing"; break;
         case "respond":
           if (room.status !== "playing" || !room.game) throw new AppError(409, "no_active_game", "当前没有进行中的对局");

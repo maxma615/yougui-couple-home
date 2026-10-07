@@ -203,7 +203,8 @@ describe("riichi authoritative game", () => {
     },"p5"));
     const opening=game.view(0);
     expect(opening.settlement).toBeNull();
-    expect(JSON.stringify(opening)).not.toContain("p0");
+    expect(opening.hand).not.toContain("p0");
+    expect(opening.players.every(player => !("hand" in player) && !("drawnTile" in player))).toBe(true);
     game.respond(0,opening.decisionId,opening.choices.find(choice=>choice.type==="discard"&&choice.value?.startsWith("p5"))!.id);
     for(const seat of [2,3]) {
       const view=game.view(seat),pass=view.choices.find(choice=>choice.type==="pass");
@@ -226,7 +227,10 @@ describe("riichi authoritative game", () => {
     expect(ron).toBeDefined();
     const beforeSettlement=game.view(0);
     expect(beforeSettlement.settlement).toBeNull();
-    expect(JSON.stringify(beforeSettlement)).not.toContain("s1");
+    // s1 may legitimately be the public dora indicator; inspect private-hand
+    // fields instead of treating an arbitrary tile code anywhere as a leak.
+    expect(beforeSettlement.hand).not.toContain("s1");
+    expect(beforeSettlement.players.every(player => !("hand" in player) && !("drawnTile" in player))).toBe(true);
     game.respond(1,ronView.decisionId,ron!.id);
     for(const seat of [0,2,3]) {
       const view=game.view(seat),pass=view.choices.find(choice=>choice.type==="pass");
