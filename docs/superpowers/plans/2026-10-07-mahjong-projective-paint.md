@@ -34,4 +34,4 @@
 - [x] Typecheck/build/secret scan and independent code review.
 - [x] Freeze source/build hashes after independent capture-path review (14 owned paths plus built artifact).
 - [x] Use existing immutable COPY-only ECS publisher with current 63ee972 rollback, disk/readiness/data/session/cleaner checks, public resource hashes and fresh offsite backup.
-- [ ] Synchronize owned primary paths only, verify foreign/index hashes, and report actual release/remaining reference-timing and Android limitations.
+- [x] Synchronize owned primary paths only, verify foreign/index hashes, and report actual release/remaining reference-timing and Android limitations.
