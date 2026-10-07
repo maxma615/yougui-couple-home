@@ -2,7 +2,7 @@
 
 ## Current status
 
-Tasks1–4 and the separate North sequence are locally implemented and task-approved; Task4 head is `c8be043d`. Joint production review, Linux checks and publication remain pending. Live changed concurrently to `5b92e32e3a74` (album/Liquid Glass); its14 exact changed source bytes are pinned to `f182006` and imported into this candidate, preserving that publication. No candidate from this plan has been frozen or published.
+Tasks1–4 and the separate North sequence are locally implemented and task-approved; Task4 head is `c8be043d`. Joint whole-branch review and its one scoped fix are approved; production build, Linux checks and publication remain pending. Live changed concurrently to `5b92e32e3a74` (album/Liquid Glass); its14 exact changed source bytes are pinned to `f182006` and imported into this candidate, preserving that publication. No candidate from this plan has been frozen or published.
 
 ## Confirmed before-state
 
@@ -12,7 +12,7 @@ Read-only real-engine evidence `.local/audit/seat-drag-issue-audit.md` shows ord
 
 ## Added visual steering
 
-The subsequent18-case seat-seam audit proves side floor/line mismatch14.53–16.90° and public group mismatch14.71–17.14°. Task4 will share local rectangular lanes/floor anchors, refresh the felt and show actual chi/pon/kan faces in buttons. The pinned Akagi reference screenshot/code was inspected; it stays reference-only.
+The subsequent18-case seat-seam audit proves side floor/line mismatch14.53–16.90° and public group mismatch14.71–17.14°. Task4 now shares local rectangular lanes/floor anchors, refreshes the felt and shows actual chi/pon/kan faces in buttons. The pinned Akagi reference screenshot/code was inspected; it stays reference-only.
 
 ## Required acceptance
 
@@ -20,13 +20,13 @@ Task1 evidence: component25/25, native96/96, nuki24/24, preserved reflow12/12 an
 
 Task2 evidence: 110 focused cases across six files, typecheck and 84 real-engine Chromium/WebKit cases passed. Exact public red/normal source, finite transfer/emphasis, hidden-source fallback and resize/input cleanup were reviewed. Root viewed the actual WebKit compositor midpoint. Final measured source/target corner error is below0.03px; `.local/audit/public-call-release3-1791363929944/` preserves source and geometry. Task review approved with only test formatting deferred.
 
-Task3 evidence: 117 focused cases, typecheck, 156 native settlement cases and12 additional physically valid yonma pao cases passed. The paired sanma counter200 correction preserves the1600 hand value and correct[-2000,3000,0] transfer. Result shows authoritative signed per-seat amounts/current scores and exact legal acknowledgement; native ack is88×44 with measured contrast8.44. Task review I1 missing yonma pao is addressed by scoped fix1 review; unused fixture M1 is removed. Explicit empty browser fixture selection is a deferred runner edge case and does not invalidate recorded12-case evidence.
+Task3 evidence: 117 focused cases, typecheck, 156 native settlement cases and12 additional physically valid yonma pao cases passed. The paired sanma counter200 correction preserves the1600 hand value and correct[-2000,3000,0] transfer. Result shows authoritative signed per-seat amounts/current scores and exact legal acknowledgement; native ack is88×44 with measured contrast8.44. Task review I1 missing yonma pao is addressed by scoped fix1 review; unused fixture M1 is removed. The final test-maintenance fix rejects explicitly empty/comma-only browser fixture selections before browser launch; recorded named12-case evidence remains valid.
 
 Ordinary drag clear of the rack must submit one legal Choice while drag-back/outside/HUD/cancel/lost-capture/changed-decision do not. Rotated North groups must remain complete and readable. Public chi/pon/open-kan must transfer only an uniquely established visible claimed tile to its exact accepted public meld, with finite group emphasis; stale/hidden/ambiguous sources must safely emphasize the group. Added/closed kan must not replay an old called tile.
 
 Sanma child mangan ron with honba2 must pay8400. Physical child50fu1han honba2+stick1 must retain hand value1600 with delta[-2000,3000,0]. Result rendering must name the hand value separately from each seat's authoritative gain/payment, current score and current winner's settlement; no client scoring formula or invented combined final score.
 
-Task reports, actual commands/exits/hashes and unique browser artifacts will be appended after verified implementation. Joint review and protected publication include the completed North sequence. Actual Android and unseen vendor choreography/protocol remain outside proven acceptance.
+Task reports, actual commands/exits/hashes and unique browser artifacts are retained with the approved local gates. Joint review and protected publication include the completed North sequence. Actual Android and unseen vendor choreography/protocol remain outside proven acceptance.
 
 
 ## Task4 local acceptance
@@ -34,3 +34,11 @@ Task reports, actual commands/exits/hashes and unique browser artifacts will be 
 Shared local lanes12/88%, north9%, south86%, rear floor6px outward plus actual front depth; one camera and own touch rack retained.71 component,66 native geometry scenes,84 exact legal selections,96 drag,84 public-call,24 nuki,12 preserved reflow,48 projection and24 named settlement cases passed. Final standing/line angle≤0.292° and native endpoint residual≤0.519px. Root viewed actual WebKit844 table/dialog/result compositor frames. Task review Approved with a shared tile-size-formula maintenance minor; no current alignment defect.45 fixed-name existing audit files were restored byte-for-byte.
 
 Concurrent publication provenance: fresh server manifests show exactly14 album/material paths changed since152e4fb; every byte matches pinnedf182006. These were copied only into the isolated candidate and will not be copied over primary foreign files. New parent/rollback is5b92e32e3a74 with imageb412760 and BuildV_TVYGZEDFpn3RZel_S5k. Final readiness and actual publication are still pending.
+
+## Joint source and route gate
+
+Whole-branch review `.local/audit/mahjong-seat-call-payment-joint-final-review.md` found no Critical/Important runtime defect; its I1 old closed-kan assertion was fixed in72e0f41. One scoped re-review approves I1/M4/M6: exact two faces/two backs, preserved Escape/no-request/reopen/exact Choice and truthful230ms-transfer/250ms-reflow wording. The initial26-scenario route run passed24 and failed only that same assertion in both projects; the focused two-project rerun passes both repaired cases. No unchanged matrix was repeated.
+
+Fresh Node suite passes55 files/469 tests with all26 Mahjong and14 imported-path source guards unchanged. The four final fix files contain only browser/E2E assertions and documentary changes; Node-suite/runtime inputs remain unchanged. The separate actual Next served-route regression passes6 Chromium/WebKit cases for real photo CRUD/reload, two-member version-conflict/draft preservation and album-wall/Escape/focus behavior. Private test databases, attachments and compiler config were restored/cleaned by the isolated runners.
+
+Final source/build binding and publication will use the exact clean reviewed descendant revision, preserve the currently observed photo-cleanup service dc65435a23cf/imageb412760 and all current sessions/photos/database fingerprints, and verify the exact fresh publication backup offsite. Historical nuki audit-byte loss stays disclosed; current evidence is fresh and uniquely retained. Long native-test formatting and matching duplicate depth formulas are non-blocking maintenance concerns. No physical Android, private current RNG/vector or complete vendor choreography equality is asserted.
