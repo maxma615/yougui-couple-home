@@ -1,5 +1,6 @@
 // Display geometry uses physical tile allocation and bounded global kan counts.
 // These snapshots are display fixtures; real engine progression is checked separately.
+import { projectedSampleScript } from "./projected-samples";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import React from "react";
@@ -12,7 +13,7 @@ import type {GameVariant,RoomView} from "../../src/modules/mahjong/types";
 
 const melds=["s111+","p2222","s3333=","z222=2"];
 for(const meld of melds)assert.equal((Majiang.Shoupai as unknown as {valid_mianzi(value:string):string|undefined}).valid_mianzi(meld),meld);
-const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css"].map(file=>readFileSync(`src/app/mahjong/${file}`,"utf8")).join("\n");
+const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css", "mahjong-camera.css"].map(file=>readFileSync(`src/app/mahjong/${file}`,"utf8")).join("\n");
 function fixture(variant:GameVariant,ownSeat:number,offset:number,m:number):RoomView {
  const capacity=variant==="sanma"?3:4,sideSeat=(ownSeat+offset)%capacity;
  const available: string[]=(variant==="sanma"?sanmaTiles():new Majiang.Shan(Majiang.rule())._pai.slice()).sort();
@@ -53,15 +54,16 @@ for(const engine of [chromium,webkit]){
     assert.equal(await page.locator(`[data-motion-rack-seat="${sideSeat}"] > i`).count(),13-3*m);
     assert.equal(await page.getByTestId(`player-${sideSeat}`).locator(".mahjong-player__melds > .mahjong-meld").count(),m);
     if(variant==="sanma")assert.equal(await page.locator('.mahjong-nuki-tray [data-tile-face="z4"]').count(),4);
+    await page.addScriptTag({content: projectedSampleScript});
     const issues=await page.evaluate(()=>{
      const problems:string[]=[],table=document.querySelector(".mahjong-table")!.getBoundingClientRect();
      for(const el of document.querySelectorAll<HTMLElement>(".mahjong-table__position .mahjong-tile,.mahjong-table__position .mahjong-meld__back,.mahjong-table__position .mahjong-player__hidden > i,.mahjong-hand .mahjong-tile,.mahjong-nuki-tray .mahjong-tile,.mahjong-table__dora .mahjong-tile")){
       if(el.closest(".mahjong-meld__stack [data-layer='called']"))continue; // Intentional kakan stack is checked by meld tests.
       const b=el.getBoundingClientRect();
       if(b.left<table.left-.5||b.top<table.top-.5||b.right>table.right+.5||b.bottom>table.bottom+.5)problems.push(`outside table: ${el.className}`);
-      for(const [x,y] of [[.16,.16],[.84,.16],[.5,.5],[.16,.84],[.84,.84]]){
-       const hit=document.elementFromPoint(b.left+b.width*x,b.top+b.height*y);
-       if(!hit||!el.contains(hit))problems.push(`${el.className||"back"} (${x},${y}) covered by ${hit?.className}`);
+      for(const point of (window as any).mahjongPhysicalSamples(el) as {x:number;y:number;u:number;v:number}[]){
+       const hit=document.elementFromPoint(point.x,point.y);
+       if(!hit||!el.contains(hit))problems.push(`${el.className||"back"} (${point.u},${point.v}) covered by ${hit?.className}`);
       }
      }
      return problems;

@@ -45,7 +45,7 @@ const fixtures=[normal("sanma"),normal("yonma"),replacement("nuki"),replacement(
 const harness = `import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';
 const root=createRoot(document.getElementById('root'));window.drawApi={render:(room,connected=true,canAnimate=false)=>flushSync(()=>root.render(React.createElement('main',{className:'mahjong-page'},React.createElement('div',{className:'mahjong-shell'},React.createElement(GameRoom,{room,connected,motionCanAnimate:canAnimate,ownSeat:0,host:true,busy:false,onChoice:()=>{},onFinish:()=>{},onLeave:()=>{},onRematch:()=>{}}))))),dispose:()=>root.unmount()};`;
 const bundle = await build({stdin:{contents:harness,resolveDir:process.cwd(),loader:"tsx"},bundle:true,platform:"browser",format:"iife",write:false,jsx:"automatic",define:{"process.env.NODE_ENV":'"development"'}});
-const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css"].map(file=>readFileSync("src/app/mahjong/"+file,"utf8")).join("\n");
+const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css", "mahjong-camera.css"].map(file=>readFileSync("src/app/mahjong/"+file,"utf8")).join("\n");
 for (const engine of [chromium,webkit]) {
  const browser=await engine.launch();
  try {

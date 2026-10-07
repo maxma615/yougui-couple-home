@@ -8,7 +8,7 @@ import {GameRoom} from "../../src/components/mahjong/mahjong-client";
 import {RiichiGame} from "../../src/modules/mahjong/engine";
 import {SanmaGame} from "../../src/modules/mahjong/sanma";
 import type {RoomView} from "../../src/modules/mahjong/types";
-const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"].map(f=>readFileSync("src/app/mahjong/"+f,"utf8")).join("\n");
+const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"].map(f=>readFileSync("src/app/mahjong/"+f,"utf8")).join("\n");
 let passed=0;
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true});

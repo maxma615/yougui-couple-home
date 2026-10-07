@@ -131,7 +131,7 @@ const bundle = await build({
   bundle: true, platform: "browser", format: "iife", write: false, jsx: "automatic",
   define: { "process.env.NODE_ENV": '"development"' },
 });
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"].map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
+const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"].map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
 const sizes = [{ width: 667, height: 375 }, { width: 844, height: 390 }, { width: 1440, height: 810 }];
 const measurements: { engine: string; scene: string; width: number; before: Awaited<ReturnType<typeof measure>>; after: Awaited<ReturnType<typeof measure>> }[] = [];
 

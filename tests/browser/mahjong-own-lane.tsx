@@ -10,7 +10,7 @@ import { sanmaTiles } from "../../src/modules/mahjong/sanma-wall";
 import type { GameVariant, RoomView } from "../../src/modules/mahjong/types";
 
 const groups = ["s111+", "p2222", "s3333=", "z222=2"];
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"].map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
+const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"].map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
 function fixture(variant: GameVariant, meldCount: number, drawn: boolean): RoomView {
   const capacity = variant === "sanma" ? 3 : 4;
   const available: string[] = (variant === "sanma" ? sanmaTiles() : new Majiang.Shan(Majiang.rule())._pai.slice()).sort();

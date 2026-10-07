@@ -8,6 +8,7 @@ import "./mahjong-interaction.css";
 import "./mahjong-discard-motion.css";
 import "./mahjong-table-center.css";
 import "./mahjong-table-edge.css";
+import "./mahjong-camera.css";
 
 export const metadata: Metadata = {
   title: "麻将室 · 有归",

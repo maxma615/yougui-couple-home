@@ -549,21 +549,28 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     })}</div><div className="mahjong-ranking__actions">{host ? <button type="button" className="mahjong-button mahjong-button--gold" disabled={busy} onClick={onRematch}><RefreshCw size={16}/>再开一场</button> : <span>等待房主发起下一场</span>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散牌桌</button> : null}</div></section> : null}
 
     <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
-      <div className="mahjong-table__grain" aria-hidden="true"/>
       {feedback ? <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
-      <svg className="mahjong-table__seams" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"><path d="M170 90H830L940 600H60ZM170 90L442 285M830 90L558 285M60 600L442 375M940 600L558 375"/><path d="M182 98H818L925 590H75Z"/></svg>
+      <div className="mahjong-table__surface" data-testid="mahjong-table-surface">
+        <div className="mahjong-table__grain" aria-hidden="true"/>
+        <svg className="mahjong-table__seams" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"><path d="M170 90H830L940 600H60ZM170 90L442 285M830 90L558 285M60 600L442 375M940 600L558 375"/><path d="M182 98H818L925 590H75Z"/></svg>
+        {Array.from({ length: capacity - 1 }, (_, index) => index + 1).map(offset => {
+          const player = byRelative(offset);
+          const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
+          return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
+        })}
+        <div className="mahjong-table__center" aria-label="场况台">
+          <strong>{roundTitle(game)}</strong>
+          <span className="mahjong-table__wall" aria-label={`剩余 ${game.remainingTiles} 张`}>余 <b>{game.remainingTiles}</b></span>
+          {game.players.map(player => <span key={player.seat} data-seat={player.seat} className={`mahjong-center-seat mahjong-center-seat--${relativeSeat(player.seat)}${game.turnSeat === player.seat ? " is-active" : ""}`} aria-label={`${windNames[player.wind]}家 ${player.score.toLocaleString()} 点`}><span className="mahjong-center-seat__wind">{windNames[player.wind]}</span><b>{player.score.toLocaleString()}</b></span>)}
+        </div>
+        {game.players.map((player) => <River key={player.seat} player={player} offset={relativeSeat(player.seat)} capacity={capacity} roomId={room.id} gameInstanceId={game.gameInstanceId} handId={game.handId} hiddenEventIds={discardMotion.hiddenEventIds} />)}
+      </div>
       {Array.from({ length: capacity - 1 }, (_, index) => index + 1).map(offset => {
         const player = byRelative(offset);
         const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
-        return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
+        return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerIdentity player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
       })}
       <div className="mahjong-table__dora" role="group" aria-label="宝牌指示牌" data-testid="mahjong-dora"><span>宝牌指示牌</span><div>{game.doraIndicators.map((tile, index) => <TileFace key={`${tile}-${index}`} value={tile}/>)}{Array.from({length: Math.max(0, 5 - game.doraIndicators.length)}, (_, index) => <i className="mahjong-indicator-back" aria-hidden="true" key={`back-${index}`}/>)}</div><small>宝牌 <b>{game.doraIndicators.map(tile => tileName(indicatorBonus(tile, room.variant))).join(" · ")}</b></small><div className="mahjong-table__counters" role="group" aria-label="场况计数"><span className="mahjong-table__counter" aria-label={`本场 ${game.honba}`}><small>本场</small><b>{game.honba}</b></span><span className="mahjong-table__counter" aria-label={`立直棒 ${game.riichiSticks}`}><i className="mahjong-table__stick" aria-hidden="true"/><small>立直棒</small><b>{game.riichiSticks}</b></span></div></div>
-      <div className="mahjong-table__center" aria-label="场况台">
-        <strong>{roundTitle(game)}</strong>
-        <span className="mahjong-table__wall" aria-label={`剩余 ${game.remainingTiles} 张`}>余 <b>{game.remainingTiles}</b></span>
-        {game.players.map(player => <span key={player.seat} data-seat={player.seat} className={`mahjong-center-seat mahjong-center-seat--${relativeSeat(player.seat)}${game.turnSeat === player.seat ? " is-active" : ""}`} aria-label={`${windNames[player.wind]}家 ${player.score.toLocaleString()} 点`}><span className="mahjong-center-seat__wind">{windNames[player.wind]}</span><b>{player.score.toLocaleString()}</b></span>)}
-      </div>
-      {game.players.map((player) => <River key={player.seat} player={player} offset={relativeSeat(player.seat)} capacity={capacity} roomId={room.id} gameInstanceId={game.gameInstanceId} handId={game.handId} hiddenEventIds={discardMotion.hiddenEventIds} />)}
       <div className="mahjong-table__own"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
         <div className="mahjong-hand-block"><div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
           {hand.map((tile, index) => {
@@ -592,13 +599,23 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   </section>;
 }
 
-function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInspect }: { player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void }) {
+type PlayerPanelProps = { player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void; includeIdentity?: boolean };
+
+function PlayerIdentity({ player, member, ownSeat, offset, capacity, onInspect }: PlayerPanelProps) {
   if (!player) return null;
   const canInspect = (player.melds.length > 0 || (player.nuki ?? 0) > 0) && Boolean(onInspect);
   const Heading = canInspect ? "button" : "div";
   const relativeNames = capacity === 3 ? ["你", "下家", "上家"] : ["你", "下家", "对家", "上家"];
-  return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
+  return <>
     <Heading className="mahjong-player__head" {...(canInspect ? {type:"button" as const, onClick:onInspect, "aria-label":`查看${member?.displayName || "牌友"}的公开副露`} : {})}><span className="mahjong-player__wind" data-avatar={player.seat % 4} data-wind={windNames[player.wind] || "東"}>{windNames[player.wind] || "東"}</span><div><strong>{member?.displayName || (player.seat === ownSeat ? "你" : "牌友")}</strong><small>{relativeNames[offset] || "牌友"}{member?.kind === "bot" ? " · 电脑" : ""}{player.nuki !== undefined ? <span className="mahjong-player__nuki" aria-label={`公开拔北数量：${player.nuki}`} data-testid={`nuki-${player.seat}`}><span>北</span> × {player.nuki}</span> : null}</small></div><b>{player.score.toLocaleString()}</b>{canInspect ? <span className="mahjong-player__zoom" aria-hidden="true"><Expand size={10}/></span> : null}{player.riichi ? <i className="mahjong-player__riichi">立直</i> : null}</Heading>
+    {member?.kind === "human" && !member.connected ? <small className="mahjong-player__offline">暂时离线 · 座位保留</small> : null}
+  </>;
+}
+
+function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInspect, includeIdentity = true }: PlayerPanelProps) {
+  if (!player) return null;
+  return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
+    {includeIdentity ? <PlayerIdentity player={player} member={member} ownSeat={ownSeat} active={active} offset={offset} capacity={capacity} onInspect={onInspect}/> : null}
     <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
       {Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => <i key={index}/>) }
       <span>{player.handCount}</span>
@@ -607,7 +624,6 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
       {player.melds.map((meld, index) => <MeldView key={`${index}-${meld}`} meld={meld}/>) }
     </div> : null}</div>
     {(player.nuki ?? 0) > 0 ? <div className="mahjong-nuki-tray" role="group" aria-label={`${member?.displayName || "牌友"}已拔北 ${player.nuki} 张`} data-nuki-seat={player.seat} data-testid={`nuki-tiles-${player.seat}`}><small>拔北 × {player.nuki}</small><div className="mahjong-nuki-tray__tiles">{Array.from({length: Math.min(4, player.nuki ?? 0)}, (_, index) => <TileFace value="z4" key={index}/>)}</div></div> : null}
-    {member?.kind === "human" && !member.connected ? <small className="mahjong-player__offline">暂时离线 · 座位保留</small> : null}
   </div>;
 }
 

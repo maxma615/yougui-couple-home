@@ -4,7 +4,24 @@ type MotionGameView = GameView & { gameInstanceId?: string; handId?: number };
 type MotionRoomView = Omit<RoomView, "game"> & { game: MotionGameView | null };
 
 export type MotionRect = Readonly<{ left: number; top: number; width: number; height: number }>;
-export type MotionSourceGeometry = Readonly<{ width: number; height: number; angle: number; scale: number }>;
+export type MotionPoint = Readonly<{ x: number; y: number }>;
+export type MotionQuad = Readonly<{
+  topLeft: MotionPoint;
+  topRight: MotionPoint;
+  bottomRight: MotionPoint;
+  bottomLeft: MotionPoint;
+}>;
+export type MotionSourceGeometry = Readonly<{ width: number; height: number; angle: number; scale: number; quad?: MotionQuad }>;
+
+function validQuad(quad: MotionQuad) {
+  const points = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
+  if (points.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) return false;
+  const area = points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length];
+    return sum + point.x * next.y - next.x * point.y;
+  }, 0) / 2;
+  return Number.isFinite(area) && Math.abs(area) > 1;
+}
 
 export type DiscardMotionIntent = Readonly<{
   roomId: string;
@@ -179,7 +196,8 @@ export class DiscardMotionTracker {
         && intent.sourceGeometry.width > 0
         && intent.sourceGeometry.height > 0
         && Number.isFinite(intent.sourceGeometry.angle)
-        && intent.sourceGeometry.scale > 0;
+        && intent.sourceGeometry.scale > 0
+        && (!intent.sourceGeometry.quad || validQuad(intent.sourceGeometry.quad));
       return {
         newEvents,
         flight: validIntent ? {

@@ -4,10 +4,12 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { RoomView } from "@/modules/mahjong/types";
 import { TileFace } from "./mahjong-tile";
+import { quadToMatrix3d } from "./projected-geometry";
 import {
   DiscardMotionTracker,
   type DiscardMotionEvent,
   type DiscardMotionIntent,
+  type MotionQuad,
   type MotionRect,
   type MotionSourceGeometry,
 } from "./discard-motion";
@@ -21,6 +23,7 @@ type FlightGeometry = Readonly<{
   height: number;
   angle: number;
   scale: number;
+  quad?: MotionQuad;
 }>;
 
 type FlightView = Readonly<{
@@ -196,7 +199,13 @@ export function measureDiscardElement(element: HTMLElement) {
   const geometry = elementToFlight(element, rect);
   return {
     rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
-    geometry: { width: geometry.width, height: geometry.height, angle: geometry.angle, scale: geometry.scale },
+    geometry: {
+      width: geometry.width,
+      height: geometry.height,
+      angle: geometry.angle,
+      scale: geometry.scale,
+      quad: geometry.quad,
+    },
   };
 }
 
@@ -206,8 +215,8 @@ function targetToFlight(face: HTMLElement, rect: DOMRect): FlightGeometry {
 
 function elementToFlight(element: HTMLElement, rect: DOMRect): FlightGeometry {
   const style = getComputedStyle(element);
-  const width = numeric(style.width) || element.offsetWidth || rect.width;
-  const height = numeric(style.height) || element.offsetHeight || rect.height;
+  const width = borderBoxSize(element, style, "width") || element.offsetWidth || rect.width;
+  const height = borderBoxSize(element, style, "height") || element.offsetHeight || rect.height;
   const { angle, scale } = accumulatedTransform(element);
   return {
     left: rect.left + rect.width / 2,
@@ -216,7 +225,81 @@ function elementToFlight(element: HTMLElement, rect: DOMRect): FlightGeometry {
     height,
     angle,
     scale,
+    quad: measureElementQuad(element, style),
   };
+}
+
+function borderBoxSize(element: HTMLElement, style: CSSStyleDeclaration, axis: "width" | "height") {
+  const size = numeric(style[axis]);
+  if (!size || style.boxSizing === "border-box") return size;
+  const sides = axis === "width" ? ["Left", "Right"] : ["Top", "Bottom"];
+  const extras = sides.reduce((sum, side) => sum
+    + numeric(style[`padding${side}` as keyof CSSStyleDeclaration] as string)
+    + numeric(style[`border${side}Width` as keyof CSSStyleDeclaration] as string), 0);
+  return size + extras;
+}
+
+function measureElementQuad(element: HTMLElement, style: CSSStyleDeclaration): MotionQuad | undefined {
+  const corners: Array<keyof MotionQuad> = ["topLeft", "topRight", "bottomRight", "bottomLeft"];
+  const dataNames: Record<keyof MotionQuad, string> = {
+    topLeft: "top-left",
+    topRight: "top-right",
+    bottomRight: "bottom-right",
+    bottomLeft: "bottom-left",
+  };
+  const border = {
+    left: numeric(style.borderLeftWidth),
+    right: numeric(style.borderRightWidth),
+    top: numeric(style.borderTopWidth),
+    bottom: numeric(style.borderBottomWidth),
+  };
+  const savedStyle = element.getAttribute("style");
+  const changedPosition = style.position === "static";
+  const markers = corners.map((corner) => {
+    const marker = document.createElement("span");
+    marker.dataset.discardMotionCorner = dataNames[corner];
+    marker.setAttribute("aria-hidden", "true");
+    marker.style.cssText = "position:absolute;display:block;width:0;height:0;min-width:0;min-height:0;padding:0;margin:0;border:0;overflow:hidden;line-height:0;pointer-events:none!important;visibility:hidden;transform:none!important;";
+    if (corner === "topLeft" || corner === "bottomLeft") marker.style.left = `${-border.left}px`;
+    else marker.style.right = `${-border.right}px`;
+    if (corner === "topLeft" || corner === "topRight") marker.style.top = `${-border.top}px`;
+    else marker.style.bottom = `${-border.bottom}px`;
+    return marker;
+  });
+
+  try {
+    if (changedPosition) element.style.setProperty("position", "relative", "important");
+    markers.forEach((marker) => element.append(marker));
+    const points = markers.map((marker) => {
+      const rect = marker.getBoundingClientRect();
+      return { x: rect.left, y: rect.top };
+    });
+    if (points.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) return undefined;
+    const quad = {
+      topLeft: points[0],
+      topRight: points[1],
+      bottomRight: points[2],
+      bottomLeft: points[3],
+    };
+    return usableQuad(quad) ? quad : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    markers.forEach((marker) => marker.remove());
+    if (changedPosition) {
+      if (savedStyle === null) element.removeAttribute("style");
+      else element.setAttribute("style", savedStyle);
+    }
+  }
+}
+
+function usableQuad(quad: MotionQuad) {
+  const points = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
+  const area = points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length];
+    return sum + point.x * next.y - next.x * point.y;
+  }, 0) / 2;
+  return Number.isFinite(area) && Math.abs(area) > 1;
 }
 
 function numeric(value: string) {
@@ -274,12 +357,16 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
     };
   }, [flight, onFinish]);
 
+  const projected = Boolean(flight.from.quad && quadToMatrix3d(
+    flight.from.width, flight.from.height, flight.from.quad, flight.from.left, flight.from.top,
+  ));
   const style = {
     left: `${flight.from.left}px`,
     top: `${flight.from.top}px`,
     width: `${flight.from.width}px`,
     height: `${flight.from.height}px`,
-    transform: transform(flight.from),
+    transform: flightTransform(flight.from),
+    transformOrigin: projected ? "0 0" : "center",
   };
   return typeof document === "undefined" ? null : createPortal(
     <div
@@ -306,12 +393,23 @@ function transform(geometry: FlightGeometry) {
   return `translate(-50%, -50%) rotate(${geometry.angle}deg) scale(${geometry.scale})`;
 }
 
+function flightTransform(geometry: FlightGeometry) {
+  if (geometry.quad) {
+    const matrix = quadToMatrix3d(geometry.width, geometry.height, geometry.quad, geometry.left, geometry.top);
+    if (matrix) return matrix;
+  }
+  return transform(geometry);
+}
+
 function keyframe(geometry: FlightGeometry): Keyframe {
   return {
     left: `${geometry.left}px`,
     top: `${geometry.top}px`,
     width: `${geometry.width}px`,
     height: `${geometry.height}px`,
-    transform: transform(geometry),
+    transform: flightTransform(geometry),
+    transformOrigin: geometry.quad && quadToMatrix3d(geometry.width, geometry.height, geometry.quad, geometry.left, geometry.top)
+      ? "0 0"
+      : "center",
   };
 }

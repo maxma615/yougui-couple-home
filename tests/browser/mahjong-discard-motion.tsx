@@ -1,5 +1,6 @@
 // Render authority-produced snapshots through the actual interactive table.
 // This checks animation geometry; real Socket submission is tested separately.
+import { projectedSampleScript } from "./projected-samples";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { build } from "esbuild";
@@ -58,7 +59,7 @@ const root=createRoot(document.getElementById('root'));flushSync(()=>root.render
 window.motionApi.update=room=>flushSync(()=>setRoom(room));window.motionApi.connected=value=>flushSync(()=>setConnected(value));window.motionApi.quietUpdate=room=>flushSync(()=>{setCanAnimate(false);setRoom(room)});`;
 const bundle = await build({ stdin: { contents: harness, resolveDir: process.cwd(), loader: "tsx" }, bundle: true,
   platform: "browser", format: "iife", write: false, jsx: "automatic", define: { "process.env.NODE_ENV": '"development"' } });
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"]
+const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"]
   .map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
 const script = "globalThis.__name=(target,value)=>Object.defineProperty(target,\"name\",{value,configurable:true});globalThis.process={env:{NODE_ENV:\"development\"}};\n" + bundle.outputFiles[0].text;
 async function mount(page: Page, fixture: ReturnType<typeof scene>, width: number) {
@@ -69,6 +70,7 @@ async function mount(page: Page, fixture: ReturnType<typeof scene>, width: numbe
   await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*{box-sizing:border-box}${css}</style><div id="root"></div>`);
   await page.evaluate(f => { (window as any).motionFixture = f; }, fixture);
   await page.addScriptTag({ content: script });
+  await page.addScriptTag({ content: projectedSampleScript });
   await page.getByTestId("mahjong-board").waitFor({state:"visible",timeout:2000});
   await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(i => i.complete && i.naturalWidth === 300));
   await page.waitForTimeout(260); // Initial draw/selection effects must have settled before measuring.
@@ -91,10 +93,10 @@ async function captureFlight(page: Page, fixture: ReturnType<typeof scene>) {
       const target = [...document.querySelectorAll<HTMLElement>('[data-discard-event-id]')].find(e => e.dataset.discardEventId === event);
       if (!target) throw Error("flight must correspond to an actual river event");
       const face = target.querySelector<HTMLElement>('[data-tile-face]')!;
-      animation.currentTime = 0; await new Promise(requestAnimationFrame); const start = box(flight); const matrix=new DOMMatrixReadOnly(getComputedStyle(flight).transform);const startAngle=Math.atan2(matrix.b,matrix.a)*180/Math.PI;
+      animation.currentTime = 0; await new Promise(requestAnimationFrame); const start = box(flight); const startCorners=(window as any).mahjongPhysicalSamples(flight,[[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[]; const matrix=new DOMMatrixReadOnly(getComputedStyle(flight).transform);const startAngle=Math.atan2(matrix.b,matrix.a)*180/Math.PI;
       animation.currentTime = duration * .5; await new Promise(requestAnimationFrame); const middle = box(flight);
       animation.currentTime = duration - .01; await new Promise(requestAnimationFrame); const end = box(flight), destination = box(face);
-      const result = { start, startAngle, middle, end, destination, source: flight.dataset.motionSource, seat: flight.dataset.motionSeat,
+      const result = { start, startCorners, startAngle, middle, end, destination, source: flight.dataset.motionSource, seat: flight.dataset.motionSeat,
         duration, pointerEvents: getComputedStyle(flight).pointerEvents, ariaHidden: flight.getAttribute('aria-hidden'),
         hiddenTarget: getComputedStyle(target).opacity === '0' || getComputedStyle(face).opacity === '0' };
       animation.finish(); return result;
@@ -132,6 +134,7 @@ for (const engine of [chromium, webkit]) {
         const fixture = scene(variant, actor, riichi); await mount(page, fixture, width);
         let source: {x: number; y: number; width: number; height: number} | null = null;
         const rack = actor !== 0 ? await page.getByTestId(`player-${actor}`).locator(".mahjong-opponent-rack").boundingBox() : null;
+        const sourceCorners = actor !== 0 ? await page.locator(`[data-motion-rack-seat="${actor}"] > i`).last().evaluate(el => (window as any).mahjongPhysicalSamples(el,[[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[]) : null;
         if (actor === 0) {
           if (riichi) await page.getByRole("button", { name: "立直", exact: true }).click();
           const tile = riichi ? page.locator('.is-drawn[data-choice-type="riichi"]')
@@ -155,9 +158,9 @@ for (const engine of [chromium, webkit]) {
         if (source) { const start = center(f.start), from = center({ x: source.x, y: source.y, w: source.width, h: source.height });
           assert.ok(Math.hypot(start[0] - from[0], start[1] - from[1]) < 3, "same-face flight must originate from selected physical tile"); }
         if (rack) {
-          const expectedAngle=actor===1?-90:variant==="sanma"||actor===3?90:180;
-          const angleDelta=((f.startAngle-expectedAngle+540)%360)-180;
-          assert.ok(Math.abs(angleDelta)<1,"opponent first frame must preserve public back rack rotation");
+          assert.ok(sourceCorners);
+          for (let i=0;i<4;i++) assert.ok(Math.hypot(f.startCorners[i].x-sourceCorners[i].x,f.startCorners[i].y-sourceCorners[i].y)<1,
+            "opponent first frame must preserve each projected corner of its actual public back tile");
           const start=center(f.start); assert.ok(start[0] >= rack.x-3 && start[0] <= rack.x+rack.width+3 && start[1] >= rack.y-3 && start[1] <= rack.y+rack.height+3, "opponent flight must start at the previous public back rack"); }
         await page.waitForTimeout(40);
         assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0);

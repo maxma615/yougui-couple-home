@@ -1,4 +1,5 @@
 // Browser audit of real, progressed closed-kan states. No server or live room is used.
+import { projectedSampleScript } from "./projected-samples";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { build } from "esbuild";
@@ -117,7 +118,7 @@ const bundle = await build({
   bundle: true, platform: "browser", format: "iife", write: false, jsx: "automatic",
   define: { "process.env.NODE_ENV": '"development"' },
 });
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css"].map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
+const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"].map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
 const sizes = [{ width: 667, height: 375 }, { width: 844, height: 390 }, { width: 1440, height: 810 }];
 const failures: string[] = [];
 let views = 0;
@@ -161,6 +162,7 @@ async function captureSignature(page: import("@playwright/test").Page, scene: Sc
   assert.deepEqual(signature.slots.filter(slot => slot.kind === "face").map(slot => slot.red), scene.red ? [true, false] : [false, false]);
   assert.equal(signature.aria, scene.red ? "暗杠，五筒（赤）" : "暗杠，红中");
 
+  await page.addScriptTag({content: projectedSampleScript});
   const geometry = await meld.evaluate(element => {
     const table = document.querySelector(".mahjong-table")!.getBoundingClientRect();
     const failures: string[] = [];
@@ -169,10 +171,9 @@ async function captureSignature(page: import("@playwright/test").Page, scene: Sc
       if (bounds.width <= 0 || bounds.height <= 0 || bounds.left < table.left - .5 || bounds.top < table.top - .5 || bounds.right > table.right + .5 || bounds.bottom > table.bottom + .5) {
         failures.push(`tile slot outside table: ${tile.className} ${JSON.stringify({ x: bounds.x, y: bounds.y, w: bounds.width, h: bounds.height })}`);
       }
-      for (const [x, y] of [[.16, .16], [.5, .5], [.84, .16], [.16, .84], [.84, .84]]) {
-        const px = bounds.left + bounds.width * x, py = bounds.top + bounds.height * y;
-        const hit = document.elementFromPoint(px, py);
-        if (!hit || !tile.contains(hit)) failures.push(`5-point tile slot sample (${x},${y}) intercepted by ${hit?.className || hit?.tagName || "none"}`);
+      for (const point of (window as any).mahjongPhysicalSamples(tile) as {x:number;y:number;u:number;v:number}[]) {
+        const hit = document.elementFromPoint(point.x, point.y);
+        if (!hit || !tile.contains(hit)) failures.push(`5-point projected tile sample (${point.u},${point.v}) intercepted by ${hit?.className || hit?.tagName || "none"}`);
       }
     }
     return failures;
