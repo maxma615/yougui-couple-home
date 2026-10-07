@@ -6,6 +6,11 @@ if [ "$#" -ne 1 ]; then
   exit 2
 fi
 
+if [ -f /srv/yougui/config/backups-disabled ]; then
+  echo "Backups disabled by the owner; explicit renewed authorization is required." >&2
+  exit 2
+fi
+
 case "$1" in
   *"/../"*|../*|*/..|..)
     echo "Backup destination must not contain parent traversal" >&2
