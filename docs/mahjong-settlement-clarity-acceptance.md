@@ -1,6 +1,6 @@
 # 横屏结算与收支展示验收
 
-日期：2026-10-08。当前步骤：本地与独立审查通过，尚未发布本次变更。
+日期：2026-10-08。已发布到上海 ECS：源码 `aa9c16a4f93c0281e77d8dd42c274704fd3391cb`，Build `PNhWHaCbRo2r8IqaH3fQd`。
 
 ## 复现与最小修正
 
@@ -33,4 +33,14 @@
 
 独立审查未发现阻断项，并重跑两个组件文件 11/11。既有 payload 边界测试在旧文案断言下 RED 3failed/3passed，更新后仍验证权威收支与牌型点数分离、固定席位和第二笔荣和不叠加上一笔。新的终局 RED 1 项确实因结算未隐藏而失败；最终两文件 GREEN 11/11。
 
-最终浏览器证据：ignored `.local/audit/mahjong-settlement-clarity-task2-20261008/run-1791391063515/`。里宝行由组件 payload fixture 验证，未独立加入本次真实浏览器物理牌局。完整检查、干净构建及上海 ECS 的实际发布证据在完成后补充。保留禁备份策略，不下载真实用户记录或照片；业务表指纹、图片清理器和应用资源限制须保持不变。
+最终浏览器证据：ignored `.local/audit/mahjong-settlement-clarity-task2-20261008/run-1791391063515/`。里宝行由组件 payload fixture 验证，未独立加入本次真实浏览器物理牌局。
+
+## 实际构建与发布
+
+干净源码的完整测试为 60 文件、524 项全部通过；生产构建、类型检查和凭据扫描通过。冻结源码 518 文件、Next 构建 449 文件；本次生产面板与 CSS 的 SHA 分别为 `3b2eb6fa87e51d681773806df2b418d49c243a8272566292bb05cbce1441ee17`、`6a4e7ac0483c212047dd23c776b5ce8558a19020ed1424a3600213b83f76596d`。
+
+ECS 候选与实际运行镜像为 `sha256:0a7e631259a4c2263f99b9cda38f690efb4e89b605c30f31e48f39774d3de047`。R01 的 Linux 组件检查继承生产环境，因 React 测试入口及 Node 内建模块解析错误失败；失败原始证据保留。R02 仅调整临时测试容器的 `NODE_ENV=test`，固定镜像 ID、只读且断网，真实两文件 11/11 通过（17.08 秒），没有为此修改产品或重建镜像。R02 同时用固定镜像 ID 重新核对全部源码及构建文件。
+
+实际发布使用已核验的 `river-solid-publish.sh`，退出码 0；入站保护门、请求排空、权威无真人牌桌检查均通过，切换后保护门恢复。live/final 核对所有源码及构建摘要、12 表发布前后摘要一致、图片清理器容器身份一致、应用 1 CPU/768 MiB 且无 OOM。备份仍禁用，没有下载用户记录或照片。公网默认信任 TLS 验证通过，health 200，137 个静态资源摘要全部匹配冻结构建。
+
+实际证据位于 ignored `.local/ecs-deploy/settlement-clarity-remote-captures/settlement-clarity-aa9c16a-r02-{candidate,linux-scoring,readiness,staging,publish,publish-status,live-check,final-health}.json`；公网证明为 `settlement-clarity-aa9c16a-public-proof.json`。主目录的八路径同步由 `sync-settlement-clarity-owned.py aa9c16a r01 --attempt r02` 约束，执行结果记录于 `settlement-clarity-aa9c16a-r02-primary-sync-proof.json`；其余并行文件、HEAD 和 index 受基线保护。

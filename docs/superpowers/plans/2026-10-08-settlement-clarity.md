@@ -47,7 +47,9 @@
 
 **Files:** `docs/mahjong-settlement-clarity-acceptance.md`、`docs/mahjong-fidelity-progress.md`；ignored 独占发布工具。
 
-- [ ] 独立审查产品和验证证据，运行所需测试、类型检查、干净生产构建与凭据扫描。
-- [ ] 新鲜核验当前 f7baf30 实际源、镜像、构建、helper、清理器、资源及禁备份策略，冻结唯一发布构建。
-- [ ] 在生产空桌与保护门检查通过后使用已核验的 no-backup 发布器，核验公网资源及业务表指纹保持不变。
+- [x] 独立审查产品和验证证据；干净源码 60 文件/524 项、类型检查、生产构建与凭据扫描通过。
+- [x] 新鲜核验 f7baf30 父版本，冻结 aa9c16a；实际 R02 固定镜像 ID 校验源码 518/构建 449 文件，隔离 Linux 两文件 11/11 通过。R01 环境失败保留，没有修改产品绕过测试。
+- [x] 权威空桌、请求排空和保护门通过，实际 no-backup 发布器退出 0；live/final 12 表摘要、清理器及资源保持一致；公网可信 TLS、health 200、137 静态资源一致。
 - [ ] 主目录仅同步本次拥有路径，保留并行变更、HEAD、index 与其他文件；记录实际限制，持续目标保持 active。
+
+实际部署源码 `aa9c16a4f93c0281e77d8dd42c274704fd3391cb`，Build `PNhWHaCbRo2r8IqaH3fQd`。本计划发布后更新仅为文档，不改变冻结产品构建。主目录同步的最终结果以 ignored `settlement-clarity-aa9c16a-r02-primary-sync-proof.json` 为准。
