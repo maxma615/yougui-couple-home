@@ -412,7 +412,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     return () => observer.disconnect();
   }, [drawArrival.cancel]);
   const selectedHandTileRef = useRef<{ tileId: string; choiceId: string } | null>(null);
-  const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
+  const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; rackTop: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
   const submittedChoiceRef = useRef(false);
   const suppressPointerClickRef = useRef(false);
   const wasBusyRef = useRef(busy);
@@ -497,10 +497,22 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     suppressPointerClickRef.current = false;
     activeTilePointerRef.current = {
       pointerId: event.pointerId ?? 0, tileId, choice,
-      startX: event.clientX, startY: event.clientY, dragged: false, element: event.currentTarget,
+      startX: event.clientX, startY: event.clientY,
+      rackTop: event.currentTarget.closest(".mahjong-hand")?.getBoundingClientRect().top ?? Number.NaN,
+      dragged: false, element: event.currentTarget,
     };
     try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* Pointer capture is unavailable in some embedded browsers. */ }
     handReflow.captureBeforeInput();
+  };
+  // Native hit testing follows the actual projected felt, rather than the
+  // surface's axis-aligned bounding box. Freeze the rack boundary on press:
+  // lifting or dragging its last tile must not move the release threshold.
+  const isPlayableDiscardRelease = (rackTop: number, clientX: number, clientY: number) => {
+    if (![rackTop, clientX, clientY].every(Number.isFinite) || clientY >= rackTop) return false;
+    const surface = tableRef.current?.querySelector(".mahjong-table__surface");
+    const target = document.elementFromPoint?.(clientX, clientY);
+    return Boolean(surface && target && surface.contains(target)
+      && !target.closest("button, a, input, select, textarea, [role='button'], .mahjong-opponent-rack, .mahjong-player__melds, .mahjong-hand-public-melds, .mahjong-nuki-tray"));
   };
   const moveHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
     const active = activeTilePointerRef.current;
@@ -509,9 +521,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     if (!active.dragged && Math.hypot(dx, dy) >= 12) active.dragged = true;
     if (active.dragged) {
       setDragPreview({ tileId, x: dx, y: dy });
-      const center = tableRef.current?.querySelector(".mahjong-table__center");
-      const target = document.elementFromPoint?.(event.clientX, event.clientY);
-      setOverDiscardTarget(Boolean(center && target && center.contains(target)));
+      setOverDiscardTarget(isPlayableDiscardRelease(active.rackTop, event.clientX, event.clientY));
     }
   };
   const endHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -519,9 +529,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
     const dx = event.clientX - active.startX, dy = event.clientY - active.startY;
     const dragged = active.dragged || Math.hypot(dx, dy) >= 12;
-    const center = tableRef.current?.querySelector(".mahjong-table__center");
-    const target = document.elementFromPoint?.(event.clientX, event.clientY);
-    const landedInTable = Boolean(center && target && center.contains(target));
+    const landedInTable = isPlayableDiscardRelease(active.rackTop, event.clientX, event.clientY);
     activeTilePointerRef.current = null;
     setDragPreview(null);
     setOverDiscardTarget(false);
@@ -535,6 +543,10 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     const active = activeTilePointerRef.current;
     if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
     activeTilePointerRef.current = null;
+    // Lost capture may precede a later click, even below the drag threshold.
+    // Suppress it until the next press and clear any earlier tile selection.
+    suppressPointerClickRef.current = true;
+    clearHandSelection();
     setDragPreview(null);
     setOverDiscardTarget(false);
     try { active.element.releasePointerCapture?.(event.pointerId); } catch { /* Cancellation already released the pointer. */ }
@@ -660,7 +672,7 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
     {offset !== 0 && player.melds.length ? <div className="mahjong-player__melds" role="group" aria-label={`${member?.displayName || "牌友"}的副露`}>
       {player.melds.map((meld, index) => <MeldView key={`${index}-${meld}`} meld={meld}/>) }
     </div> : null}</div> : player.melds.length ? <div className="mahjong-hand-public-melds" role="group" aria-label="你的公开副露">{player.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}
-    {(player.nuki ?? 0) > 0 ? <div className="mahjong-nuki-tray" role="group" aria-label={`${member?.displayName || "牌友"}已拔北 ${player.nuki} 张`} data-nuki-seat={player.seat} data-testid={`nuki-tiles-${player.seat}`}><small>拔北 × {player.nuki}</small><div className="mahjong-nuki-tray__tiles">{Array.from({length: Math.min(4, player.nuki ?? 0)}, (_, index) => <span key={index} data-nuki-index={index} style={{display: "contents"}}><TileFace value="z4"/></span>)}</div></div> : null}
+    {(player.nuki ?? 0) > 0 ? <div className="mahjong-nuki-tray" role="group" aria-label={`${member?.displayName || "牌友"}已拔北 ${player.nuki} 张`} data-nuki-seat={player.seat} data-testid={`nuki-tiles-${player.seat}`} style={{"--nuki-count": Math.min(4, player.nuki ?? 0)} as CSSProperties}><small>拔北 × {player.nuki}</small><div className="mahjong-nuki-tray__footprint"><div className="mahjong-nuki-tray__tiles">{Array.from({length: Math.min(4, player.nuki ?? 0)}, (_, index) => <span key={index} data-nuki-index={index} style={{display: "contents"}}><TileFace value="z4"/></span>)}</div></div></div> : null}
   </div>;
 }
 
@@ -724,7 +736,7 @@ function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriv
   const choice = choices[0];
   const dragging = Boolean(drag);
   const style = drag ? { "--mahjong-drag-x": `${drag.x}px`, "--mahjong-drag-y": `${drag.y}px` } as CSSProperties : undefined;
-  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)}/>;
+  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)} onLostPointerCapture={event => onPointerCancel(tileId, event)}/>;
 }
 
 function SettlementPanel({ game, room }: { game: GameView; room: RoomView }) {

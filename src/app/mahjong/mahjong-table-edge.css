@@ -149,3 +149,30 @@
     top: calc(50% + min(1.4cqw, 2.9cqh, 22px));
   }
 }
+
+
+/* Rotate only the physical North group. Its wrapper reserves the swapped
+   dimensions, so up to four Norths stay within the existing side anchor. */
+.mahjong-page .mahjong-game .mahjong-nuki-tray__footprint {
+  position: relative;
+  --nuki-tile-h: min(3.7cqw, 6cqh, 44px);
+}
+
+.mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-nuki-tray__footprint,
+.mahjong-page .mahjong-game .mahjong-table__position--east .mahjong-nuki-tray__footprint {
+  width: var(--nuki-tile-h);
+  height: calc(var(--nuki-count) * var(--nuki-tile-w) + (var(--nuki-count) - 1) * 2px);
+}
+
+.mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-nuki-tray__tiles,
+.mahjong-page .mahjong-game .mahjong-table__position--east .mahjong-nuki-tray__tiles {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max-content;
+  transform: translate(-50%, -50%) rotate(var(--nuki-seat-angle));
+}
+
+.mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-nuki-tray__tiles { --nuki-seat-angle: 90deg; }
+.mahjong-page .mahjong-game .mahjong-table__position--east .mahjong-nuki-tray__tiles { --nuki-seat-angle: -90deg; }
+.mahjong-page .mahjong-game .mahjong-table__position--north .mahjong-nuki-tray__tiles { transform: rotate(180deg); }

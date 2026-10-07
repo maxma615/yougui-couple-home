@@ -241,6 +241,8 @@ it("submits a tile only after a real drag clears the distance threshold and land
   const tile = screen.getByRole("button", { name: "切出 一筒" });
   const board = screen.getByTestId("mahjong-board");
   Object.defineProperty(board, "getBoundingClientRect", { configurable: true, value: () => ({ x: 0, y: 0, left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, toJSON: () => ({}) }) });
+  const rack = screen.getByTestId("mahjong-hand");
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
   const center = board.querySelector(".mahjong-table__center")!;
   Object.defineProperty(document, "elementFromPoint", { configurable: true, value: (x: number, y: number) => x >= 250 && x <= 350 && y >= 140 && y <= 220 ? center : document.body });
 
@@ -274,6 +276,8 @@ it("cancels a drag without submitting even when the operating system cancels ove
   const onChoice = show(view);
   const tile = screen.getByRole("button", { name: "切出 一筒" });
   const board = screen.getByTestId("mahjong-board");
+  const rack = screen.getByTestId("mahjong-hand");
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
   const center = board.querySelector(".mahjong-table__center")!;
   Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => center });
 
@@ -383,4 +387,56 @@ it("shows all three tiles when a chi option's source marker is inside the sequen
   expect(option.getAttribute('aria-label')).toBe('1筒 2筒 3筒');
   fireEvent.click(option);
   expect(onChoice).toHaveBeenCalledWith(first);
+});
+
+
+it("uses playable felt above the original rack for both drag preview and one legal release", () => {
+  const view = fixtureGame().view(0);
+  const discard = view.choices.find(c => c.type === "discard" && !c.value?.endsWith("_"))!;
+  const onChoice = show(view);
+  const tile = document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
+  const board = screen.getByTestId("mahjong-board");
+  const rack = screen.getByTestId("mahjong-hand");
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
+  const felt = screen.getByTestId("mahjong-table-surface");
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => felt });
+  fireEvent.pointerDown(tile, { pointerId: 12, isPrimary: true, button: 0, clientX: 80, clientY: 350 });
+  fireEvent.pointerMove(tile, { pointerId: 12, clientX: 80, clientY: 240 });
+  expect(board.classList.contains("is-discard-target")).toBe(true);
+  fireEvent.pointerUp(tile, { pointerId: 12, clientX: 80, clientY: 240 });
+  fireEvent.pointerUp(tile, { pointerId: 12, clientX: 80, clientY: 240 });
+  expect(onChoice).toHaveBeenCalledExactlyOnceWith(discard);
+});
+
+it("losing capture cancels a selected drag and suppresses the subsequent pointer click", () => {
+  const view = fixtureGame().view(0);
+  const discard = view.choices.find(c => c.type === "discard" && !c.value?.endsWith("_"))!;
+  const onChoice = show(view);
+  const tile = document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
+  const rack = screen.getByTestId("mahjong-hand");
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => screen.getByTestId("mahjong-table-surface") });
+  fireEvent.click(tile);
+  fireEvent.pointerDown(tile, { pointerId: 14, isPrimary: true, button: 0, clientX: 80, clientY: 350 });
+  fireEvent.pointerMove(tile, { pointerId: 14, clientX: 80, clientY: 240 });
+  fireEvent.lostPointerCapture(tile, { pointerId: 14, clientX: 80, clientY: 240 });
+  expect(tile.classList.contains("is-dragging")).toBe(false);
+  fireEvent.pointerUp(tile, { pointerId: 14, clientX: 80, clientY: 240 });
+  fireEvent.click(tile, { detail: 1 });
+  expect(onChoice).not.toHaveBeenCalled();
+  expect(tile.classList.contains("is-dragging")).toBe(false);
+});
+
+it("cancels the pointer sequence even if capture is lost before reaching the drag threshold", () => {
+  const view = fixtureGame().view(0);
+  const discard = view.choices.find(c => c.type === "discard" && !c.value?.endsWith("_"))!;
+  const onChoice = show(view);
+  const tile = document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
+  fireEvent.click(tile);
+  fireEvent.pointerDown(tile, { pointerId: 18, isPrimary: true, button: 0, clientX: 80, clientY: 350 });
+  fireEvent.pointerMove(tile, { pointerId: 18, clientX: 83, clientY: 350 });
+  fireEvent.lostPointerCapture(tile, { pointerId: 18, clientX: 83, clientY: 350 });
+  fireEvent.click(tile, { detail: 1 });
+  expect(onChoice).not.toHaveBeenCalled();
+  expect(tile.getAttribute("aria-pressed")).toBe("false");
 });
