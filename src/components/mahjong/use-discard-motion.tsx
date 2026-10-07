@@ -18,7 +18,7 @@ import {
 
 type PointRect = MotionRect;
 
-type FlightGeometry = Readonly<{
+export type FlightGeometry = Readonly<{
   left: number;
   top: number;
   width: number;
@@ -29,7 +29,7 @@ type FlightGeometry = Readonly<{
   depth?: number;
 }>;
 
-type FlightView = Readonly<{
+export type FlightView = Readonly<{
   event: DiscardMotionEvent;
   source: "own" | "opponent";
   sourceTileId?: string;
@@ -204,7 +204,7 @@ export function useDiscardMotion({
   };
 }
 
-function rectToFlight(rect: PointRect, geometry: MotionSourceGeometry): FlightGeometry {
+export function rectToFlight(rect: PointRect, geometry: MotionSourceGeometry): FlightGeometry {
   return {
     left: rect.left + rect.width / 2,
     top: rect.top + rect.height / 2,
@@ -370,7 +370,7 @@ function parseTransform(transform: string) {
   return { a: 1, b: 0, c: 0, d: 1 };
 }
 
-export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; onFinish: (eventId: string) => void }) {
+export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { flight: FlightView; onFinish: (eventId: string) => void; kind?: "discard" | "nuki" }) {
   const element = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = element.current;
@@ -427,7 +427,7 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
     <div
       ref={element}
       className="mahjong-discard-flight"
-      data-testid="mahjong-discard-flight"
+      data-testid={`mahjong-${kind}-flight`}
       data-motion-seat={flight.event.seat}
       data-motion-source={flight.source}
       data-motion-event={flight.event.id}

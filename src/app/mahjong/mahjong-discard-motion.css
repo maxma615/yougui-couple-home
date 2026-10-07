@@ -147,3 +147,6 @@
 .mahjong-discard-flight__face { transform: rotateY(180deg); }
 .mahjong-discard-flight[data-motion-source="own"] .mahjong-discard-flight__face { transform: none; }
 .mahjong-river__tile.is-discard-motion-hidden { opacity: 0 !important; animation: none !important; }
+
+/* Keep the authoritative supplement in place while extraction completes. */
+.mahjong-drawn-wrap.is-nuki-held > .mahjong-tile { opacity: 0; }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import type { DiscardMotionIntent } from "./discard-motion";
 import { isAcceptedOwnHandDiscard, matchHandReflowOccurrences, type HandReflowTile } from "./hand-reflow";
+import { acceptedNukiEvent, uniqueOwnNorthInstance } from "./nuki-motion";
 import type { RoomView } from "@/modules/mahjong/types";
 
 const durationMs = 250;
@@ -119,8 +120,11 @@ export function useHandReflow({
     const hidden = typeof document !== "undefined" && document.visibilityState === "hidden";
     const eligible = connected && canAnimate && !reducedMotion && !hidden;
     const handRoot = tableRef.current?.querySelector<HTMLElement>(".mahjong-hand") ?? null;
-    const accepted = Boolean(previous && !scopeChanged && !connectionChanged && previous.connected && eligible
+    const nuki = previous && eligible && previous.connected && !scopeChanged && !connectionChanged ? acceptedNukiEvent(previous.room, room) : null;
+    const northId = nuki?.seat === ownSeat ? uniqueOwnNorthInstance(previous?.tiles ?? []) : null;
+    const acceptedDiscard = Boolean(previous && !scopeChanged && !connectionChanged && previous.connected && eligible
       && isAcceptedOwnHandDiscard(previous.room, room, intent));
+    const accepted = acceptedDiscard || Boolean(northId);
     const prepared = preparedSource.current;
     const usePreparedSource = Boolean(accepted && prepared && previous
       && prepared.roomId === previous.room.id
@@ -142,8 +146,10 @@ export function useHandReflow({
     const targets = readHandTiles(tableRef.current);
 
     let startedForAcceptance = false;
-    if (accepted && intent) {
-      const matches = matchHandReflowOccurrences(sourceTiles, targets, intent.sourceTileId);
+    if (accepted) {
+      const removedId = northId || intent!.sourceTileId;
+      const destinations = northId ? targets.filter(tile => !tile.instanceId.startsWith("drawn:")) : targets;
+      const matches = matchHandReflowOccurrences(sourceTiles, destinations, removedId);
       for (const match of matches) {
         const dx = match.from.x - match.to.x;
         const dy = match.from.y - match.to.y;
