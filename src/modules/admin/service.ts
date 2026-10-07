@@ -100,7 +100,7 @@ function normalizeOptionalBinding(input: { homeId?: unknown; slot?: unknown }) {
   };
 }
 
-async function assertAdministrator(target: QueryTarget, context: AdminContext): Promise<void> {
+export async function assertAdministrator(target: QueryTarget, context: AdminContext): Promise<void> {
   const result = await target.query<{ role: string; disabled: boolean }>(
     "SELECT role,disabled FROM users WHERE id=$1",
     [context.userId],
