@@ -2,7 +2,7 @@
 
 ## Current status
 
-Implementation follows `docs/superpowers/plans/2026-10-07-mahjong-seat-call-payment.md`; Task1 is approved at `f4fcb495` and Task2 at `99b642da`; Tasks3–4 and joint publication remain pending. Current public release remains `152e4fb`. No candidate from this plan has been frozen or published.
+Implementation follows `docs/superpowers/plans/2026-10-07-mahjong-seat-call-payment.md`; Task1 is approved at `f4fcb495` and Task2 at `99b642da`; Task3 is approved after fix1 at `4f0d8508`; Task4 and joint publication remain pending. Current public release remains `152e4fb`. No candidate from this plan has been frozen or published.
 
 ## Confirmed before-state
 
@@ -19,6 +19,8 @@ The subsequent18-case seat-seam audit proves side floor/line mismatch14.53–16.
 Task1 evidence: component25/25, native96/96, nuki24/24, preserved reflow12/12 and typecheck passed. `.superpowers/sdd/2026-10-07-mahjong-seat-call-payment/task-1-report.md` records exact commands and hashes; task review approved with only native-runner readability minor.
 
 Task2 evidence: 110 focused cases across six files, typecheck and 84 real-engine Chromium/WebKit cases passed. Exact public red/normal source, finite transfer/emphasis, hidden-source fallback and resize/input cleanup were reviewed. Root viewed the actual WebKit compositor midpoint. Final measured source/target corner error is below0.03px; `.local/audit/public-call-release3-1791363929944/` preserves source and geometry. Task review approved with only test formatting deferred.
+
+Task3 evidence: 117 focused cases, typecheck, 156 native settlement cases and12 additional physically valid yonma pao cases passed. The paired sanma counter200 correction preserves the1600 hand value and correct[-2000,3000,0] transfer. Result shows authoritative signed per-seat amounts/current scores and exact legal acknowledgement; native ack is88×44 with measured contrast8.44. Task review I1 missing yonma pao is addressed by scoped fix1 review; unused fixture M1 is removed. Explicit empty browser fixture selection is a deferred runner edge case and does not invalidate recorded12-case evidence.
 
 Ordinary drag clear of the rack must submit one legal Choice while drag-back/outside/HUD/cancel/lost-capture/changed-decision do not. Rotated North groups must remain complete and readable. Public chi/pon/open-kan must transfer only an uniquely established visible claimed tile to its exact accepted public meld, with finite group emphasis; stale/hidden/ambiguous sources must safely emphasize the group. Added/closed kan must not replay an old called tile.
 
