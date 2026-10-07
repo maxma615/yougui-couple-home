@@ -69,7 +69,7 @@ const bundle = await build({
     'process.env.NODE_ENV': '"development"'
   }
 });
-const css = ['mahjong.css', 'mahjong-river.css', 'mahjong-meld.css', 'mahjong-interaction.css', 'mahjong-discard-motion.css', 'mahjong-table-center.css', 'mahjong-table-edge.css', 'mahjong-camera.css'].map(f => readFileSync(`src/app/mahjong/${f}`, 'utf8')).join('\n');
+const css = ['mahjong.css', 'mahjong-river.css', 'mahjong-meld.css', 'mahjong-interaction.css', 'mahjong-discard-motion.css', 'mahjong-table-center.css', 'mahjong-table-edge.css', 'mahjong-camera.css', 'mahjong-call-announcement.css', 'mahjong-standing-tile.css'].map(f => readFileSync(`src/app/mahjong/${f}`, 'utf8')).join('\n');
 for (const engine of [chromium, webkit]) {
   const browser = await engine.launch();
   try {

@@ -383,7 +383,8 @@ it("shows all three tiles when a chi option's source marker is inside the sequen
   fireEvent.click(screen.getByRole("button",{name:"吃"}));
   const dialog=screen.getByRole("dialog",{name:"选择吃牌"});
   const option=dialog.querySelector<HTMLButtonElement>('[data-choice-id="chi:p12-3"]')!;
-  expect([...option.querySelectorAll('[data-tile-face]')].map(tile=>tile.getAttribute('data-tile-face'))).toEqual(["p1","p2","p3"]);
+  expect([...option.querySelectorAll('[data-tile-face]')].map(tile=>tile.getAttribute('data-tile-face'))).toEqual(["p2","p1","p3"]);
+  expect(option.querySelector('[data-called] [data-tile-face]')?.getAttribute("data-tile-face")).toBe("p2");
   expect(option.getAttribute('aria-label')).toBe('1筒 2筒 3筒');
   fireEvent.click(option);
   expect(onChoice).toHaveBeenCalledWith(first);

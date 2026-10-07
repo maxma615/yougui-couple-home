@@ -1,5 +1,7 @@
 "use client";
 
+import { MahjongCallOption } from "./mahjong-call-option";
+
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
@@ -601,7 +603,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         : <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
       <div className="mahjong-table__surface" data-testid="mahjong-table-surface">
         <div className="mahjong-table__grain" aria-hidden="true"/>
-        <svg className="mahjong-table__seams" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"><path d="M170 90H830L940 600H60ZM170 90L442 285M830 90L558 285M60 600L442 375M940 600L558 375"/><path d="M182 98H818L925 590H75Z"/></svg>
+        <div className="mahjong-table__seams mahjong-table__lane" aria-hidden="true"/>
         {Array.from({ length: capacity - 1 }, (_, index) => index + 1).map(offset => {
           const player = byRelative(offset);
           const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
@@ -637,7 +639,18 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     {!isFinished && (otherChoices.length > 0 || riichiChoices.length > 0 || game.settlement) ? <div className="mahjong-action-dock" aria-label="可执行操作">
       {tsumoChoice && !game.settlement ? <button type="button" className="mahjong-button mahjong-button--win mahjong-button--tsumo" disabled={busy || !connected || !tsumoChoice} data-choice-id={tsumoChoice?.id} data-choice-type={tsumoChoice?.type} title={tsumoChoice ? "点击自摸和牌" : game.turnSeat !== ownSeat ? "等待你的摸牌回合" : "当前没有合法自摸选项"} onClick={() => connected && !busy && tsumoChoice && onChoice(tsumoChoice)}>自摸</button> : null}
       {riichiChoices.length > 0 && !game.settlement ? <button type="button" className={`mahjong-button mahjong-button--riichi${riichiMode ? " is-selected" : ""}`} aria-pressed={riichiMode} disabled={busy || !connected || !riichiChoices.length} title={riichiChoices.length ? "选择高亮牌切出并宣告立直" : ownPlayer?.riichi ? "已经立直" : "当前没有合法立直选项"} onClick={() => connected && !busy && setRiichiMode((value) => !value)}>{riichiMode ? "选择立直牌" : "立直"}</button> : null}
-      {[...callGroups].map(([type, choices]) => <button key={type} type="button" className={`mahjong-button ${type === "ron" ? "mahjong-button--win" : type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`} disabled={busy || !connected} data-choice-id={choices.length === 1 ? choices[0].id : undefined} data-choice-type={type} aria-haspopup={choices.length > 1 ? "dialog" : undefined} onClick={() => { if (!connected || busy) return; publicCallMotion.cancel(); choices.length > 1 ? setPendingCallType(type) : onChoice(choices[0]); }}>{choiceNames[type]}{choices.length === 1 && choices[0].value ? <small>{choiceDescription(choices[0].value)}</small> : null}</button>)}
+      {[...callGroups].map(([type, choices]) => <button key={type} type="button"
+        className={`mahjong-button ${type === "ron" ? "mahjong-button--win" : type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`}
+        disabled={busy || !connected} data-choice-id={choices.length === 1 ? choices[0].id : undefined}
+        data-choice-type={type} aria-label={choiceNames[type]} aria-haspopup={choices.length > 1 ? "dialog" : undefined}
+        onClick={() => {
+          if (!connected || busy) return;
+          publicCallMotion.cancel();
+          choices.length > 1 ? setPendingCallType(type) : onChoice(choices[0]);
+        }}>
+        <span className="mahjong-call-label">{choiceNames[type]}{choices.length > 1 ? <small>选择组合 · {choices.length}</small> : null}</span>
+        <span className="mahjong-call-previews">{choices.map(choice => <MahjongCallOption key={choice.id} choice={choice}/>)}</span>
+      </button>)}
       {riichiMode ? <button type="button" className="mahjong-action-dock__cancel" onClick={() => setRiichiMode(false)}>返回普通切牌</button> : null}
       {game.settlement ? <div className="mahjong-settlement" role="status"><span>{settlementTitle(game.settlement)}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
     </div> : null}
@@ -700,12 +713,13 @@ function CallChoiceDialog({ type, choices, busy, connected, onClose, onChoice }:
   return <dialog ref={dialog} className="mahjong-confirm mahjong-call-dialog" aria-label={title} onCancel={event => {event.preventDefault(); onClose();}}>
     <button type="button" className="mahjong-icon-button mahjong-public-melds__close" aria-label="关闭选牌" onClick={onClose}><X size={18}/></button>
     <p className="mahjong-kicker">YOUR CALL</p><h2>{title}</h2>
-    <div className="mahjong-call-options">{choices.map(choice => {
-      const match = choice.value?.match(/^([mpsz])([0-9+\-=]+)$/);
-      return <button key={choice.id} type="button" className="mahjong-button mahjong-button--action" disabled={busy || !connected} data-choice-id={choice.id} data-choice-type={type} aria-label={choice.value ? choiceDescription(choice.value) : choiceNames[type]} onClick={() => connected && !busy && onChoice(choice)}>
-        {match ? [...match[2].replace(/\D/g, "")].map((number,index) => <TileFace key={index} value={`${match[1]}${number}`}/>) : choiceDescription(choice.value || choiceNames[type])}
-      </button>;
-    })}</div>
+    <div className="mahjong-call-options">{choices.map(choice => <button key={choice.id} type="button"
+      className="mahjong-button mahjong-button--action" disabled={busy || !connected}
+      data-choice-id={choice.id} data-choice-type={type}
+      aria-label={choice.value ? choiceDescription(choice.value) : choiceNames[type]}
+      onClick={() => connected && !busy && onChoice(choice)}>
+      <span className="mahjong-call-label">{choiceNames[type]}</span><MahjongCallOption choice={choice}/>
+    </button>)}</div>
   </dialog>;
 }
 
@@ -721,7 +735,7 @@ function displayShortTile(value: string) {
   const honor: Record<string, string> = { z1: "東", z2: "南", z3: "西", z4: "北", z5: "白", z6: "發", z7: "中" };
   if (honor[key]) return honor[key];
   const suit = key[0] === "m" ? "萬" : key[0] === "p" ? "筒" : "索";
-  return `${key[1] === "0" ? "5" : key[1]}${suit}`;
+  return `${key[1] === "0" ? "赤5" : key[1]}${suit}`;
 }
 
 function choiceDescription(value: string) {

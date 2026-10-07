@@ -1,11 +1,11 @@
 .mahjong-page {
-  --mj-ink: #121313;
-  --mj-panel: #1a1c1c;
-  --mj-panel-raised: #212323;
+  --mj-ink: #11181d;
+  --mj-panel: #182229;
+  --mj-panel-raised: #202e36;
   --mj-hairline: rgb(234 225 204 / 12%);
   --mj-muted: #aaa99f;
   --mj-white: #f2f0e9;
-  --mj-gold: #d3b778;
+  --mj-gold: #b7d6dc;
   --mj-gold-soft: rgb(211 183 120 / 13%);
   --mj-red: #c96d62;
   min-height: 100dvh;
@@ -702,3 +702,25 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
   .mahjong-settlement-panel__delta b { font-size: 14px; }
   .mahjong-settlement-panel__actions { bottom: -11px; }
 }
+
+/* Original quiet blue/charcoal hierarchy; all tile art remains the licensed set. */
+.mahjong-page .mahjong-lobby__panel,
+.mahjong-page .mahjong-confirm { background: #18232bed; border-color: #708d9c55; }
+.mahjong-page .mahjong-game .mahjong-table::before { border-image: linear-gradient(135deg, #172027, #52616b 4%, #26333e 10%, #18222a 50%, #52616b 97%, #172027) 1; }
+.mahjong-page .mahjong-game .mahjong-table__dora { border-color: #718791; background: #162630ee; }
+.mahjong-page .mahjong-game:not(.is-finished) > .mahjong-settlement-panel { background: #15232ff5; border-color: #7897a266; }
+.mahjong-page .mahjong-settlement-panel__actions { background: #15232f; }
+.mahjong-page .mahjong-action-dock .mahjong-button,
+.mahjong-page .mahjong-call-options .mahjong-button { border: 1px solid #7896a2; border-radius: 7px; background: #203744; color: #edf5f6; text-shadow: none; box-shadow: 0 2px 0 #0c1922, 0 4px 10px #07111966; }
+.mahjong-page .mahjong-action-dock .mahjong-button--quiet { background: #182630; color: #c1cdd2; border-color: #5e747f; }
+.mahjong-page .mahjong-action-dock .mahjong-button--win { background: #644235; color: #fff0cc; border-color: #c29d68; }
+.mahjong-call-label { display: grid; gap: 2px; white-space: nowrap; }
+.mahjong-page .mahjong-call-label > small { font-size: 10px; color: #ccdade; }
+.mahjong-call-previews { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.mahjong-call-previews:empty { display: none; }
+.mahjong-call-previews, .mahjong-call-preview, .mahjong-call-preview * { pointer-events: none; }
+.mahjong-call-preview { display: inline-flex; align-items: end; }
+.mahjong-page .mahjong-call-preview .mahjong-meld--public { --meld-tile-w: 19px; --meld-tile-h: 27px; }
+.mahjong-page .mahjong-call-previews:has(> :nth-child(2)) .mahjong-meld--public { --meld-tile-w: 15px; --meld-tile-h: 21px; }
+.mahjong-page .mahjong-call-options .mahjong-button { min-height: 58px; gap: 14px; }
+.mahjong-page .mahjong-call-options .mahjong-meld--public { --meld-tile-w: 27px; --meld-tile-h: 38px; }

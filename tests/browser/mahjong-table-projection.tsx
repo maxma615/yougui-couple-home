@@ -136,7 +136,7 @@ function Scene(){const[room,roomSetter]=useState(window.projectionFixture);const
 const root=createRoot(document.getElementById('root'));flushSync(()=>root.render(React.createElement(Scene)));window.projectionApi.dispose=()=>root.unmount();window.projectionApi.update=room=>flushSync(()=>setRoom(room));window.projectionApi.quietUpdate=room=>flushSync(()=>{setCanAnimate(false);setRoom(room)});window.projectionApi.connected=value=>flushSync(()=>setConnected(value));`;
 const bundle = await build({ stdin: { contents: harness, resolveDir: process.cwd(), loader: "tsx" }, bundle: true,
   platform: "browser", format: "iife", write: false, jsx: "automatic", define: { "process.env.NODE_ENV": '"development"' } });
-const cssFiles = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css", "mahjong-standing-tile.css"];
+const cssFiles = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css", "mahjong-call-announcement.css", "mahjong-standing-tile.css"];
 const css = cssFiles.map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
 const cameraSha = createHash("sha256").update(readFileSync("src/app/mahjong/mahjong-camera.css")).digest("hex");
 const clientSha = createHash("sha256").update(readFileSync("src/components/mahjong/mahjong-client.tsx")).digest("hex");

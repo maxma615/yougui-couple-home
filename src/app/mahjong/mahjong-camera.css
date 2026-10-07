@@ -1,7 +1,7 @@
 /* A single tabletop projection keeps every physical rack and river in the
    same camera. Touch controls and HUD remain outside this transformed plane. */
 .mahjong-page .mahjong-game:not(.is-finished) .mahjong-table {
-  background: radial-gradient(ellipse at 50% 44%, #3c302c, #201e21 78%);
+  background: radial-gradient(ellipse at 50% 44%, #1b2730, #10171e 78%);
 }
 
 .mahjong-page .mahjong-game .mahjong-table__surface {
@@ -11,10 +11,10 @@
   transform-origin: 50% 44%;
   transform: perspective(150cqh) rotateX(28deg) scaleX(.94);
   background:
-    radial-gradient(ellipse at 50% 44%, rgb(163 198 191 / 9%), transparent 42%),
-    radial-gradient(ellipse at 50% 43%, #34596b 0, #27485c 48%, #1d3a4f 78%, #142d41 100%);
-  border: clamp(8px, 1.15cqw, 16px) solid #5d4634;
-  box-shadow: inset 0 0 0 1px #dcc39370, inset 0 0 38px #07162480, 0 8px 30px #080d169c;
+    radial-gradient(ellipse at 50% 44%, rgb(126 170 195 / 6%), transparent 42%),
+    radial-gradient(ellipse at 50% 43%, #293e50 0, #233648 48%, #1c2d3c 78%, #172632 100%);
+  border: clamp(8px, 1.15cqw, 16px) solid #273039;
+  box-shadow: inset 0 0 0 1px #a8bac14d, inset 0 0 38px #07162480, 0 8px 30px #080d169c;
 }
 
 .mahjong-page .mahjong-game .mahjong-table__surface .mahjong-table__grain,
@@ -65,4 +65,46 @@
   overflow: auto;
   padding: 2px 10px;
   font-size: 12px;
+}
+
+/* One rectangular family in table-local coordinates. The existing camera is
+   the only perspective. Six local pixels separate the inner (rear) standing
+   feet from the line; the front baseline is a further physical tile depth
+   outward. Both concealed and public groups share that front baseline.
+   Own concealed tiles keep their independent, frozen native touch lane. */
+.mahjong-page .mahjong-game .mahjong-table__surface {
+  --seat-lane-side: 12%;
+  --seat-lane-north: 9%;
+  --seat-lane-south: 86%;
+  --seat-floor-inset: 6px;
+}
+.mahjong-page .mahjong-game .mahjong-table__lane {
+  inset: var(--seat-lane-north) var(--seat-lane-side) auto;
+  width: auto;
+  height: calc(var(--seat-lane-south) - var(--seat-lane-north));
+  border: 1px solid #10222c99;
+  box-shadow: 0 1px 0 #91abb918, 1px 0 0 #91abb918;
+}
+.mahjong-page .mahjong-game .mahjong-opponent-rack {
+  --rack-height: min(3.64cqw, 7.5cqh, 52px);
+  --rack-depth: calc(var(--rack-height) * .4);
+  transform-origin: 0 100%;
+}
+.mahjong-page .mahjong-game .mahjong-table__position--north .mahjong-opponent-rack {
+  left: 50%;
+  top: calc(var(--seat-lane-north) - var(--seat-floor-inset) - var(--rack-depth));
+  transform: translateY(-100%) rotate(180deg) translateX(-50%);
+}
+.mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-opponent-rack,
+.mahjong-page .mahjong-game .mahjong-table__position--east .mahjong-opponent-rack {
+  --rack-height: min(2.59cqw, 5.3cqh, 38px);
+}
+.mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-opponent-rack {
+  left: calc(var(--seat-lane-side) - var(--seat-floor-inset) - var(--rack-depth));
+  transform: translateY(-100%) rotate(90deg) translateX(-50%);
+}
+.mahjong-page .mahjong-game .mahjong-table__position--east .mahjong-opponent-rack {
+  left: calc(100% - var(--seat-lane-side) + var(--seat-floor-inset) + var(--rack-depth));
+  right: auto;
+  transform: translateY(-100%) rotate(-90deg) translateX(-50%);
 }

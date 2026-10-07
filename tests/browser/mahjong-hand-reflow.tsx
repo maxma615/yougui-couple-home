@@ -71,7 +71,7 @@ const bundle = await build({
   bundle: true, platform: "browser", format: "iife", write: false, jsx: "automatic",
   define: { "process.env.NODE_ENV": '"development"' },
 });
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"]
+const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css", "mahjong-call-announcement.css", "mahjong-standing-tile.css"]
   .map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
 
 async function mount(page: Page, room: RoomView, viewport: { width: number; height: number }) {

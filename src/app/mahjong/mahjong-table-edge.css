@@ -10,10 +10,10 @@
   align-content: center;
   gap: 2px;
   padding: 4px 3px;
-  border: 1px solid #c6b58175;
-  border-left: 2px solid #d6b677;
+  border: 1px solid #8299a375;
+  border-left: 2px solid #9fbcc7;
   border-radius: 7px;
-  background: linear-gradient(145deg, #263b4deF, #12283aeF 78%);
+  background: linear-gradient(145deg, #22333eef, #14232eef 78%);
   box-shadow: 0 2px 0 #0d1a28, 0 5px 12px #08152455;
 }
 
