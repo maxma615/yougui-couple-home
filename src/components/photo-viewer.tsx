@@ -7,19 +7,22 @@ import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
 import type { Moment, MomentPhoto } from "@/components/home-types";
 import { photoUrl } from "@/components/photo-url";
 
-export type PhotoViewerEntry = {
-  moment: Moment;
+type ViewablePhotoEntry = {
+  moment: Pick<Moment, "id" | "title" | "date">;
   photo: MomentPhoto;
   photoIndex: number;
 };
 
+export type PhotoViewerEntry = ViewablePhotoEntry & { moment: Moment };
+
 type PhotoViewerProps = {
-  entries: PhotoViewerEntry[];
+  entries: ViewablePhotoEntry[];
   photoId: string;
   onSelectPhoto: (id: string) => void;
   onClose: () => void;
   returnFocusTo: HTMLElement | null;
   showMomentLink?: boolean;
+  resolvePhotoUrl?: typeof photoUrl;
 };
 
 type TouchStart = { pointerId: number; x: number; y: number };
@@ -31,6 +34,7 @@ export function PhotoViewer({
   onClose,
   returnFocusTo,
   showMomentLink = false,
+  resolvePhotoUrl = photoUrl,
 }: PhotoViewerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -164,7 +168,7 @@ export function PhotoViewer({
               <img
                 key={current.photo.id + "-" + attempt}
                 className="space-photo-viewer__image"
-                src={photoUrl(current.photo.id, { retry: attempt })}
+                src={resolvePhotoUrl(current.photo.id, { retry: attempt })}
                 alt={current.moment.title + "，第 " + entryNumber + " 张照片"}
                 fetchPriority="high"
                 decoding="async"

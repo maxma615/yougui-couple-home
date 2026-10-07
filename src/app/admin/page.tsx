@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownLeft, BadgeCheck, Heart, KeyRound, LoaderCircle, LogOut, Plus, Search, ShieldCheck, UserRound, UsersRound, X } from "lucide-react";
+import { ArrowDownLeft, BadgeCheck, Heart, Images, KeyRound, LoaderCircle, LogOut, Plus, Search, ShieldCheck, UserRound, UsersRound, X } from "lucide-react";
 
 import { ApiError, apiRequest, errorMessage, jsonBody } from "@/components/api-client";
 import type { SessionData } from "@/components/home-types";
 import { Modal } from "@/components/modal";
+import { AdminAlbums } from "@/components/admin-albums";
 import { FieldError } from "@/components/ui";
 import { SessionProvider, useSession } from "@/hooks/use-session";
 
@@ -145,6 +146,7 @@ function AdminDashboard() {
           </a>
           <div className="admin-header__account">
             <span className="admin-header__identity"><ShieldCheck size={15} /> 管理员 · {session.user.phone || session.user.email || "有归"}</span>
+            <a className="admin-button admin-button--quiet" href="#admin-space-albums"><Images size={16} />空间相册</a>
             <button className="admin-button admin-button--quiet" type="button" onClick={event => openDialog({ kind: "own-password" }, event)}>
               <KeyRound size={16} /> 修改我的密码
             </button>
@@ -158,9 +160,9 @@ function AdminDashboard() {
           <div>
             <p className="admin-kicker">有归 · 管理</p>
             <h1>账号与空间</h1>
-            <p>在这里配置成员账号、查看配对状态并维护登录安全。</p>
+            <p>配置成员账号、维护登录安全，并浏览各个空间的相册。</p>
           </div>
-          <div className="admin-intro__seal" aria-hidden="true"><span>PRIVATE</span><Heart size={22} /><small>只管理账号，不查看生活记录</small></div>
+          <div className="admin-intro__seal" aria-hidden="true"><span>有归</span><Heart size={22} /><small>账号与空间相册</small></div>
         </section>
 
         {notice ? <p className="admin-notice" role="status"><BadgeCheck size={17} />{notice}</p> : null}
@@ -221,12 +223,7 @@ function AdminDashboard() {
               : <div className="admin-empty-state"><UsersRound size={21} />{members.length ? "没有符合条件的成员。" : "目前还没有成员账号。"}</div>}
         </section>
 
-        <section className="admin-spaces" aria-labelledby="admin-spaces-title">
-          <div className="admin-section-heading"><div><p className="admin-kicker">空间</p><h2 id="admin-spaces-title">情侣空间</h2><p>查看名称、开始日期与成员数量。</p></div><span className="admin-count">{homes.length} 个</span></div>
-          {homes.length
-            ? <div className="admin-space-list">{homes.map(home => <article className="admin-space" key={home.id}><div><h3>{home.name}</h3><p>共同开始于 {home.startDate}</p></div><span className="admin-space__count"><UsersRound size={16} />{home.memberCount} / 2</span></article>)}</div>
-            : <div className="admin-space-empty">还没有创建情侣空间。成员可在首次登录后完成设置。</div>}
-        </section>
+        <AdminAlbums />
       </div>
 
       {dialog?.kind === "create" ? <CreateMemberDialog homes={homes} users={users} returnFocusTo={returnFocusTo} onClose={() => setDialog(null)} onSaved={() => completeAction("成员账号已创建。")} /> : null}
