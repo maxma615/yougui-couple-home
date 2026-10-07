@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "kind": "settlement-sequence-published",
+  "release": "3539a6c",
+  "sourceRevision": "3539a6cf7858f7d759a5139ae302da9d94156be3",
+  "buildId": "Hkb9CLV2QaCdFLxmu3zqi",
+  "imageId": "sha256:58676ab9663a69fb84b947bdfc15bd51acbeff9d9e1863efc31804d281618682",
+  "parentRelease": "aa9c16a",
+  "parentImageId": "sha256:0a7e631259a4c2263f99b9cda38f690efb4e89b605c30f31e48f39774d3de047",
+  "manifestSha256": "c69e10155694a8660796cb60bf5d7aa97bd7295fbe998c91e5bc1d678a3dbb9d",
+  "archiveSha256": "30da3cd7af3f9e3c33611c845303a682af4445a5fc2f30326e679ea5f91b8994",
+  "sourceFiles": 529,
+  "nextFiles": 449,
+  "linuxTestFiles": 4,
+  "linuxTestsPassed": 35,
+  "localTestFiles": 63,
+  "localTestsPassed": 552,
+  "authenticatedSocketCases": 4,
+  "nativeBrowserScenes": 8,
+  "cameraScenes": 12,
+  "cameraPaintSamples": 48,
+  "publicAssets": 130,
+  "tlsVerified": true,
+  "tableCount": 12,
+  "tableDigestsSha256": "62822111fb43742ac11d3a6ce9174bff9a9d644af57378749c0a8eccffce90ef",
+  "tablesUnchanged": true,
+  "cleanerCidAndImageUnchanged": true,
+  "backupPolicyDisabled": true,
+  "appResources": {
+    "nanoCpus": 1000000000,
+    "memoryBytes": 805306368
+  },
+  "helperCount": 8,
+  "publisherSha256": "e9c3e466b6da94c6263589bdbe6ebf32dd61dfa7b3f8b0b4206dc6531130deb7",
+  "ownedSync": {
+    "foreignFilesUnchanged": true,
+    "foreignStatusUnchanged": true,
+    "primaryHeadUnchanged": true,
+    "indexUnchanged": true,
+    "nextEnvUnchanged": true
+  },
+  "remoteEvidence": {
+    "candidate": {
+      "commandSha256": "57dac6d6c969e645f6ad90cd9e3998948b02fb6ac9945e7072af60744ff0ad5d",
+      "captureSha256": "90b593e3c73d0f64cef6c6cdf9fbab8bdb551f30f60eb468798d3da0ecd63211"
+    },
+    "linux-status": {
+      "commandSha256": "3d7e40fe74761d426a2022485601f52f86e37c3174cb74825185b896c81e153c",
+      "captureSha256": "5fc4d6e4a4ebf5ccc16ab387be677a6feb51923e90585a27d9415cc4df4ef521"
+    },
+    "readiness": {
+      "commandSha256": "a2dfcfa5edefb8b941c7fbdd74efab4abccc9cc048c7643d491db37c7bc3d092",
+      "captureSha256": "4a510caa38ac13f720ec6daf23a16f447b7de304a5ecf1569c5d097adaf663ef"
+    },
+    "publish": {
+      "commandSha256": "1211e8fc65e98945293f2dc5ed37faf83bc4e3691c4c47165c3c5b2fedc4bf1d",
+      "captureSha256": "6a696c9a803fc8ed0551a95c7ef3c6e8dabda8d8b8c62e22e18e69bcd8604a33"
+    },
+    "publish-status": {
+      "commandSha256": "18fd4712dc0d81ea5110dcad26d6c9299784704d60abeb8d8088776611bd101a",
+      "captureSha256": "c137d360056b8f48737d3f4f386cf452efb164fec1d5fd4d7e56fb27afe411e0"
+    },
+    "live-check": {
+      "commandSha256": "1fa01acfdf0b141b15150f65aa4faabe4c056ef0d1fc2cf2e570683819b91545",
+      "captureSha256": "9476d682c4143a59ed17732e46a739f94df65cfb64d85a050809b7715183c15c"
+    },
+    "final-health": {
+      "commandSha256": "b0c4fcbb864cff9d407bd0a9e46de03f47aaccb046c0063fe4b700c97ae884f4",
+      "captureSha256": "2998867eb00c4373a3bc3ca0ac7af3942cadc3d2615517b8d965877ecba76b42"
+    },
+    "published-preflight": {
+      "commandSha256": "fd31748a88554941ca8fd8ac1ff3e4d6f2c30a62936b196adff3d5e28416876f",
+      "captureSha256": "707b4295e2a12562786136d962655cf45afeaaa47b63aa7d428169ffff8fcc9d"
+    }
+  },
+  "publicProofSha256": "c1cdf2b47bff355f272ed4f8fa8c805722484bc8b68554abf3c8a1b6866e4ffe",
+  "limits": [
+    "Real Android device not validated",
+    "Original visual/timing implementation; no vendor artwork, audio or frame-perfect claim",
+    "Draw/abort/nagashi/end-rank sequencing remains follow-up",
+    "Native payments retained; nonzero-honba multi-ron Soul allocation not inferred"
+  ]
+}

@@ -1,6 +1,6 @@
 # Settlement Sequence Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan inline. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan inline. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 三/四人和牌按赢家逐页显示，再进行一次统一收支展示，带可验证的确认时序。
 
@@ -52,8 +52,8 @@ Interfaces: hook 消费 flow+当前 ACK/connected/busy/onChoice，返回相对 e
 
 Files: 真实 Socket 测试、ignored 浏览器证据与发布工具、`docs/mahjong-settlement-sequence-acceptance.md`、fidelity progress。
 
-- [ ] 本机隔离真实服务验证三/四席、机器人 ACK、断线与重连、权限/私有牌、最终比分及解散；必要回归覆盖此次接口变化。
-- [ ] 运行完整测试、类型、干净构建和凭据扫描，独立 whole-branch review，修复确实影响用户的发现。
-- [ ] 冻结新源码/构建，核验当前父版本 aa9c16a；Linux 候选测试必须设置 NODE_ENV=test，按固定 image ID 检查。
-- [ ] 按已授权 no-backup 发布流程，在权威无真人牌桌检查后切换；验证资源、12表摘要、清理器与全部公网资源，守卫同步拥有路径。
-- [ ] 验收记录真实范围；整体目标保持 active，未证实的规则与真机边界继续保留。
+- [x] 本机隔离真实服务验证三/四席、机器人 ACK、断线与重连、权限/私有牌、最终比分及解散；必要回归覆盖此次接口变化。
+- [x] 运行完整测试、类型、干净构建和凭据扫描，独立 whole-branch review，修复确实影响用户的发现。
+- [x] 冻结新源码/构建，核验当前父版本 aa9c16a；Linux 候选测试必须设置 NODE_ENV=test，按固定 image ID 检查。
+- [x] 按已授权 no-backup 发布流程，在权威无真人牌桌检查后切换；验证资源、12表摘要、清理器与全部公网资源，守卫同步拥有路径。
+- [x] 验收记录真实范围；整体目标保持 active，未证实的规则与真机边界继续保留。
