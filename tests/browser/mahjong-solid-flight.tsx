@@ -117,8 +117,8 @@ async function sampleFlight(page: Page, actor: number, scenario: Scenario) {
       await new Promise(requestAnimationFrame);
       flight = document.querySelector<HTMLElement>('[data-testid="mahjong-discard-flight"]');
       card = flight?.querySelector<HTMLElement>(".mahjong-discard-flight__card") ?? null;
-      movement = flight?.getAnimations().find(animation => animation.effect?.target === flight) ?? null;
-      flip = card?.getAnimations().find(animation => animation.effect?.target === card) ?? null;
+      movement = flight?.getAnimations().find(animation => animation.effect instanceof KeyframeEffect && animation.effect.target === flight) ?? null;
+      flip = card?.getAnimations().find(animation => animation.effect instanceof KeyframeEffect && animation.effect.target === card) ?? null;
       if (flight && card && movement && flip) break;
     }
     if (!flight || !card || !movement || !flip) throw new Error("expected both finite browser animations");
@@ -331,7 +331,7 @@ const rows: Record<string, unknown>[] = [];
       const file = new URL(route.request().url()).pathname;
       return route.fulfill({ status: 200, contentType: file.endsWith(".svg") ? "image/svg+xml" : "image/webp", body: readFileSync("public" + file) });
     });
-    let compositorBounds: { x:number; y:number; radiusX:number; radiusY:number } | null = null;
+    let compositorBounds: { left:number; top:number; width:number; height:number } | null = null;
     for (const variant of variants) {
       const actors = probeOnly || videoProbe ? [2] : Array.from({ length: variant === "sanma" ? 3 : 4 }, (_, seat) => seat).filter(seat => seat !== 0);
       for (const width of widths) for (const actor of actors) for (const scenario of scenarios) {
