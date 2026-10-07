@@ -7,6 +7,7 @@ import {renderToStaticMarkup} from "react-dom/server";
 import {chromium,webkit} from "@playwright/test";
 import Majiang from "@kobalab/majiang-core";
 import {GameRoom} from "../../src/components/mahjong/mahjong-client";
+import {sanmaTiles} from "../../src/modules/mahjong/sanma-wall";
 import type {GameVariant,RoomView} from "../../src/modules/mahjong/types";
 
 const melds=["s111+","p2222","s3333=","z222=2"];
@@ -14,7 +15,9 @@ for(const meld of melds)assert.equal((Majiang.Shoupai as unknown as {valid_mianz
 const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css"].map(file=>readFileSync(`src/app/mahjong/${file}`,"utf8")).join("\n");
 function fixture(variant:GameVariant,ownSeat:number,offset:number,m:number):RoomView {
  const capacity=variant==="sanma"?3:4,sideSeat=(ownSeat+offset)%capacity;
- const available: string[]=new Majiang.Shan(Majiang.rule())._pai.filter((tile:string)=>variant!=="sanma"||!/^m[2-8]$/.test(tile)).sort();
+ const available: string[]=(variant==="sanma"?sanmaTiles():new Majiang.Shan(Majiang.rule())._pai.slice()).sort();
+ assert.equal(available.length,variant==="sanma"?108:136);
+ if(variant==="sanma")assert.ok(!available.some(tile=>/^m[02-8]$/.test(tile)),"Sanma physical fixtures must omit the red five of characters too");
  const take=(tile:string)=>{const i=available.indexOf(tile);assert.ok(i>=0,`physical tile exhausted: ${tile}`);return available.splice(i,1)[0]};
  const groups=melds.slice(0,m);
  assert.ok(groups.filter(group=>group.replace(/\D/g,"").length===4).length<=3,"fixture must stay below the global four-kan limit");

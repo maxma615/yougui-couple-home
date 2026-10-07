@@ -98,6 +98,19 @@
   left: 0;
 }
 
+/* Keep concealed tiles in a stable left lane and declared melds at the right.
+   Calls shorten the hand; they must not recenter every remaining tile. */
+.mahjong-page .mahjong-game .mahjong-hand-line {
+  justify-content: space-between;
+  padding-inline: 12% 6%;
+}
+
+.mahjong-page .mahjong-game .mahjong-hand,
+.mahjong-page .mahjong-game .mahjong-hand-public-melds {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
+
 .mahjong-page .mahjong-game .mahjong-table__position--north .mahjong-player__head {
   right: 0;
 }
