@@ -1,0 +1,87 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { MahjongSettlementPanel } from "@/components/mahjong/mahjong-settlement-panel";
+import type { RoomView } from "@/modules/mahjong/types";
+
+beforeEach(() => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] }));
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+function result(stage: "detail" | "scores", count: 3 | 4 = 3): RoomView {
+  const oldScores = Array(count).fill(count === 3 ? 35000 : 25000);
+  const delta = count === 3 ? [-5200, 2600, 2600] : [-5200, 2600, 2600, 0];
+  return { id: "sequence", code: "ABCDEFGH", hostUserId: "0", variant: count === 3 ? "sanma" : "yonma", mode: "east", status: "playing", version: 1, mySeat: 0,
+    members: Array.from({length: count}, (_,seat) => ({ userId: String(seat), displayName: ["甲","乙","丙","丁"][seat], seat, kind: "human", ready: true, connected: true })),
+    game: { gameInstanceId: "native-game", handId: 1, decisionId: `flow:${stage}`, phase: stage === "scores" ? "score_change" : "hule", roundWind: 0, roundNumber: 1, honba: 0, riichiSticks: 0, remainingTiles: 20, doraIndicators: ["z6"], turnSeat: 0, hand: [], drawnTile: null, choices: [{id: "ack", type: "ack"}], ranking: null,
+      players: oldScores.map((score,seat) => ({seat,wind:seat,score,handCount:13,discards:[],melds:[],riichi:false})),
+      settlement: {kind:"win",name:"和了",winnerSeat:1,winMethod:"ron",winningTile:"z2",hand:"p123456789s123z22",fu:40,han:2,points:2600,delta:[-2600,2600,0,...(count===4?[0]:[])],yaku:[{name:"混全带幺九",han:2},{name:"门前清自摸和",han:1}],uraIndicators:["p1"]},
+      settlementFlow: {id:"result-1",stage,detailIndex:stage==="scores"?2:0,detailCount:2,elapsedMs:0,oldScores,delta,newScores:oldScores.map((score,seat)=>score+delta[seat])} } };
+}
+function show(room = result("scores")) {
+  const onChoice = vi.fn();
+  const props = {game:room.game!,room,connected:true,busy:false,onChoice};
+  const rendered = render(<MahjongSettlementPanel {...props}/>);
+  return { ...rendered, props, onChoice, rerenderProps: (overrides: Partial<typeof props>) => rendered.rerender(<MahjongSettlementPanel {...props} {...overrides}/>) };
+}
+it.each([3,4] as const)("separates winner detail from aggregate transfers at %i seats", count => {
+  const r = result("detail",count), {rerenderProps} = show(r);
+  const detail = screen.getByRole("region",{name:"和牌详情"});
+  expect(within(detail).queryByLabelText("本次各席收支")).toBeNull();
+  expect(detail.textContent).toContain("第 1 / 共 2 位");
+  expect(within(detail).getByText("2,600 点")).toBeTruthy();
+  expect(detail.querySelector('.mahjong-winning-hand')).toBeTruthy();
+  const scoreRoom = result("scores",count); rerenderProps({game:scoreRoom.game!,room:scoreRoom});
+  const scores = screen.getByRole("region",{name:"本局收支"});
+  expect(scores.querySelector('.mahjong-winning-hand')).toBeNull();
+  expect(scores.querySelector('ul')).toBeNull();
+  expect(scores.querySelectorAll('[data-settlement-seat]')).toHaveLength(count);
+});
+it("reveals detail before enabling manual confirmation, then confirms only once", () => {
+  const {onChoice} = show(result("detail"));
+  const button = screen.getByRole("button",{name:/继续/}) as HTMLButtonElement;
+  fireEvent.click(button); expect(onChoice).not.toHaveBeenCalled();
+  tick(1259); expect(button.disabled).toBe(true);
+  tick(1); expect(button.disabled).toBe(false);
+  tick(2999); expect(onChoice).not.toHaveBeenCalled();
+  tick(1); expect(onChoice).toHaveBeenCalledExactlyOnceWith({id:"ack",type:"ack"});
+  tick(10000); expect(onChoice).toHaveBeenCalledTimes(1);
+});
+it("rolls real net scores in 33 steps without enabling the score ACK early", () => {
+  const {onChoice} = show();
+  const score = screen.getByTestId("settlement-score-0");
+  const button = screen.getByRole("button",{name:/继续/}) as HTMLButtonElement;
+  expect(score.textContent).toBe("35,000"); tick(1199); expect(score.textContent).toBe("35,000");
+  tick(1); expect(score.textContent).toBe("34,843");
+  tick(30); expect(score.textContent).toBe("34,685");
+  tick(930); expect(score.textContent).toBe("29,800");
+  tick(2339); expect(button.disabled).toBe(true);
+  tick(1); expect(button.disabled).toBe(false);
+  tick(2999); expect(onChoice).not.toHaveBeenCalled();
+  tick(1); expect(onChoice).toHaveBeenCalledTimes(1);
+});
+it("changes phase without carrying an old timer into the score page", () => {
+  const {onChoice,rerenderProps} = show(result("detail")); tick(4000);
+  const r = result("scores"); rerenderProps({room:r,game:r.game!});
+  tick(3500); expect(onChoice).not.toHaveBeenCalled();
+  tick(4000); expect(onChoice).toHaveBeenCalledTimes(1);
+});
+it("cancels automatic ACK after unmount", () => {const {onChoice,unmount}=show();tick(7400);unmount();tick(10000);expect(onChoice).not.toHaveBeenCalled();});
+it.each(["connected","busy"] as const)("holds automatic ACK while %s blocks it, then acknowledges the current page once", guard => {
+  const {onChoice,rerenderProps}=show(); tick(1000);
+  rerenderProps(guard==="connected"?{connected:false}:{busy:true}); tick(8000);
+  expect(onChoice).not.toHaveBeenCalled();
+  rerenderProps(guard==="connected"?{connected:true}:{busy:false});
+  expect(onChoice).toHaveBeenCalledTimes(1);tick(10000);expect(onChoice).toHaveBeenCalledTimes(1);
+});
+it("permits a manual retry after a failed request releases busy, without automatic retries", () => {
+  const {onChoice,rerenderProps}=show();tick(7500);expect(onChoice).toHaveBeenCalledTimes(1);
+  rerenderProps({busy:true});rerenderProps({busy:false});
+  const button=screen.getByRole("button",{name:/继续/}) as HTMLButtonElement;
+  expect(button.disabled).toBe(false);fireEvent.click(button);fireEvent.click(button);
+  expect(onChoice).toHaveBeenCalledTimes(2);tick(10000);expect(onChoice).toHaveBeenCalledTimes(2);
+});
+it("does not acknowledge an already confirmed seat",()=>{const r=result("scores");r.game!.choices=[];const {onChoice}=show(r);tick(20000);expect(onChoice).not.toHaveBeenCalled();expect(screen.queryByRole("button",{name:/继续/})).toBeNull();});
+it("uses relative elapsed time despite device wall-clock jumps",()=>{const {onChoice}=show();vi.setSystemTime(Date.now()+86400000);tick(4499);expect((screen.getByRole("button",{name:/继续/}) as HTMLButtonElement).disabled).toBe(true);expect(onChoice).not.toHaveBeenCalled();tick(1);expect((screen.getByRole("button",{name:/继续/}) as HTMLButtonElement).disabled).toBe(false);});
+it("shows final numbers under reduced motion while preserving the confirmation delay",()=>{vi.stubGlobal("matchMedia",()=>({matches:true,addEventListener(){},removeEventListener(){}}));show();expect(screen.getByTestId("settlement-score-0").textContent).toBe("29,800");expect((screen.getByRole("button",{name:/继续/}) as HTMLButtonElement).disabled).toBe(true);tick(4500);expect((screen.getByRole("button",{name:/继续/}) as HTMLButtonElement).disabled).toBe(false);});
+it("does not send leftover result ACKs after terminal ranking appears",()=>{const {onChoice,rerenderProps,props}=show();tick(7000);const g=structuredClone(props.game);g.ranking=[{seat:0,rank:1,score:40000}];rerenderProps({game:g});tick(10000);expect(onChoice).not.toHaveBeenCalled();expect(screen.queryByRole('region')).toBeNull();});
+it("finishes a zero-transfer score page at 1200ms and auto confirms at 4200ms",()=>{const r=result("scores");r.game!.settlementFlow!.delta=[0,0,0];r.game!.settlementFlow!.newScores=[35000,35000,35000];const {onChoice}=show(r);tick(1199);expect((screen.getByRole('button',{name:/继续/}) as HTMLButtonElement).disabled).toBe(true);tick(1);expect((screen.getByRole('button',{name:/继续/}) as HTMLButtonElement).disabled).toBe(false);tick(3000);expect(onChoice).toHaveBeenCalledTimes(1);});

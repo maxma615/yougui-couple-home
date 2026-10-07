@@ -43,10 +43,10 @@ Files: `mahjong-settlement-panel.tsx`、新 `use-settlement-presentation.ts`、�
 
 Interfaces: hook 消费 flow+当前 ACK/connected/busy/onChoice，返回相对 elapsed、canConfirm、countdown、按33步计算的显示分数；纯时序函数与常量由新 presentation 模块导出。
 
-- [ ] 新 DTO 组件测试先 RED：详情无收支，分数页无手牌；按钮时序、自动确认一次、断线与卸载取消。
-- [ ] 实现明确阶段与原创揭示动画、33步整数计分。无 flow 的现有流局保持；屏幕减少动态效果不重播。
-- [ ] 新测试及既有11项结算组件通过；浏览器验证横屏滚动、实际 ACK 和三个以上阶段，不把假时钟当真机证据。
-- [ ] 提交 UI 步骤。
+- [x] 新 DTO 组件测试先 RED：详情无收支，分数页无手牌；按钮时序、自动确认一次、断线与卸载取消。
+- [x] 实现明确阶段与原创揭示动画、33步整数计分。无 flow 的现有流局保持；屏幕减少动态效果不重播。
+- [x] 新测试及既有11项结算组件通过；浏览器验证横屏滚动、实际 ACK 和三个以上阶段，不把假时钟当真机证据。
+- [x] 提交 UI 步骤。
 
 ### Task 3: 联机、审查与实际发布
 

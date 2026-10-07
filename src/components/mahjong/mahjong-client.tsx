@@ -53,6 +53,7 @@ function roundTitle(game: GameView) {
 }
 
 function phaseTitle(game: GameView) {
+  if (game.settlementFlow?.stage === "scores") return "分数结算";
   if (game.settlement) return game.settlement.kind === "win" ? "和了结算" : "流局结算";
   const labels: Record<string, string> = {
     zimo: "摸牌",
@@ -653,7 +654,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         <span className="mahjong-call-previews">{choices.map(choice => <MahjongCallOption key={choice.id} choice={choice}/>)}</span>
       </button>)}
       {riichiMode ? <button type="button" className="mahjong-action-dock__cancel" onClick={() => setRiichiMode(false)}>返回普通切牌</button> : null}
-      {game.settlement ? <div className="mahjong-settlement" role="status"><span>{settlementTitle(game.settlement)}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
+      {game.settlement && !game.settlementFlow ? <div className="mahjong-settlement" role="status"><span>{settlementTitle(game.settlement)}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
     </div> : null}
 
     {game.settlement ? <MahjongSettlementPanel game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}

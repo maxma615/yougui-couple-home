@@ -724,3 +724,22 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 .mahjong-page .mahjong-call-previews:has(> :nth-child(2)) .mahjong-meld--public { --meld-tile-w: 15px; --meld-tile-h: 21px; }
 .mahjong-page .mahjong-call-options .mahjong-button { min-height: 58px; gap: 14px; }
 .mahjong-page .mahjong-call-options .mahjong-meld--public { --meld-tile-w: 27px; --meld-tile-h: 38px; }
+
+/* One result sequence: winner details, then one aggregate score roll. */
+.mahjong-settlement-panel.is-detail .mahjong-settlement-panel__content { grid-template-columns: minmax(0,1fr); }
+.mahjong-settlement-panel__page { color: var(--mj-muted); font-variant-numeric: tabular-nums; }
+.mahjong-settlement-panel.is-detail .mahjong-settlement-panel__heading { animation: mahjong-result-reveal 300ms ease-out both; }
+.mahjong-settlement-panel.is-detail .is-pending { opacity: 0; visibility: hidden; }
+.mahjong-settlement-panel.is-detail .is-revealed { animation: mahjong-result-reveal 180ms ease-out both; }
+.mahjong-settlement-panel.is-detail .mahjong-settlement-panel__value.is-revealed { animation-duration: 600ms; }
+.mahjong-settlement-panel.is-scores .mahjong-settlement-panel__content { grid-template-columns: minmax(0,1fr); }
+.mahjong-settlement-panel.is-scores .mahjong-settlement-panel__delta { grid-column: 1 / -1; }
+.mahjong-settlement-panel.is-scores .mahjong-settlement-panel__balance-after { margin-top: 8px; }
+.mahjong-settlement-panel.is-scores .mahjong-settlement-panel__balance-after strong { display: block; margin-top: 4px; color: #edf5f6; font-size: clamp(18px,2.8cqw,30px); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mahjong-settlement-panel__actions { gap: 12px; align-items: center; }
+.mahjong-settlement-panel__actions small { color: var(--mj-muted); font-size: 12px; }
+@keyframes mahjong-result-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .mahjong-settlement-panel.is-detail .mahjong-settlement-panel__heading,
+  .mahjong-settlement-panel.is-detail .is-revealed { animation: none; }
+}
