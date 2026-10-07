@@ -82,21 +82,6 @@ function assertSettlement(settlement: Settlement, method: "ron" | "tsumo", tile:
   return { closed, melds };
 }
 
-function closedSanmaRon(): Fixture {
-  const game = new SanmaGame("east", names.slice(0, 3), { dealer: 0, wallFactory: () => sanmaWall({
-    0: "m19p19s123z234567", 1: "p123s123456789z5", 2: "m119p246s246z2346",
-  }, ["z5"]) });
-  const dealer = game.view(0), discard = dealer.choices.find(choice => choice.type === "discard" && choice.value === "z5_");
-  assert.ok(discard, "dealer has a real legal z5 tsumogiri Choice");
-  game.respond(0, dealer.decisionId, discard.id);
-  const response = game.view(1), ron = response.choices.find(choice => choice.type === "ron");
-  assert.ok(ron, "seat 1 has a legal closed-hand ron Choice");
-  game.respond(1, response.decisionId, ron.id);
-  const view = game.view(1), settlement = view.settlement!;
-  const parts = assertSettlement(settlement, "ron", "z5");
-  return { name: "sanma-closed-ron", variant: "sanma", game: view, settlement, room: room(view, "sanma", 1, "closed-ron"), ...parts, winningTile: "z5", title: "荣和" };
-}
-
 function openSanmaRon(): Fixture {
   const game = new SanmaGame("east", names.slice(0, 3), { dealer: 0, wallFactory: () => sanmaWall({
     0: "m1p123s456z234567", 1: "z11p123s123456z56", 2: "m119p246s246z2346",
@@ -202,6 +187,59 @@ for(const method of ['tsumo','ron'] as const){
  fixtures.push({name,variant:'sanma',game:v,settlement:s,room:room(v,'sanma',0,'pao'),...assertSettlement(s,method,'p3'),winningTile:'p3',title:method==='tsumo'?'自摸':'荣和'});
  const before=v.players.map(p=>p.score);ack(g,3);assert.deepEqual(g.view(0).players.map(p=>p.score),before.map((score,seat)=>score+s.delta[seat]));assert.equal(g.view(0).players.reduce((sum,p)=>sum+p.score,0),105000);
 }
+// Four-seat responsibility must come from three legal dragon pons. Seat 2
+// supplies the final dragon; seat 0 is a different ron discarder. The fourth
+// seat remains unchanged, so these literals also catch an ordinary-tsumo or
+// single-discarder payment accidentally replacing pao in the engine DTO.
+for (const method of ["tsumo", "ron"] as const) {
+  const draws = method === "tsumo" ? ["z5", "z6", "z7", "s8", "s7", "s6", "p3"] : ["z5", "z6", "z7", "s8", "s7", "p3"];
+  const g = make("yonma", { 1: method === "tsumo" ? "p123s99z11556677" : "p112s99z11556677" }, draws);
+  assert.ok(g instanceof RiichiGame, "yonma pao uses the real four-seat engine");
+  // Seed only prior-hand bookkeeping: two counters and one deposited stick
+  // taken from seat 2. The three calls and winning Choice below are all legal.
+  metadata(g, "yonma", 2, 1);
+  act(g, 0, "discard:z5_"); act(g, 1, "pon:z555-"); pass(g, 4);
+  act(g, 1, "discard:s9"); pass(g, 4);
+  act(g, 2, "discard:z6_"); act(g, 1, "pon:z666+"); pass(g, 4);
+  act(g, 1, "discard:s9"); pass(g, 4);
+  act(g, 2, "discard:z7_"); act(g, 1, "pon:z777+"); pass(g, 4);
+  assert.deepEqual(g.view(1).players.find(player => player.seat === 1)?.melds, ["z555-", "z666+", "z777+"], "the final dragon was legally supplied by liable seat 2");
+  act(g, 1, method === "tsumo" ? "discard:p3" : "discard:p1"); pass(g, 4);
+  act(g, 2, "discard:s8_"); pass(g, 4);
+  act(g, 3, "discard:s7_"); pass(g, 4);
+  if (method === "tsumo") {
+    act(g, 0, "discard:s6_"); pass(g, 4); act(g, 1, "tsumo");
+  } else {
+    act(g, 0, "discard:p3_"); act(g, 1, "ron"); pass(g, 4);
+  }
+  const v = g.view(0), settlement = v.settlement!;
+  assert.deepEqual(settlement.yaku, [{ name: "大三元", han: "*" }]);
+  assert.equal(settlement.winnerSeat, 1);
+  assert.equal(settlement.points, 32000, "child yakuman hand value excludes counters and pot");
+  // Yonma 300 per counter: 600 paid by the liable seat on tsumo, or
+  // the discarder on split ron; the winner also receives the 1000 deposit.
+  const delta = method === "tsumo" ? [0, 33600, -32600, 0] : [-16600, 33600, -16000, 0];
+  assert.deepEqual(settlement.delta, delta);
+  const scores = (game: E) => game.view(0).players.slice().sort((a, b) => a.seat - b.seat).map(player => player.score);
+  assert.deepEqual(scores(g), [25000, 25000, 24000, 25000]);
+  assert.equal(scores(g).reduce((sum, score) => sum + score, 0) + v.riichiSticks * 1000, 100000, "pre-payment scores plus deposited stick conserve all points");
+  assert.equal(settlement.delta.reduce((sum, transfer) => sum + transfer, 0), 1000, "only the deposited stick enters seat transfers");
+  const name = `yonma-yakuman-pao-${method}`;
+  expected.set(name, { delta, points: 32000 });
+  fixtures.push({ name, variant: "yonma", game: v, settlement, room: room(v, "yonma", 0, name), ...assertSettlement(settlement, method, "p3"), winningTile: "p3", title: method === "tsumo" ? "自摸" : "荣和" });
+  ack(g, 4);
+  assert.deepEqual(scores(g), method === "tsumo" ? [25000, 58600, -8600, 25000] : [8400, 58600, 8000, 25000], "all four legal acks apply the exact authoritative transfer");
+  assert.equal(scores(g).reduce((sum, score) => sum + score, 0), 100000, "post-payment scores conserve every point");
+}
+// Optional exact-name selection bounds native reruns without hiding missing fixtures.
+const requestedFixtures = process.env.SETTLEMENT_FIXTURES?.split(",").filter(Boolean);
+if (requestedFixtures) {
+  assert.equal(new Set(requestedFixtures).size, requestedFixtures.length, "fixture filter must contain unique names");
+  for (const name of requestedFixtures) assert.ok(fixtures.some(fixture => fixture.name === name), `requested fixture is missing: ${name}`);
+  const selected = fixtures.filter(fixture => requestedFixtures.includes(fixture.name));
+  fixtures.splice(0, fixtures.length, ...selected);
+}
+console.log(`SELECTED ${fixtures.length} fixtures: ${fixtures.map(fixture => fixture.name).join(", ")}; ${fixtures.length * 6} native cases`);
 const harness = `import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {flushSync} from 'react-dom';
