@@ -1,5 +1,9 @@
 import Majiang from "@kobalab/majiang-core";
 
+// Published DefaultDetailGameRule3 continuance-counter points (configuration
+// evidence; vendor server packet parity has not been observed).
+export const SANMA_HONBA_POINTS = 200;
+
 export const sanmaRule = Majiang.rule({
   "赤牌": {
     m: 0,
@@ -57,7 +61,7 @@ export function sanmaPayment({
     }
   }
   if (loser !== undefined)
-    pay(loser, Math.ceil(base * factor / 100) * 100 + honba * 300);
+    pay(loser, Math.ceil(base * factor / 100) * 100 + honba * SANMA_HONBA_POINTS);
   else if (base === 0 && pao.length)
     pay(pao[0].seat, honba * 200);
   else

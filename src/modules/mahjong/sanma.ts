@@ -3,7 +3,7 @@ import Majiang from "@kobalab/majiang-core";
 import { AppError } from "@/lib/errors";
 import { concealedTiles } from "./engine";
 import { SanmaWall } from "./sanma-wall";
-import { sanmaPayment, scoreSanma, tenpaiPayment } from "./sanma-scoring";
+import { SANMA_HONBA_POINTS, sanmaPayment, scoreSanma, tenpaiPayment } from "./sanma-scoring";
 import type { Choice, ChoiceType, GameMode, GameView, Settlement } from "./types";
 
 export type SanmaOptions = {
@@ -316,7 +316,7 @@ export class SanmaGame {
         })),
         fu: result.fu,
         han: result.han,
-        points: delta[seat] - (index === 0 ? this.sticks * 1000 : 0) - (ron ? this.honba * 300 : this.honba * 200),
+        points: delta[seat] - (index === 0 ? this.sticks * 1000 : 0) - (ron ? this.honba * SANMA_HONBA_POINTS : this.honba * 200),
         delta,
         uraIndicators: this.players[seat].riichi ? this.wall.ura : []
       } satisfies Settlement;

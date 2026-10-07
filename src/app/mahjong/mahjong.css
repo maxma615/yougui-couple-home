@@ -669,3 +669,36 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 @media (max-width: 700px) {
   .mahjong-winning-hand { --win-tile-w: clamp(19px,5.5vw,24px); --win-tile-h: 37px; }
 }
+
+/* Result values come from the engine; each seat keeps its current score and transfer. */
+.mahjong-settlement-panel { grid-template-columns: minmax(170px,.65fr) minmax(0,1.35fr); gap: 12px 18px; color: #e8e4da; }
+.mahjong-settlement-panel__heading { min-width: 0; }
+.mahjong-settlement-panel h2 { margin: 3px 0; font-size: 20px; }
+.mahjong-settlement-panel__winner { display: block; font-size: 18px; overflow-wrap: anywhere; }
+.mahjong-settlement-panel p:not(.mahjong-kicker) { font-size: 12px; line-height: 1.5; }
+.mahjong-settlement-panel__value { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
+.mahjong-settlement-panel__value small { font-size: 12px; color: var(--mj-muted); }
+.mahjong-settlement-panel__value b { color: var(--mj-gold); font-size: 23px; font-variant-numeric: tabular-nums; }
+.mahjong-settlement-panel__delta { gap: 8px; }
+.mahjong-settlement-panel__delta > span { display: grid; align-content: center; gap: 5px; min-width: 0; padding: 8px; border: 1px solid var(--mj-hairline); border-radius: 6px; background: rgb(255 255 255 / 3%); }
+.mahjong-settlement-panel__delta small { font-size: 12px; }
+.mahjong-settlement-panel__delta em { font-style: normal; display: block; font-size: 12px; white-space: nowrap; color: var(--mj-muted); }
+.mahjong-settlement-panel__delta b { font-size: 16px; white-space: nowrap; }
+.mahjong-settlement-panel__explanation { grid-column: 1 / -1; }
+.mahjong-settlement-panel .mahjong-winning-hand > div:first-child, .mahjong-settlement-panel .mahjong-ura-indicators > small { font-size: 12px; }
+.mahjong-settlement-panel li { font-size: 12px; }
+.mahjong-settlement-panel li b { font-size: 12px; }
+.mahjong-settlement-panel__actions { grid-column: 1 / -1; position: sticky; bottom: -13px; display: flex; justify-content: flex-end; padding: 8px 0; background: #152139; }
+.mahjong-settlement-panel__actions button { min-width: 88px; min-height: 44px; font-size: 16px; }
+.mahjong-game:not(.is-finished) > .mahjong-settlement-panel { top: 43%; width: min(960px,94%); max-height: 72dvh; }
+@media (max-width: 900px) {
+  .mahjong-settlement-panel { grid-template-columns: 1fr; gap: 8px; }
+  .mahjong-settlement-panel__heading { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 10px; }
+  .mahjong-settlement-panel__heading .mahjong-kicker { display: none; }
+  .mahjong-settlement-panel__heading h2 { font-size: 18px; }
+  .mahjong-settlement-panel__value { margin: 0; }
+  .mahjong-settlement-panel__delta { gap: 6px; }
+  .mahjong-settlement-panel__delta > span { padding: 6px; }
+  .mahjong-settlement-panel__delta b { font-size: 14px; }
+  .mahjong-settlement-panel__actions { bottom: -11px; }
+}

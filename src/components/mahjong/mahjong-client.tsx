@@ -22,7 +22,8 @@ import { useTableFeedback } from "./use-table-feedback";
 import { MahjongCallAnnouncement } from "./mahjong-call-announcement";
 import { MahjongStandingTile } from "./mahjong-standing-tile";
 import { useDrawArrival } from "./use-draw-arrival";
-import { winningHand, settlementTitle } from "./mahjong-winning-hand";
+import { settlementTitle } from "./mahjong-winning-hand";
+import { MahjongSettlementPanel } from "./mahjong-settlement-panel";
 
 const windNames = ["東", "南", "西", "北"];
 const choiceNames: Record<Choice["type"], string> = {
@@ -567,7 +568,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const tsumoChoice = otherChoices.find(choice => choice.type === "tsumo");
   const callGroups = new Map<Choice["type"], Choice[]>();
   for (const choice of otherChoices) {
-    if (choice.type !== "tsumo") callGroups.set(choice.type, [...(callGroups.get(choice.type) || []), choice]);
+    if (choice.type !== "tsumo" && !(game.settlement && choice.type === "ack")) callGroups.set(choice.type, [...(callGroups.get(choice.type) || []), choice]);
   }
   const pendingCalls = pendingCallType ? otherChoices.filter(choice => choice.type === pendingCallType) : [];
   const allowedChoices = riichiMode ? riichiChoices : discardChoices;
@@ -641,7 +642,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       {game.settlement ? <div className="mahjong-settlement" role="status"><span>{settlementTitle(game.settlement)}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
     </div> : null}
 
-    {game.settlement ? <SettlementPanel game={game} room={room}/> : null}
+    {game.settlement ? <MahjongSettlementPanel game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}
     {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
     {inspectedSeat !== null ? <PublicMeldDialog player={game.players.find(p => p.seat === inspectedSeat)} member={room.members.find(m => m.seat === inspectedSeat)} onClose={() => setInspectedSeat(null)}/> : null}
     {publicCallMotion.flight ? <DiscardFlightLayer kind="call" flight={publicCallMotion.flight} onFinish={publicCallMotion.finishFlight}/> : null}
@@ -742,25 +743,4 @@ function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriv
   const dragging = Boolean(drag);
   const style = drag ? { "--mahjong-drag-x": `${drag.x}px`, "--mahjong-drag-y": `${drag.y}px` } as CSSProperties : undefined;
   return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)} onLostPointerCapture={event => onPointerCancel(tileId, event)}/>;
-}
-
-function SettlementPanel({ game, room }: { game: GameView; room: RoomView }) {
-  const settlement = game.settlement;
-  if (!settlement) return null;
-  const hanText = String(settlement.han ?? "");
-  const yakuYakumanCount = settlement.yaku.reduce((count, yaku) => count + ((String(yaku.han).match(/\*+/)?.[0].length || 0)), 0);
-  const yakumanCount = Math.max((hanText.match(/\*+/)?.[0].length || 0), yakuYakumanCount, /役満|役满/.test(hanText) ? 1 : 0);
-  const hanLabel = yakumanCount ? `${yakumanCount > 1 ? `${yakumanCount}倍` : ""}役满` : `${hanText || "—"} 翻`;
-  const winning = winningHand(settlement);
-  const winner = settlement.winnerSeat === undefined ? null : room.members.find((member) => member.seat === settlement.winnerSeat);
-  return <section className="mahjong-settlement-panel" aria-label="本局结算">
-    <div><p className="mahjong-kicker">HAND RESULT</p><h2>{settlementTitle(settlement)}</h2><p>{settlement.kind === "win" ? `${hanLabel}${settlement.fu ? ` · ${settlement.fu} 符` : ""}` : "牌山已尽"}{settlement.points ? ` · ${settlement.points.toLocaleString()} 点` : ""}</p></div>
-    <div className={`mahjong-settlement-panel__delta${room.variant === "sanma" ? " is-sanma" : ""}`}>{settlement.delta.map((delta, seat) => <span key={seat}><small>{room.members.find((member) => member.seat === seat)?.displayName || (seat === room.mySeat ? "你" : `${windNames[seat]}家`)}</small><b className={delta > 0 ? "is-positive" : delta < 0 ? "is-negative" : ""}>{delta > 0 ? "+" : ""}{delta.toLocaleString()}</b></span>)}</div>
-    {winning.closed.length || winning.melds.length ? <div className="mahjong-winning-hand"><div><small>{winner?.displayName || "和牌"}的手牌</small>{winning.winningTile ? <small>和牌：{tileName(winning.winningTile)}</small> : null}</div><div className="mahjong-winning-hand__row"><div className="mahjong-winning-hand__closed" role="group" aria-label="闭手">{winning.closed.map((tile, index) => <TileFace value={tile} key={`${index}-${tile}`} />)}</div>{winning.winningTile ? <span className="mahjong-winning-hand__tile" data-testid="mahjong-winning-tile"><TileFace value={winning.winningTile}/></span> : null}{winning.melds.length ? <div className="mahjong-winning-hand__melds">{winning.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}</div></div> : null}
-    {settlement.kind === "win" && settlement.uraIndicators.length ? <div className="mahjong-ura-indicators"><small>里宝牌指示</small><div>{settlement.uraIndicators.map((tile, index) => <TileFace value={tile} key={`${tile}-${index}`} />)}</div></div> : null}
-    {settlement.yaku.length ? <ul>{settlement.yaku.map((yaku) => {
-      const units = String(yaku.han).match(/\*+/)?.[0].length || 0;
-      return <li key={yaku.name}><span>{yaku.name}</span><b>{units ? `${units > 1 ? `${units}倍` : ""}役满` : `${yaku.han} 翻`}</b></li>;
-    })}</ul> : null}
-  </section>;
 }
