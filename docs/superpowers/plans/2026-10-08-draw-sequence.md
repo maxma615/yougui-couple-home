@@ -28,11 +28,11 @@
 
 Files: types.ts、engine.ts、sanma.ts、settlement-sequence.ts；tests/fixtures/mahjong-draw-game.ts、tests/unit/mahjong-draw-sequence.test.ts。
 
-Interfaces: DrawInfo={kind:exhaustive|abort|nagashi,revealedHands:{seat,hand}[],nagashiResults:{seat,points,delta}[]}；SettlementFlow.stage新增draw。
+Interfaces: DrawInfo={kind:exhaustive|abort|nagashi,revealedHands:{seat,hand,waits}[],nagashiResults:{seat,points,delta}[]}；SettlementFlow.stage新增draw。
 
-- [ ] 写真实物理墙合法推进荒牌、九种九牌、单／双流满贯三/四麻用例，记录缺少drawInfo/flow的有效RED。
-- [ ] 引擎只增加原生公开结果元数据，分项总和必须等于原生支付；适配器按spec page模式收集，保留原生支付与终局。
-- [ ] 定向新测试和现有结果8项、engine/sanma/rooms通过；验证无私有牌、旧ACK/独立游标/最终屏障/排名一致，提交。
+- [x] 写真实物理墙合法推进荒牌、九种九牌、单／双流满贯三/四麻用例，记录缺少drawInfo/flow的有效RED。
+- [x] 引擎只增加原生公开结果元数据，分项总和必须等于原生支付；适配器按spec page模式收集，保留原生支付与终局。
+- [x] 定向新测试和现有结果8项、engine/sanma/rooms通过；验证无私有牌、旧ACK/独立游标/最终屏障/排名一致，提交。
 
 ### Task 2: 听牌、原因、流满贯与桌面揭示
 

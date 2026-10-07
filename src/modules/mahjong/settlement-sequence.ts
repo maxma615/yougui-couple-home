@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "@/lib/errors";
-import type { GameView, MahjongGame, Settlement } from "./types";
+import type { GameView, MahjongGame, Settlement, SettlementFlow } from "./types";
+
+type Page = { stage: SettlementFlow["stage"]; settlement: Settlement; detailIndex: number };
 
 type Sequence = {
   id: string;
   snapshots: GameView[];
-  details: Settlement[];
+  pages: Page[];
+  detailCount: number;
   oldScores: number[];
   delta: number[];
   indices: number[];
@@ -21,14 +24,14 @@ export class SettlementSequenceGame implements MahjongGame {
 
   constructor(private readonly engine: MahjongGame, private readonly seatCount: 3 | 4, options: { now?: () => number } = {}) {
     this.now = options.now ?? Date.now;
-    this.collectWin();
+    this.collectResult();
   }
 
   private seats() { return Array.from({ length: this.seatCount }, (_, seat) => seat); }
 
-  private collectWin() {
+  private collectResult() {
     const first = this.engine.view(0);
-    if (first.ranking || first.settlement?.kind !== "win") return;
+    if (first.ranking || !first.settlement) return;
     if (first.handId === undefined || !first.gameInstanceId) throw Error("Result sequence requires native hand identity");
     const snapshots = this.seats().map(seat => structuredClone(this.engine.view(seat)));
     const oldScores = this.seats().map(seat => {
@@ -39,7 +42,7 @@ export class SettlementSequenceGame implements MahjongGame {
     const details: Settlement[] = [];
     for (let page = 0; page < this.seatCount; page++) {
       const current = this.engine.view(0);
-      if (current.gameInstanceId !== first.gameInstanceId || current.handId !== first.handId || current.ranking || current.settlement?.kind !== "win") {
+      if (current.gameInstanceId !== first.gameInstanceId || current.handId !== first.handId || current.ranking || current.settlement?.kind !== first.settlement.kind) {
         throw Error("Unexpected native result boundary");
       }
       if (current.settlement.delta.length !== this.seatCount || !current.settlement.delta.every(Number.isFinite)) throw Error("Invalid native result delta");
@@ -56,26 +59,42 @@ export class SettlementSequenceGame implements MahjongGame {
       if (page === this.seatCount - 1) throw Error("Native result exceeded seat bound");
     }
     const delta = this.seats().map(seat => details.reduce((sum, detail) => sum + detail.delta[seat], 0));
-    this.sequence = { id: randomUUID(), snapshots, details, oldScores, delta, indices: this.seats().map(() => 0), startedAt: this.seats().map(() => this.now()), confirmed: new Set() };
+    const pages: Page[] = [];
+    let detailCount = details.length;
+    if (first.settlement.kind === "win") details.forEach((settlement, detailIndex) => pages.push({stage: "detail", settlement, detailIndex}));
+    else {
+      const result = details[0], draw = result.drawInfo;
+      if (details.length !== 1 || !draw) throw Error("Native draw result metadata is required");
+      pages.push({stage: "draw", settlement: result, detailIndex: 0});
+      detailCount = draw.nagashiResults.length;
+      draw.nagashiResults.forEach((winner, detailIndex) => pages.push({stage: "detail", detailIndex, settlement: {
+        ...result, winnerSeat: winner.seat, points: winner.points, delta: winner.delta,
+        hand: draw.revealedHands.find(hand => hand.seat === winner.seat)?.hand,
+      }}));
+    }
+    if (first.settlement.kind === "win" || first.settlement.drawInfo?.kind !== "abort") {
+      pages.push({stage: "scores", detailIndex: detailCount, settlement: {...details[details.length - 1], delta}});
+    }
+    this.sequence = { id: randomUUID(), snapshots, pages, detailCount, oldScores, delta, indices: this.seats().map(() => 0), startedAt: this.seats().map(() => this.now()), confirmed: new Set() };
   }
 
   respond(seat: number, decisionId: string, choiceId: string) {
     const sequence = this.sequence;
     if (!sequence) {
       this.engine.respond(seat, decisionId, choiceId);
-      this.collectWin();
+      this.collectResult();
       return;
     }
     if (!Number.isInteger(seat) || seat < 0 || seat >= this.seatCount) throw new AppError(403, "seat_required", "你没有牌桌席位");
     const index = sequence.indices[seat];
     if (decisionId !== `${sequence.id}:${index}`) throw new AppError(409, "stale_decision", "牌局已更新，请按当前牌面操作");
     if (choiceId !== "ack" || sequence.confirmed.has(seat)) throw new AppError(409, "illegal_choice", "当前不能执行这个操作");
-    if (index === sequence.details.length) {
+    if (index === sequence.pages.length - 1) {
       sequence.confirmed.add(seat);
       if (sequence.confirmed.size === this.seatCount) this.sequence = null;
     } else {
       // Detail navigation belongs to this viewer. The only table-wide barrier
-      // is after everyone confirms their final aggregate score page.
+      // is after everyone confirms the final score or abort-reason page.
       sequence.indices[seat]++;
       sequence.startedAt[seat] = this.now();
     }
@@ -86,16 +105,15 @@ export class SettlementSequenceGame implements MahjongGame {
     const sequence = this.sequence;
     if (!sequence) return this.engine.view(seat);
     const index = sequence.indices[seat];
-    const scores = index === sequence.details.length;
+    const page = sequence.pages[index];
     const view = structuredClone(sequence.snapshots[seat]);
     view.decisionId = `${sequence.id}:${index}`;
-    view.phase = scores ? "score_change" : "hule";
+    view.phase = page.stage === "scores" ? "score_change" : page.stage === "draw" ? "pingju" : "hule";
     view.ranking = null;
-    view.settlement = structuredClone(sequence.details[Math.min(index, sequence.details.length - 1)]);
-    if (scores) view.settlement.delta = sequence.delta.slice();
+    view.settlement = structuredClone(page.settlement);
     view.choices = sequence.confirmed.has(seat) ? [] : [{ id: "ack", type: "ack" }];
     view.settlementFlow = {
-      id: sequence.id, stage: scores ? "scores" : "detail", detailIndex: index, detailCount: sequence.details.length,
+      id: sequence.id, stage: page.stage, detailIndex: page.detailIndex, detailCount: sequence.detailCount,
       elapsedMs: Math.max(0, this.now() - sequence.startedAt[seat]), oldScores: sequence.oldScores.slice(), delta: sequence.delta.slice(),
       newScores: sequence.oldScores.map((score, seat) => score + sequence.delta[seat]),
     };

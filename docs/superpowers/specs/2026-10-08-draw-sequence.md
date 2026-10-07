@@ -10,7 +10,7 @@
 
 ## 数据与隔离
 
-Settlement新增可选drawInfo：kind为exhaustive／abort／nagashi；revealedHands为原生已经公开的{seat,hand}；nagashiResults为每位原生获分者{seat,points,delta}。不发布未听牌者闭手、下一局手牌、牌山或随机盐。途中流局不可把公开原因手牌误标成听牌。
+Settlement新增可选drawInfo：kind为exhaustive／abort／nagashi；revealedHands为原生已经公开的{seat,hand,waits}；nagashiResults为每位原生获分者{seat,points,delta}。不发布未听牌者闭手、下一局手牌、牌山或随机盐。途中流局不可把公开原因手牌误标成听牌。
 
 四麻仅使用原生pingju.shoupai作为公开牌；流满贯资格使用上游现有公开河牌条件，分项按固定1.4.1上游实际支付公式映射座位，并强制总和等于原生fenpei，否则拒绝输出。三麻保留同一次sanmaPayment计算结果作为分项，不再次计算／入账。未知官方非零本场多荣规则保持记录，不改支付。
 

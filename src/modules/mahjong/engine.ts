@@ -1,7 +1,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import Majiang from "@kobalab/majiang-core";
 import { AppError } from "@/lib/errors";
-import type { Choice, ChoiceType, GameMode, GameView, Settlement } from "./types";
+import type { Choice, ChoiceType, DrawInfo, GameMode, GameView, Settlement } from "./types";
 
 type Rule = Parameters<typeof Majiang.rule>[0];
 export type EngineOptions = { dealer?: number; wallFactory?: (rule: NonNullable<Rule>) => InstanceType<typeof Majiang.Shan> };
@@ -76,7 +76,22 @@ export class RiichiGame extends Majiang.Game {
       };
     } else if (type === "pingju") {
       const draw = (messages[0] as { pingju: DrawMessage }).pingju;
-      this.settlement = { kind: "draw", name: draw.name, yaku: [], delta: this.mapBySeat(draw.fenpei), uraIndicators: [], tenpaiSeats: draw.shoupai.flatMap((s, wind) => s ? [model.player_id[wind]] : []) };
+      const kind: DrawInfo["kind"] = draw.name === "流し満貫" ? "nagashi" : draw.name === "荒牌平局" ? "exhaustive" : "abort";
+      const revealedHands = draw.shoupai.flatMap((hand, wind) => hand ? [{
+        seat: model.player_id[wind], hand,
+        waits: kind === "abort" ? [] : [...new Set(Majiang.Util.tingpai(model.shoupai[wind].clone()) ?? [])],
+      }] : []);
+      // These are the fixed per-seat partitions used by majiang-core 1.4.1's
+      // pingju. They describe the existing native payment; they never apply it.
+      const nagashiResults = kind !== "nagashi" ? [] : model.he.flatMap((river, wind) =>
+        river._pai.every(tile => !/[+=-]$/.test(tile) && /^(?:z|[mps][19])/.test(tile)) ? [{
+          seat: model.player_id[wind], points: wind === 0 ? 12000 : 8000,
+          delta: this.mapBySeat([0,1,2,3].map(payer => payer === wind ? wind === 0 ? 12000 : 8000 : wind === 0 || payer === 0 ? -4000 : -2000)),
+        }] : []);
+      const delta = this.mapBySeat(draw.fenpei);
+      if (kind === "nagashi" && !delta.every((amount, seat) => nagashiResults.reduce((sum, result) => sum + result.delta[seat], 0) === amount)) throw Error("Native nagashi partition mismatch");
+      this.settlement = { kind: "draw", name: draw.name, yaku: [], delta, uraIndicators: [],
+        tenpaiSeats: kind === "abort" ? [] : revealedHands.map(hand => hand.seat), drawInfo: {kind, revealedHands, nagashiResults} };
     }
     for (let wind = 0; wind < 4; wind++) {
       const choices = this.legalChoices(wind);

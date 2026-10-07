@@ -332,14 +332,13 @@ export class SanmaGame {
         : []
     );
     let delta = abort ? [0, 0, 0] : tenpaiPayment(tenpai);
+    const nagashiResults = nagashi.map(seat => {
+      const delta = sanmaPayment({base: 2000, winner: seat, dealer: this.dealer});
+      return {seat, points: delta[seat], delta};
+    });
     if (nagashi.length) {
       name = "流し満貫";
-      delta = [0, 0, 0];
-      for (const winner of nagashi) sanmaPayment({
-        base: 2000,
-        winner,
-        dealer: this.dealer
-      }).forEach((v, s) => delta[s] += v);
+      delta = [0, 1, 2].map(seat => nagashiResults.reduce((sum, result) => sum + result.delta[seat], 0));
     }
     this.repeat = abort || tenpai.includes(this.dealer);
     this.drawEnd = true;
@@ -349,7 +348,14 @@ export class SanmaGame {
       yaku: [],
       delta,
       uraIndicators: [],
-      tenpaiSeats: tenpai
+      tenpaiSeats: abort ? [] : tenpai,
+      drawInfo: {
+        kind: abort ? "abort" : nagashi.length ? "nagashi" : "exhaustive",
+        revealedHands: (abort ? name === "九種九牌" ? [this.turn] : [] : tenpai).map(seat => ({
+          seat, hand: this.players[seat].hand.toString(), waits: abort ? [] : waits(this.players[seat].hand),
+        })),
+        nagashiResults,
+      },
     }];
     this.showSettlement();
   }

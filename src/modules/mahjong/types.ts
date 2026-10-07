@@ -3,8 +3,9 @@ export type GameMode = "east" | "hanchan";
 export type ChoiceType = "discard" | "riichi" | "chi" | "pon" | "kan" | "tsumo" | "ron" | "abort" | "nuki" | "pass" | "ack";
 export type Choice = { id: string; type: ChoiceType; value?: string };
 export type PublicPlayer = { seat: number; wind: number; score: number; handCount: number; hasDrawnTile?: boolean; discards: string[]; melds: string[]; riichi: boolean; nuki?: number };
-export type Settlement = { kind: "win" | "draw"; name: string; winnerSeat?: number; hand?: string; winMethod?: "tsumo" | "ron"; winningTile?: string; yaku: { name: string; han: number | string }[]; fu?: number; han?: number; points?: number; delta: number[]; uraIndicators: string[]; tenpaiSeats?: number[] };
-export type SettlementFlow = { id: string; stage: "detail" | "scores"; detailIndex: number; detailCount: number; elapsedMs: number; oldScores: number[]; delta: number[]; newScores: number[] };
+export type DrawInfo = { kind: "exhaustive" | "abort" | "nagashi"; revealedHands: { seat: number; hand: string; waits: string[] }[]; nagashiResults: { seat: number; points: number; delta: number[] }[] };
+export type Settlement = { kind: "win" | "draw"; name: string; winnerSeat?: number; hand?: string; winMethod?: "tsumo" | "ron"; winningTile?: string; yaku: { name: string; han: number | string }[]; fu?: number; han?: number; points?: number; delta: number[]; uraIndicators: string[]; tenpaiSeats?: number[]; drawInfo?: DrawInfo };
+export type SettlementFlow = { id: string; stage: "draw" | "detail" | "scores"; detailIndex: number; detailCount: number; elapsedMs: number; oldScores: number[]; delta: number[]; newScores: number[] };
 export type GameView = { gameInstanceId?: string; handId?: number; decisionId: string; phase: string; roundWind: number; roundNumber: number; honba: number; riichiSticks: number; remainingTiles: number; doraIndicators: string[]; turnSeat: number; hand: string[]; drawnTile: string | null; players: PublicPlayer[]; choices: Choice[]; settlement: Settlement | null; settlementFlow?: SettlementFlow; ranking: { seat: number; rank: number; score: number }[] | null };
 export interface MahjongGame { view(seat: number): GameView; respond(seat: number, decisionId: string, choiceId: string): void; }
 export type PlayerIdentity = { userId: string; displayName: string };
