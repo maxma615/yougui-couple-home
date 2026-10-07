@@ -294,12 +294,33 @@ for (const engine of [chromium, webkit]) {
       await mount(page, fixture.before, size);
       let expectedSource: Point[];
       if (fixture.actor === 0) {
+        await page.mouse.move(1, 1);
+        const drawSpacing = await page.getByTestId("mahjong-hand").evaluate(hand => {
+          const drawn = hand.querySelector<HTMLElement>(".mahjong-drawn-wrap .is-drawn")!;
+          const last = [...hand.querySelectorAll<HTMLElement>(":scope > .mahjong-tile")].at(-1)!;
+          const drawBox = drawn.getBoundingClientRect(), closedBox = last.getBoundingClientRect();
+          return { gapRatio: (drawBox.left - closedBox.right) / drawBox.width, baselineError: Math.abs(drawBox.bottom - closedBox.bottom) };
+        });
+        assert.ok(drawSpacing.gapRatio >= .33 && drawSpacing.gapRatio <= .38, `${fixture.id}/${size.width}: reference-normalized drawn gap ${drawSpacing.gapRatio}`);
+        assert.ok(drawSpacing.baselineError < 1.5, "the separated draw shares the concealed hand baseline");
         if (fixture.riichi) await page.getByRole("button", { name: "立直", exact: true }).click();
         const tile = fixture.riichi
           ? page.locator('.is-drawn[data-choice-type="riichi"]')
           : page.getByTestId("mahjong-hand").locator('[data-tile-face="p1"]').nth(1);
         await tile.click();
-        await page.waitForTimeout(120);
+        await page.waitForTimeout(170);
+        const selected = await tile.evaluate(element => {
+          const style = getComputedStyle(element), rect = element.getBoundingClientRect();
+          const lift = Math.abs(new DOMMatrixReadOnly(style.transform).m42) / Number.parseFloat(style.height);
+          const samples = (window as any).mahjongPhysicalSamples(element, [[.12,.12],[.88,.12],[.5,.5],[.12,.88],[.88,.88]]) as Point[];
+          return { lift, inViewport: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+            allHit: samples.every(point => document.elementFromPoint(point.x, point.y)?.closest('[data-hand-instance-id]') === element), hits: samples.map(point => ({point, hit: document.elementFromPoint(point.x, point.y)?.className})), rect: {x:rect.x,y:rect.y,width:rect.width,height:rect.height} };
+        });
+        assert.ok(selected.lift >= .28 && selected.lift <= .34, `${fixture.id}/${size.width}: reference-normalized selected lift ${selected.lift}`);
+        assert.equal(selected.inViewport, true, "raising the selected tile must keep it on screen");
+        if (size.width === 844) await page.screenshot({path: `.local/audit/own-hand-selected-${engine.name()}-${fixture.id}-844.png`});
+        assert.equal(selected.allHit, true, `${engine.name()} ${fixture.id}/${size.width}: raised tile points remain selectable ${JSON.stringify(selected)}`);
+        assert.equal(await page.evaluate(() => (window as any).projectionApi.lastChoice), null, "the first selection must not submit a Choice");
         await tile.click();
         const intent = await page.evaluate(() => (window as any).projectionApi.lastIntent);
         assert.equal((await page.evaluate(() => (window as any).projectionApi.lastChoice))?.id, fixture.choice.id,
@@ -343,11 +364,19 @@ for (const engine of [chromium, webkit]) {
         movement.currentTime = duration - 0.5;
         await nextFrame(); await nextFrame();
         const endQuad = quad(node);
+        const flyingFace = node.querySelector<HTMLElement>(".mahjong-discard-flight__face")!;
+        const paint = (element: Element) => {
+          const style = getComputedStyle(element);
+          return { background: style.background, border: style.borderTop, borderRadius: style.borderTopLeftRadius,
+            padding: style.padding, boxShadow: style.boxShadow, outline: style.outlineStyle === "none" ? "none" : style.outline };
+        };
         const result: any = { eventId, source: node.dataset.motionSource, seat: Number(node.dataset.motionSeat), duration,
           startQuad, expectedSource, targetQuad, endQuad, middleQuad, middleTime,
           startError: error(startQuad, expectedSource), endError: error(endQuad, targetQuad),
           pointerEvents: getComputedStyle(node).pointerEvents, ariaHidden: node.getAttribute("aria-hidden"),
-          targetHidden: getComputedStyle(target).opacity === "0" || getComputedStyle(face).opacity === "0" };
+          targetHidden: getComputedStyle(target).opacity === "0" || getComputedStyle(face).opacity === "0",
+          flyingPaint: paint(flyingFace), targetPaint: paint(face),
+          flyingFilter: getComputedStyle(flyingFace).filter, targetFilter: getComputedStyle(target).filter };
         if (checkQuietResize) {
           movement.currentTime = duration / 2;
           await nextFrame();
@@ -368,6 +397,8 @@ for (const engine of [chromium, webkit]) {
       assert.equal(measured.pointerEvents, "none");
       assert.equal(measured.ariaHidden, "true");
       assert.equal(measured.targetHidden, true);
+      assert.deepEqual(measured.flyingPaint, measured.targetPaint, "own and opponent flights must land with the actual river's material, including the riichi outline");
+      assert.equal(measured.flyingFilter, measured.targetFilter, "the actual tsumogiri marker controls landing brightness");
       if (size.width === 844) await page.screenshot({ path: `.local/audit/mahjong-table-projection-flight-${engine.name()}-${fixture.id}-844.png` });
       if (size.width === 844 && fixture.id === "sanma-nuki-own-discard") {
         assert.equal((measured as any).quietPreserved, true, "quiet rerender must preserve current flight node and paused animation time");

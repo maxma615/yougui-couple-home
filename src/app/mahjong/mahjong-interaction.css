@@ -6,7 +6,7 @@
 
 .mahjong-game button.mahjong-tile.is-playable.is-selected {
   z-index: 7;
-  transform: translateY(-8px);
+  transform: translateY(-31%);
   outline: 2px solid #f0c46d;
   outline-offset: 2px;
   box-shadow: 0 5px 0 #c7bf9d, 0 8px 18px #0009;

@@ -12,14 +12,14 @@ import type { Choice, GameVariant, GameView, RoomView } from "../../src/modules/
 import { projectedSampleScript } from "./projected-samples";
 
 type RealGame = { view(seat: number): GameView; respond(seat: number, decisionId: string, choiceId: string): void };
-type DrawAction = "closed-hand" | "drawn-tile";
+type DrawAction = "closed-hand" | "drawn-tile" | "red-hand";
 type Point = { x: number; y: number };
 type Fixture = { variant: GameVariant; actor: number; viewer: number; action: DrawAction; game: RealGame; before: RoomView; after: RoomView; choice: Choice };
 
 const names = ["玩家", "电脑甲", "电脑乙", "电脑丙"];
 const viewports = [{ width: 667, height: 375 }, { width: 844, height: 390 }, { width: 1440, height: 810 }];
 const tileList = (encoded: string) => [...encoded.matchAll(/([mpsz])(\d+)/g)].flatMap(match => [...match[2]].map(rank => match[1] + rank));
-const concealedHand = "p112233s456789z1";
+const concealedHand = "p011233s456789z1";
 const drawnTile = "z7";
 
 function sanmaOptions(actor: number) {
@@ -98,7 +98,7 @@ function fixture(variant: GameVariant, actor: number, action: DrawAction): Fixtu
   assert.equal(actorBefore.drawnTile, drawnTile, `${variant} actor ${actor} must have the physical wall draw`);
   const choice = actorBefore.choices.find(item => item.type === "discard" && (action === "drawn-tile"
     ? item.value === `${drawnTile}_`
-    : item.value === "p1"));
+    : item.value === (action === "red-hand" ? "p0" : "p1")));
   assert.ok(choice, `${variant} actor ${actor} must have the requested legal ${action} Choice`);
 
   const beforeRaw = game.view(viewer);
@@ -189,6 +189,10 @@ async function liveFlight(page: Page, current: Fixture) {
       if (!movement) throw new Error("an opponent discard must use the live browser flight");
       movement.pause();
       movement.currentTime = 0;
+      for (const animation of node.querySelector(".mahjong-discard-flight__card")?.getAnimations() ?? []) {
+        animation.pause();
+        animation.currentTime = 0;
+      }
       await new Promise(requestAnimationFrame);
       const event = node.dataset.motionEvent;
       const river = [...document.querySelectorAll<HTMLElement>("[data-discard-event-id]")].find(item => item.dataset.discardEventId === event);
@@ -199,6 +203,45 @@ async function liveFlight(page: Page, current: Fixture) {
     }
     throw new Error(`${action} by opponent seat ${actor} did not create a flight`);
   }, { after: current.after, actor: current.actor, action: current.action });
+}
+
+async function sourceMaterial(page: Page, actor: number, action: DrawAction) {
+  return page.evaluate(({ actor, action }) => {
+    const backs = [...document.querySelectorAll<HTMLElement>(`[data-motion-rack-seat="${actor}"] > i`)];
+    const tile = action === "drawn-tile" ? backs.find(back => back.dataset.motionDrawn === "true") : backs.filter(back => back.dataset.motionDrawn !== "true").at(-1);
+    const face = tile?.querySelector<HTMLElement>("[data-motion-surface]");
+    if (!face) throw new Error("a material comparison requires the real source surface");
+    const style = getComputedStyle(face);
+    return { backgroundColor: style.backgroundColor, backgroundImage: style.backgroundImage,
+      borderColor: style.borderTopColor, borderWidth: style.borderTopWidth,
+      borderRadius: style.borderTopLeftRadius, boxShadow: style.boxShadow };
+  }, { actor, action });
+}
+
+async function flightMaterials(page: Page) {
+  return page.evaluate(() => {
+    const flight = document.querySelector<HTMLElement>('[data-testid="mahjong-discard-flight"]')!;
+    const event = flight.dataset.motionEvent;
+    const river = [...document.querySelectorAll<HTMLElement>("[data-discard-event-id]")].find(item => item.dataset.discardEventId === event)!;
+    const surface = (element: Element) => {
+      const style = getComputedStyle(element);
+      return { backgroundColor: style.backgroundColor, backgroundImage: style.backgroundImage,
+        borderColor: style.borderTopColor, borderWidth: style.borderTopWidth,
+        borderRadius: style.borderTopLeftRadius, boxShadow: style.boxShadow };
+    };
+    const front = flight.querySelector<HTMLElement>(".mahjong-discard-flight__face")!;
+    const target = river.querySelector<HTMLElement>(".mahjong-tile")!;
+    const facePaint = (element: Element) => {
+      const style = getComputedStyle(element);
+      return { ...surface(element), padding: style.padding, outline: style.outlineStyle === "none" ? "none" : style.outline };
+    };
+    const indicatorBacks = [...document.querySelectorAll<HTMLElement>(".mahjong-indicator-back")].map(surface);
+    return { back: surface(flight.querySelector(".mahjong-discard-flight__back")!),
+      front: facePaint(front), target: facePaint(target), indicatorBacks,
+      flyingValue: front.dataset.tileFace, targetValue: target.dataset.tileFace,
+      artwork: front.querySelector<HTMLImageElement>("img")?.getAttribute("src"),
+      frontFilter: getComputedStyle(front).filter, riverFilter: getComputedStyle(river).filter };
+  });
 }
 
 const compareCorners = (actual: Point[], expected: Point[], label: string) => {
@@ -223,7 +266,7 @@ try {
       });
       for (const variant of ["sanma", "yonma"] as const) {
         const capacity = variant === "sanma" ? 3 : 4;
-        for (let actor = 0; actor < capacity; actor++) for (const viewport of viewports) for (const action of ["closed-hand", "drawn-tile"] as const) {
+        for (let actor = 0; actor < capacity; actor++) for (const viewport of viewports) for (const action of ["closed-hand", "drawn-tile", "red-hand"] as const) {
           const current = fixture(variant, actor, action);
           await mount(page, current.before, viewport.width, viewport.height);
           const keepVisualSample = browserName === "chromium" && actor === 0
@@ -247,10 +290,25 @@ try {
           assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0, "refreshing on an accepted snapshot must not replay a flight");
           await mount(page, current.before, viewport.width, viewport.height);
           const expected = await sourceCorners(page, actor, action);
+          const expectedMaterial = await sourceMaterial(page, actor, action);
           const flight = await liveFlight(page, current);
           assert.equal(flight.source, "opponent"); assert.equal(flight.sourceSeat, actor);
           assert.equal(flight.tsumogiri, action === "drawn-tile", "the river marker must reflect the real engine Choice");
           compareCorners(flight.corners, expected, `${browserName}/${variant}/actor=${actor}/${action}`);
+          const paint = await flightMaterials(page);
+          assert.deepEqual(paint.back, expectedMaterial, "the flying back must keep its source tile's original material without a gold flash");
+          assert.deepEqual(paint.front, paint.target, "the flight face must land with the confirmed river face's paint, padding and outline");
+          assert.equal(paint.frontFilter, paint.riverFilter, "tsumogiri brightness must not jump when the flying face reaches its river");
+          assert.equal(paint.flyingValue, paint.targetValue, "the confirmed flying value matches its river tile");
+          if (action === "red-hand") {
+            assert.equal(paint.flyingValue, "p0", "the real physical red five is preserved in flight");
+            assert.equal(paint.artwork, "/images/mahjong-tiles/regular/Pin5-Dora.svg", "a red five uses the original licensed red artwork");
+          }
+          for (const back of paint.indicatorBacks) {
+            assert.equal(back.backgroundColor, expectedMaterial.backgroundColor, "indicator backs belong to the same physical tile set");
+            assert.equal(back.backgroundImage, expectedMaterial.backgroundImage);
+            assert.equal(back.borderColor, expectedMaterial.borderColor);
+          }
           if (keepVisualSample) await page.screenshot({ path: `.local/audit/mahjong-opponent-draw-${variant}-${viewport.width}-${action}-flight.png` });
 
           // Duplicate snapshots are applied with the same public event and room version.
@@ -280,8 +338,8 @@ try {
       await page.close();
     } finally { await browser.close(); }
   }
-  writeFileSync(".local/audit/mahjong-opponent-draw-browser-proof.json", JSON.stringify({ cases: passed, source: "real SanmaGame/RiichiGame snapshots and actual public player rack", geometry: "DOM projected four-corner comparison", matrix: "2 browsers × 7 absolute actor seats × 3 viewports × 2 legal discard choices" }, null, 2) + "\n");
-  console.log(`${passed}/84 real-engine projected opponent-rack and discard-origin cases passed.`);
+  writeFileSync(".local/audit/mahjong-opponent-draw-browser-proof.json", JSON.stringify({ cases: passed, source: "real SanmaGame/RiichiGame snapshots and actual public player rack", geometry: "DOM projected four-corner and computed-paint comparison", matrix: "2 browsers × 7 absolute actor seats × 3 viewports × 3 legal discard choices including red five" }, null, 2) + "\n");
+  console.log(`${passed}/126 real-engine projected opponent-rack, material and discard-origin cases passed.`);
 } catch (error) {
   writeFileSync(".local/audit/mahjong-opponent-draw-browser-failure.json", JSON.stringify({ passed, error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error) }, null, 2) + "\n");
   throw error;

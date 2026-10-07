@@ -394,7 +394,7 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
     >
       <span className="mahjong-discard-flight__card">
         {flight.source === "opponent" ? <span className="mahjong-discard-flight__back"/> : null}
-        <TileFace value={flight.event.tile} className="mahjong-discard-flight__face"/>
+        <TileFace value={flight.event.tile} className={`mahjong-discard-flight__face${flight.event.tile.includes("_") ? " is-tsumogiri" : ""}${flight.event.tile.includes("*") ? " is-riichi" : ""}`}/>
       </span>
     </div>,
     document.body,

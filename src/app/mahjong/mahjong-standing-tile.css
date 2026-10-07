@@ -95,9 +95,18 @@
 .mahjong-standing-tile__face--back {
   width: var(--standing-w);
   height: var(--standing-h);
+  transform: rotateX(90deg);
+}
+
+/* Every concealed, flying and publicly face-down tile uses the same original
+   back material. Changing its location must not change its tile set. */
+.mahjong-standing-tile__face--back,
+.mahjong-discard-flight__back,
+.mahjong-page .mahjong-indicator-back,
+.mahjong-page .mahjong-meld--public .mahjong-meld__back,
+.mahjong-public-melds .mahjong-meld--public .mahjong-meld__back {
   border-color: #a85831;
   background: #cf7339;
-  transform: rotateX(90deg);
 }
 
 .mahjong-standing-tile__face--front {
@@ -148,6 +157,10 @@
 /* Keep contextual buttons inward from the side rack, above the viewer's hand. */
 .mahjong-page .mahjong-game:not(.is-finished) .mahjong-action-dock {
   right: max(14%, env(safe-area-inset-right));
+  /* Clear the 31% selected lift, including the second row used by riichi
+     cancellation. The table occupies the viewport, so these sizes match its
+     container-relative hand width without flattening the 3D surface. */
+  bottom: max(calc(14dvh + 10px), calc(max(2dvh, env(safe-area-inset-bottom)) + 6px + min(4.8dvw, 13dvh, 64px) * 1.46 * 1.31 + 8px));
 }
 
 /* A kan adds a physical tile to the side row. Reserve a standing tile's full

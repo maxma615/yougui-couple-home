@@ -57,6 +57,12 @@ for(const engine of [chromium,webkit]){
    for(const [stage,room] of [['before',scenario.before],['after',scenario.after]] as const){
     const noop=()=>{},html=renderToStaticMarkup(createElement(GameRoom,{room,ownSeat:scenario.ownSeat,host:true,busy:false,connected:true,onChoice:noop,onFinish:noop,onLeave:noop,onRematch:noop}));
     await page.setContent(`<base href="https://mahjong.local/"><style>*{box-sizing:border-box}body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);await page.addScriptTag({content:'globalThis.__name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});'+projectedSampleScript});
+    const publicBacks=await page.evaluate(()=>{
+     const material=(e:Element)=>{const s=getComputedStyle(e);return {color:s.backgroundColor,image:s.backgroundImage,border:s.borderColor};};
+     return {standing:material(document.querySelector('[data-standing-face="back"]')!),public:[...document.querySelectorAll('.mahjong-meld--public .mahjong-meld__back')].map(material),indicators:[...document.querySelectorAll('.mahjong-indicator-back')].map(material)};
+    });
+    if(scenario.name==='sanma-kan')assert.equal(publicBacks.public.length,2,'real concealed kan retains two public back tiles');
+    for(const material of [...publicBacks.public,...publicBacks.indicators])assert.deepEqual(material,publicBacks.standing,'public kan and indicator backs share the standing-rack material');
     const metric=await page.evaluate(()=>{
      const sample=(e:Element)=> (window as any).mahjongPhysicalSamples(e,[[0,0],[1,0],[1,1],[0,1]]) as {x:number,y:number}[];
      const area=(q:{x:number,y:number}[])=>Math.abs(q.reduce((sum,p,i)=>sum+p.x*q[(i+1)%4].y-p.y*q[(i+1)%4].x,0))/2;
@@ -94,7 +100,7 @@ for(const engine of [chromium,webkit]){
      const actual=room.game!.players.find(p=>p.seat===rack.seat)!;assert.equal(rack.tileCount,actual.handCount);assert.equal(rack.drawn,actual.hasDrawnTile?1:0);
     }
     if(scenario.variant==='sanma'&&stage==='after')assert.equal(await page.getByTestId('nuki-tiles-0').locator('[data-tile-face="z4"]').count(),1,'North remains a physical public tile');
-    results.push({browser:engine.name(),variant:scenario.variant,scenario:scenario.name,size,stage,racks:metric});
+    results.push({browser:engine.name(),variant:scenario.variant,scenario:scenario.name,size,stage,publicBacks,racks:metric});
    }
    await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>('img.mahjong-tile__art')].every(i=>i.complete&&i.naturalWidth===300));await page.waitForTimeout(300);
    const stem=`.local/audit/standing-tile-${engine.name()}-${scenario.name}-${size.width}`;let pixels=await page.screenshot({path:stem+'-snapshot.png'});const video=page.video();await context.close();
