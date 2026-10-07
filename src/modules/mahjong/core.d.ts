@@ -42,6 +42,7 @@ declare module "@kobalab/majiang-core" {
     _sync: boolean;
     _gang: string | null;
     _dapai: string | null;
+    _hule_option: string | null;
     _paipu: { rank: number[] };
     _diyizimo: boolean;
     _neng_rong: boolean[];

@@ -40,7 +40,8 @@ export function useTableFeedback(game:GameView|null, members:RoomMember[], ownSe
     const actor=(seat:number)=>seat===ownSeat ? "你" : members.find(m=>m.seat===seat)?.displayName || "牌友";
     if (game.settlement && next.settlementIdentity!==old.settlementIdentity) {
       const winner=game.settlement.winnerSeat;
-      event={kind:"win",text:game.settlement.kind==="win" ? `${winner===undefined ? "" : `${actor(winner)} · `}和牌` : "流局",seat:winner};
+      const winLabel = game.settlement.winMethod === "tsumo" ? "自摸" : game.settlement.winMethod === "ron" ? "荣和" : "和牌";
+      event={kind:"win",text:game.settlement.kind==="win" ? `${winner===undefined ? "" : `${actor(winner)} · `}${winLabel}` : "流局",seat:winner};
     }
     if (!event) for(const p of next.players) {
       const before=old.players.find(o=>o.seat===p.seat);

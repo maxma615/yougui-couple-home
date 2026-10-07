@@ -5,7 +5,7 @@ import type { Choice, ChoiceType, GameMode, GameView, Settlement } from "./types
 
 type Rule = Parameters<typeof Majiang.rule>[0];
 export type EngineOptions = { dealer?: number; wallFactory?: (rule: NonNullable<Rule>) => InstanceType<typeof Majiang.Shan> };
-type WinMessage = { l: number; shoupai: string; fubaopai: string[] | null; fu?: number; fanshu?: number; defen: number; hupai: { name: string; fanshu: number | string }[]; fenpei: number[] };
+type WinMessage = { l: number; shoupai: string; baojia: number | null; fubaopai: string[] | null; fu?: number; fanshu?: number; defen: number; hupai: { name: string; fanshu: number | string }[]; fenpei: number[] };
 type DrawMessage = { name: string; shoupai: string[]; fenpei: number[] };
 
 export function concealedTiles(hand: string): string[] {
@@ -65,8 +65,12 @@ export class RiichiGame extends Majiang.Game {
     if (type === "qipai") this.settlement = null;
     if (type === "hule") {
       const win = (messages[0] as { hule: WinMessage }).hule;
+      const winningTile = win.baojia === null ? model.shoupai[win.l]._zimo?.slice(0, 2)
+        : this._hule_option === "qianggang" ? this._gang![0] + this._gang!.slice(-1)
+        : this._dapai!.slice(0, 2);
       this.settlement = {
         kind: "win", name: "和了", winnerSeat: model.player_id[win.l], hand: win.shoupai,
+        winMethod: win.baojia === null ? "tsumo" : "ron", ...(winningTile ? { winningTile } : {}),
         yaku: win.hupai.map(y => ({ name: y.name, han: y.fanshu })), fu: win.fu, han: win.fanshu,
         points: win.defen, delta: this.mapBySeat(win.fenpei), uraIndicators: win.fubaopai ?? [],
       };

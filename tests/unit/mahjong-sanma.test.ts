@@ -140,8 +140,14 @@ describe("Sanma special rules with physical fixtures",()=>{
     const v=game.view(0);expect(v.players[0].nuki).toBe(1);expect(v.hand).toHaveLength(14);
     expect(v.remainingTiles).toBe(53);expect(v.doraIndicators).toEqual(before.doraIndicators);
     expect(v.choices.some(c=>c.type==="tsumo")).toBe(true);
+    expect([0,1,2].map(seat=>game.view(seat).settlement)).toEqual([null,null,null]);
     act(game,0,"tsumo");
-    const yaku=game.view(0).settlement!.yaku.map(y=>y.name);
+    const settlement=game.view(0).settlement!;
+    expect(settlement).toMatchObject({kind:"win",winnerSeat:0,winMethod:"tsumo",winningTile:"z2"});
+    const settlementViews=[0,1,2].map(seat=>game.view(seat));
+    expect(settlementViews.every(view=>view.settlement?.hand===settlement.hand)).toBe(true);
+    expect(settlementViews.map(view=>view.settlement?.winMethod)).toEqual(["tsumo","tsumo","tsumo"]);
+    const yaku=settlement.yaku.map(y=>y.name);
     expect(yaku).toContain("抜きドラ");expect(yaku).not.toContain("天和");expect(yaku).not.toContain("嶺上開花");
   });
   it("publishes a shared draw flag for a real replacement draw and clears it on discard",()=>{
@@ -170,8 +176,10 @@ describe("Sanma special rules with physical fixtures",()=>{
     const game=new SanmaGame("east",names,options);
     act(game,0,"nuki");expect(game.view(1).choices.some(c=>c.type==="ron")).toBe(true);
     act(game,1,"ron");passAll(game);
-    expect(game.view(1).settlement!.winningTile).toBe("z4");
-    expect(game.view(1).settlement!.yaku.map(y=>y.name)).not.toContain("槍槓");
+    const settlement=game.view(1).settlement!;
+    expect(settlement).toMatchObject({kind:"win",winnerSeat:1,winMethod:"ron",winningTile:"z4"});
+    expect([0,1,2].map(seat=>game.view(seat).settlement?.winMethod)).toEqual(["ron","ron","ron"]);
+    expect(settlement.yaku.map(y=>y.name)).not.toContain("槍槓");
     const passed=new SanmaGame("east",names,options);act(passed,0,"nuki");passAll(passed);
     act(passed,0,"nuki");
     expect(passed.view(1).choices.some(c=>c.type==="ron")).toBe(false);
@@ -216,9 +224,11 @@ describe("Sanma special rules with physical fixtures",()=>{
     const game=new SanmaGame("east",names,fixture({1:"p123456789s123z2",2:"p123456789s123z2"},["z2"]));
     act(game,0,"discard:z2_");act(game,2,"ron");act(game,1,"ron");
     expect(game.view(0).settlement!.winnerSeat).toBe(1);
+    expect(game.view(0).settlement).toMatchObject({winMethod:"ron",winningTile:"z2"});
     const delta=game.view(0).settlement!.delta;
     for(let s=0;s<3;s++)act(game,s,"ack");
     expect(game.view(0).settlement!.winnerSeat).toBe(2);
+    expect(game.view(0).settlement).toMatchObject({winMethod:"ron",winningTile:"z2"});
     expect(game.view(0).players.map(p=>p.score)).toEqual(delta.map(x=>35000+x));
     expect(game.view(0).settlement!.delta).toHaveLength(3);
     expect(game.view(0).settlement!.delta.reduce((s,n)=>s+n,0)).toBe(0);
@@ -480,5 +490,6 @@ it("offers a real added kan after pon and gives its robber the chankan yaku",()=
   act(game,1,"discard:s9");passAll(game);act(game,2,"discard:z3_");passAll(game);act(game,0,"discard:z4_");passAll(game);
   expect(game.view(1).choices.some(c=>c.id==="kan:p111-1")).toBe(true);
   act(game,1,"kan:p111-1");expect(game.view(2).choices.some(c=>c.type==="ron")).toBe(true);act(game,2,"ron");passAll(game);
-  expect(game.view(0).settlement!.winnerSeat).toBe(2);expect(game.view(0).settlement!.yaku.map(y=>y.name)).toContain("槍槓");
+  expect(game.view(0).settlement).toMatchObject({winnerSeat:2,winMethod:"ron",winningTile:"p1"});
+  expect(game.view(0).settlement!.yaku.map(y=>y.name)).toContain("槍槓");
 });

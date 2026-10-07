@@ -147,11 +147,17 @@ describe("riichi authoritative game", () => {
       const tsumoView = winning.view(dealer);
       expect(tsumoView.turnSeat).toBe(dealer);
       expect(tsumoView.choices.some(choice => choice.type === "tsumo")).toBe(true);
+      expect([0, 1, 2, 3].map(seat => winning.view(seat).settlement)).toEqual([null, null, null, null]);
       for (const seat of [0, 1, 2, 3].filter(seat => seat !== dealer)) {
         expect(winning.view(seat).choices).toEqual([]);
       }
       winning.respond(dealer, tsumoView.decisionId, "tsumo");
-      expect(winning.view(dealer).settlement?.winnerSeat).toBe(dealer);
+      const settlement = winning.view(dealer).settlement!;
+      expect(settlement.winnerSeat).toBe(dealer);
+      expect(settlement).toMatchObject({ winMethod: "tsumo", winningTile: "z2" });
+      const settlementViews = [0, 1, 2, 3].map(seat => winning.view(seat));
+      expect(settlementViews.map(view => view.settlement?.winMethod)).toEqual(["tsumo", "tsumo", "tsumo", "tsumo"]);
+      expect(settlementViews.every(view => view.settlement?.hand === settlement.hand)).toBe(true);
 
       const declaring = new RiichiGame("east", ["A", "B", "C", "D"], fixture({ [dealer]: "m123p123s123z1112" }, "p9", dealer));
       const riichiView = declaring.view(dealer);
@@ -183,8 +189,56 @@ describe("riichi authoritative game", () => {
     const second=game.view(1); expect(second.choices.some(c=>c.type==="ron")).toBe(true);
     game.respond(1,second.decisionId,"ron");
     for(let seat=2;seat<4;seat++){const v=game.view(seat);if(v.choices.some(c=>c.type==="pass"))game.respond(seat,v.decisionId,"pass");}
-    expect(game.view(1).settlement!.winnerSeat).toBe(1);
-    expect(game.view(1).settlement!.delta.reduce((s,n)=>s+n,0)).toBe(0);
+    const settlement=game.view(1).settlement!;
+    expect(settlement.winnerSeat).toBe(1);
+    expect(settlement).toMatchObject({ winMethod: "ron", winningTile: "z2" });
+    expect(settlement.delta.reduce((s,n)=>s+n,0)).toBe(0);
+  });
+  it("shows a red-five open winning hand only after its real ron settlement", () => {
+    const game=new RiichiGame("east",["A","B","C","D"],fixture({
+      0:"m456p123s456z2345",
+      1:"m123s123z111p1p059",
+      2:"m789p167s789z2345",
+      3:"m456p123s456z3467",
+    },"p5"));
+    const opening=game.view(0);
+    expect(opening.settlement).toBeNull();
+    expect(JSON.stringify(opening)).not.toContain("p0");
+    game.respond(0,opening.decisionId,opening.choices.find(choice=>choice.type==="discard"&&choice.value?.startsWith("p5"))!.id);
+    for(const seat of [2,3]) {
+      const view=game.view(seat),pass=view.choices.find(choice=>choice.type==="pass");
+      if(pass)game.respond(seat,view.decisionId,pass.id);
+    }
+    const ponView=game.view(1),pon=ponView.choices.find(choice=>choice.type==="pon"&&choice.value?.includes("0"));
+    expect(pon).toBeDefined();game.respond(1,ponView.decisionId,pon!.id);
+    const openView=game.view(1);
+    expect(openView.players[1].melds.some(meld=>meld.includes("0"))).toBe(true);
+    expect(openView.settlement).toBeNull();
+    game.respond(1,openView.decisionId,openView.choices.find(choice=>choice.type==="discard"&&choice.value?.startsWith("p9"))!.id);
+    for(const seat of [0,2,3]) {
+      const view=game.view(seat),pass=view.choices.find(choice=>choice.type==="pass");
+      if(pass)game.respond(seat,view.decisionId,pass.id);
+    }
+    const next=game.view(2);
+    const ronTile=next.choices.find(choice=>choice.type==="discard"&&choice.value?.startsWith("p1"));
+    expect(ronTile).toBeDefined();game.respond(2,next.decisionId,ronTile!.id);
+    const ronView=game.view(1),ron=ronView.choices.find(choice=>choice.type==="ron");
+    expect(ron).toBeDefined();
+    const beforeSettlement=game.view(0);
+    expect(beforeSettlement.settlement).toBeNull();
+    expect(JSON.stringify(beforeSettlement)).not.toContain("s1");
+    game.respond(1,ronView.decisionId,ron!.id);
+    for(const seat of [0,2,3]) {
+      const view=game.view(seat),pass=view.choices.find(choice=>choice.type==="pass");
+      if(pass)game.respond(seat,view.decisionId,pass.id);
+    }
+    const settlement=game.view(0).settlement!;
+    expect(settlement).toMatchObject({kind:"win",winnerSeat:1,winMethod:"ron",winningTile:"p1"});
+    expect(settlement.hand).toContain("p505-");
+    expect(settlement.hand).toContain("s1");
+    const settledViews=[0,1,2,3].map(seat=>game.view(seat));
+    expect(settledViews.every(view=>view.settlement?.hand===settlement.hand)).toBe(true);
+    expect(settledViews.map(view=>view.settlement?.winMethod)).toEqual(["ron","ron","ron","ron"]);
   });
   it("resolves an ankan with a replacement draw and another dora indicator", () => {
     const game=new RiichiGame("east",["A","B","C","D"],fixture({0:"m111234p456s789z1"},"m1"));

@@ -17,6 +17,7 @@ import { MahjongMeld as MeldView } from "./mahjong-meld";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
 import { useDrawArrival } from "./use-draw-arrival";
+import { winningHand, settlementTitle } from "./mahjong-winning-hand";
 
 const windNames = ["東", "南", "西", "北"];
 const choiceNames: Record<Choice["type"], string> = {
@@ -590,7 +591,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       {riichiChoices.length > 0 && !game.settlement ? <button type="button" className={`mahjong-button mahjong-button--riichi${riichiMode ? " is-selected" : ""}`} aria-pressed={riichiMode} disabled={busy || !connected || !riichiChoices.length} title={riichiChoices.length ? "选择高亮牌切出并宣告立直" : ownPlayer?.riichi ? "已经立直" : "当前没有合法立直选项"} onClick={() => connected && !busy && setRiichiMode((value) => !value)}>{riichiMode ? "选择立直牌" : "立直"}</button> : null}
       {[...callGroups].map(([type, choices]) => <button key={type} type="button" className={`mahjong-button ${type === "ron" ? "mahjong-button--win" : type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`} disabled={busy || !connected} data-choice-id={choices.length === 1 ? choices[0].id : undefined} data-choice-type={type} aria-haspopup={choices.length > 1 ? "dialog" : undefined} onClick={() => { if (!connected || busy) return; choices.length > 1 ? setPendingCallType(type) : onChoice(choices[0]); }}>{choiceNames[type]}{choices.length === 1 && choices[0].value ? <small>{choiceDescription(choices[0].value)}</small> : null}</button>)}
       {riichiMode ? <button type="button" className="mahjong-action-dock__cancel" onClick={() => setRiichiMode(false)}>返回普通切牌</button> : null}
-      {game.settlement ? <div className="mahjong-settlement" role="status"><span>{game.settlement.name}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
+      {game.settlement ? <div className="mahjong-settlement" role="status"><span>{settlementTitle(game.settlement)}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
     </div> : null}
 
     {game.settlement ? <SettlementPanel game={game} room={room}/> : null}
@@ -701,25 +702,16 @@ function SettlementPanel({ game, room }: { game: GameView; room: RoomView }) {
   const yakuYakumanCount = settlement.yaku.reduce((count, yaku) => count + ((String(yaku.han).match(/\*+/)?.[0].length || 0)), 0);
   const yakumanCount = Math.max((hanText.match(/\*+/)?.[0].length || 0), yakuYakumanCount, /役満|役满/.test(hanText) ? 1 : 0);
   const hanLabel = yakumanCount ? `${yakumanCount > 1 ? `${yakumanCount}倍` : ""}役满` : `${hanText || "—"} 翻`;
-  const winningTiles = settlement.hand ? parseWinningHand(settlement.hand) : [];
+  const winning = winningHand(settlement);
   const winner = settlement.winnerSeat === undefined ? null : room.members.find((member) => member.seat === settlement.winnerSeat);
   return <section className="mahjong-settlement-panel" aria-label="本局结算">
-    <div><p className="mahjong-kicker">HAND RESULT</p><h2>{settlement.name}</h2><p>{settlement.kind === "win" ? `${hanLabel}${settlement.fu ? ` · ${settlement.fu} 符` : ""}` : "牌山已尽"}{settlement.points ? ` · ${settlement.points.toLocaleString()} 点` : ""}</p></div>
+    <div><p className="mahjong-kicker">HAND RESULT</p><h2>{settlementTitle(settlement)}</h2><p>{settlement.kind === "win" ? `${hanLabel}${settlement.fu ? ` · ${settlement.fu} 符` : ""}` : "牌山已尽"}{settlement.points ? ` · ${settlement.points.toLocaleString()} 点` : ""}</p></div>
     <div className={`mahjong-settlement-panel__delta${room.variant === "sanma" ? " is-sanma" : ""}`}>{settlement.delta.map((delta, seat) => <span key={seat}><small>{room.members.find((member) => member.seat === seat)?.displayName || (seat === room.mySeat ? "你" : `${windNames[seat]}家`)}</small><b className={delta > 0 ? "is-positive" : delta < 0 ? "is-negative" : ""}>{delta > 0 ? "+" : ""}{delta.toLocaleString()}</b></span>)}</div>
-    {winningTiles.length ? <div className="mahjong-winning-hand"><div><small>{winner?.displayName || "和牌"}的手牌</small>{settlement.winningTile ? <small>和牌：{tileName(settlement.winningTile)}</small> : null}</div><div>{winningTiles.map((tile, index) => <TileFace value={tile} key={`${index}-${tile}`} />)}</div></div> : null}
+    {winning.closed.length || winning.melds.length ? <div className="mahjong-winning-hand"><div><small>{winner?.displayName || "和牌"}的手牌</small>{winning.winningTile ? <small>和牌：{tileName(winning.winningTile)}</small> : null}</div><div className="mahjong-winning-hand__row"><div className="mahjong-winning-hand__closed" role="group" aria-label="闭手">{winning.closed.map((tile, index) => <TileFace value={tile} key={`${index}-${tile}`} />)}</div>{winning.winningTile ? <span className="mahjong-winning-hand__tile" data-testid="mahjong-winning-tile"><TileFace value={winning.winningTile}/></span> : null}{winning.melds.length ? <div className="mahjong-winning-hand__melds">{winning.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}</div></div> : null}
     {settlement.kind === "win" && settlement.uraIndicators.length ? <div className="mahjong-ura-indicators"><small>里宝牌指示</small><div>{settlement.uraIndicators.map((tile, index) => <TileFace value={tile} key={`${tile}-${index}`} />)}</div></div> : null}
     {settlement.yaku.length ? <ul>{settlement.yaku.map((yaku) => {
       const units = String(yaku.han).match(/\*+/)?.[0].length || 0;
       return <li key={yaku.name}><span>{yaku.name}</span><b>{units ? `${units > 1 ? `${units}倍` : ""}役满` : `${yaku.han} 翻`}</b></li>;
     })}</ul> : null}
   </section>;
-}
-
-function parseWinningHand(value: string) {
-  const groups = value.split(",")[0];
-  const tiles: string[] = [];
-  for (const match of groups.matchAll(/([mpsz])(\d+)/g)) {
-    for (const number of match[2]) tiles.push(`${match[1]}${number}`);
-  }
-  return tiles;
 }

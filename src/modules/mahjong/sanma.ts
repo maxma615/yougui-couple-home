@@ -308,9 +308,8 @@ export class SanmaGame {
         name: "和了",
         winnerSeat: seat,
         hand: this.players[seat].hand.toString(),
-        ...(ron ? {
-          winningTile: ron.tile
-        } : {}),
+        winMethod: ron ? "ron" : "tsumo",
+        winningTile: ron?.tile ?? this.players[seat].hand._zimo!.slice(0, 2),
         yaku: result.yaku.map(y => ({
           name: y.name,
           han: y.fanshu

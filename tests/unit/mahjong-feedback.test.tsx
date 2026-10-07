@@ -94,7 +94,7 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     const first = engine.view(0);
     expect(first.settlement?.winnerSeat).toBe(1);
     rerender({ current: first });
-    expect(result.current).toMatchObject({ kind: "win", seat: 1, text: "P1 · 和牌" });
+    expect(result.current).toMatchObject({ kind: "win", seat: 1, text: "P1 · 荣和" });
     for (const seat of [0, 1, 2]) {
       act(() => vi.advanceTimersByTime(100));
       const view = engine.view(seat);
@@ -105,13 +105,27 @@ describe("useTableFeedback lifecycle and event recognition", () => {
     const second = engine.view(0);
     expect(second.settlement?.winnerSeat).toBe(2);
     expect(second.decisionId).not.toBe(first.decisionId);
-    expect(result.current).toMatchObject({ key: second.decisionId, kind: "win", seat: 2, text: "P2 · 和牌" });
+    expect(result.current).toMatchObject({ key: second.decisionId, kind: "win", seat: 2, text: "P2 · 荣和" });
     act(() => vi.advanceTimersByTime(899));
     expect(result.current?.seat).toBe(2);
     act(() => vi.advanceTimersByTime(1));
     expect(result.current).toBeNull();
     rerender({ current: second });
     expect(result.current).toBeNull();
+  });
+
+  it("announces the actual closed North replacement win as tsumo", () => {
+    const engine = northReplacementFixture();
+    const opening = engine.view(0);
+    engine.respond(0, opening.decisionId, "nuki");
+    const before = engine.view(0);
+    expect(before.choices.some(choice => choice.type === "tsumo")).toBe(true);
+    const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(), 0, "room-a"), {
+      initialProps: { current: before },
+    });
+    engine.respond(0, before.decisionId, "tsumo");
+    rerender({ current: engine.view(0) });
+    expect(result.current).toMatchObject({ kind: "win", seat: 0, text: "你 · 自摸" });
   });
 
   it("lets a new special action replace North feedback while an ordinary draw cannot", () => {
