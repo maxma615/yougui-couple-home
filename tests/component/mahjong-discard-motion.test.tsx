@@ -123,13 +123,16 @@ it("flies opponents from a public facedown rack and never reads their concealed 
   const after = room(afterGame, 11);
   const view = render(<GameRoom room={before} busy={false} host ownSeat={0} connected onChoice={() => {}} onFinish={() => {}} onRematch={() => {}} onLeave={() => {}}/>);
   const oldBack = document.querySelector('[data-testid="player-2"] .mahjong-player__hidden > i')!;
-  rect(oldBack, { left: 680, top: 180, width: 28, height: 36 });
+  rect(oldBack, { left: 100, top: 400, width: 8, height: 12 });
+  const visibleBack = oldBack.querySelector('[data-motion-surface]')!;
+  rect(visibleBack, { left: 680, top: 180, width: 28, height: 36 });
   view.rerender(<GameRoom room={{ ...before }} busy={false} host ownSeat={0} connected onChoice={() => {}} onFinish={() => {}} onRematch={() => {}} onLeave={() => {}}/>);
 
   view.rerender(<GameRoom room={after} busy={false} host ownSeat={0} connected onChoice={() => {}} onFinish={() => {}} onRematch={() => {}} onLeave={() => {}}/>);
   const flight = screen.getByTestId("mahjong-discard-flight");
   expect(flight).toHaveAttribute("data-motion-source", "opponent");
   expect(flight).toHaveAttribute("data-motion-seat", "2");
+  expect(flight).toHaveStyle({ left: "694px", top: "198px", width: "28px", height: "36px" });
   expect(flight.querySelector(".mahjong-discard-flight__back")).toBeInTheDocument();
   expect(flight.textContent).not.toContain("p1");
 });

@@ -132,7 +132,7 @@ const root=createRoot(document.getElementById('root'));flushSync(()=>root.render
 
 const bundle = await build({ stdin: { contents: harness, resolveDir: process.cwd(), loader: "tsx" }, bundle: true,
   platform: "browser", format: "iife", write: false, jsx: "automatic", define: { "process.env.NODE_ENV": '"development"' } });
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"]
+const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css", "mahjong-standing-tile.css"]
   .map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
 const script = "globalThis.__name=(target,value)=>Object.defineProperty(target,\"name\",{value,configurable:true});globalThis.process={env:{NODE_ENV:\"development\"}};\n" + bundle.outputFiles[0].text;
 
@@ -162,7 +162,7 @@ async function rackState(page: Page, actor: number) {
     const closedGap = backs.length > 2 ? Math.hypot(center(box(backs[backs.length-2])).x-center(box(backs[backs.length-3])).x,center(box(backs[backs.length-2])).y-center(box(backs[backs.length-3])).y) : 0;
     const drawnGap = drawn.length && backs.length > 1 ? Math.hypot(center(box(drawn[0])).x-center(box(backs[backs.length-2])).x,center(box(drawn[0])).y-center(box(backs[backs.length-2])).y) : 0;
     return { backs: backs.length, drawn: drawn.length, drawnIndex: backs.indexOf(drawn[0]), drawnGap, closedGap,
-      publicCount: Number(rack.querySelector("span")?.textContent), hasFace: Boolean(rack.querySelector("img,[data-tile-face]")),
+      publicCount: Number(rack.querySelector(":scope > span")?.textContent), hasFace: Boolean(rack.querySelector("img,[data-tile-face]")),
       cards: backs.map(back => ({className:back.className,drawn:back.dataset.motionDrawn??null})) };
   }, actor);
 }
@@ -172,7 +172,9 @@ async function sourceCorners(page: Page, actor: number, action: DrawAction) {
     const backs = [...document.querySelectorAll<HTMLElement>(`[data-motion-rack-seat="${seat}"] > i`)];
     const source = backs[drawAction === "drawn-tile" ? backs.length - 1 : backs.length - 2];
     if (!source || backs.length !== 14) throw new Error("real initial opponent rack must contain fourteen backs");
-    return (window as any).mahjongPhysicalSamples(source, [[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[];
+    const face = source.querySelector<HTMLElement>("[data-motion-surface]");
+    if (!face) throw new Error("a physical opponent tile must provide its visible back as the discard source");
+    return (window as any).mahjongPhysicalSamples(face, [[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[];
   }, { seat: actor, action });
 }
 

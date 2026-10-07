@@ -66,10 +66,13 @@ export function useDiscardMotion({
     table.querySelectorAll<HTMLElement>("[data-motion-rack-seat] > i").forEach((element) => {
       const seat = Number(element.parentElement?.dataset.motionRackSeat);
       if (!Number.isInteger(seat) || seat === ownSeat) return;
-      const rect = element.getBoundingClientRect();
+      // An upright tile's visible back occupies a different plane from its
+      // layout wrapper. Cache that surface before the accepted discard arrives.
+      const surface = element.querySelector<HTMLElement>("[data-motion-surface]") ?? element;
+      const rect = surface.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
         const rack = next.get(seat) ?? {};
-        rack[element.dataset.motionDrawn === "true" ? "drawn" : "closed"] = elementToFlight(element, rect);
+        rack[element.dataset.motionDrawn === "true" ? "drawn" : "closed"] = elementToFlight(surface, rect);
         next.set(seat, rack);
       }
     });

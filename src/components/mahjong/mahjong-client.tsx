@@ -17,6 +17,7 @@ import { MahjongMeld as MeldView } from "./mahjong-meld";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
 import { MahjongCallAnnouncement } from "./mahjong-call-announcement";
+import { MahjongStandingTile } from "./mahjong-standing-tile";
 import { useDrawArrival } from "./use-draw-arrival";
 import { winningHand, settlementTitle } from "./mahjong-winning-hand";
 
@@ -624,7 +625,7 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
     {offset !== 0 ? <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
       {Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
         const drawn = player.hasDrawnTile === true && index === Math.min(player.handCount, 14) - 1;
-        return <i key={index} className={drawn ? "is-drawn" : undefined} data-motion-drawn={drawn ? "true" : undefined}/>;
+        return <MahjongStandingTile key={index} drawn={drawn}/>;
       }) }
       <span>{player.handCount}</span>
     </div>

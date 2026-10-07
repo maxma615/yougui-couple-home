@@ -132,7 +132,7 @@ function Scene(){const[room,roomSetter]=useState(window.projectionFixture);const
 const root=createRoot(document.getElementById('root'));flushSync(()=>root.render(React.createElement(Scene)));window.projectionApi.dispose=()=>root.unmount();window.projectionApi.update=room=>flushSync(()=>setRoom(room));window.projectionApi.quietUpdate=room=>flushSync(()=>{setCanAnimate(false);setRoom(room)});window.projectionApi.connected=value=>flushSync(()=>setConnected(value));`;
 const bundle = await build({ stdin: { contents: harness, resolveDir: process.cwd(), loader: "tsx" }, bundle: true,
   platform: "browser", format: "iife", write: false, jsx: "automatic", define: { "process.env.NODE_ENV": '"development"' } });
-const cssFiles = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"];
+const cssFiles = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css", "mahjong-standing-tile.css"];
 const css = cssFiles.map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
 const cameraSha = createHash("sha256").update(readFileSync("src/app/mahjong/mahjong-camera.css")).digest("hex");
 const clientSha = createHash("sha256").update(readFileSync("src/components/mahjong/mahjong-client.tsx")).digest("hex");
@@ -220,16 +220,26 @@ async function projection(page: Page, spec: SceneSpec) {
         maxNonOrthogonality:tiles.length?Math.max(...tiles.map(tile=>tile.orthogonality)):null };
     });
     const riverFaces = [...surface.querySelectorAll<HTMLElement>(".mahjong-river__tile .mahjong-tile")].map(tile=>metrics(tile));
-    const allTiles = [...document.querySelectorAll<HTMLElement>("[data-tile-face],.mahjong-player__hidden > i,.mahjong-meld__back")].filter(el=>{
+    const allTiles = [...document.querySelectorAll<HTMLElement>("[data-tile-face],.mahjong-player__hidden [data-motion-surface],.mahjong-meld__back")].filter(el=>{
       const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(el).visibility!=="hidden";
     });
     const tileIssues:string[]=[];
+    // The visible center must remain the drag target in the shared 3D scene.
+    // WebKit can hit the felt instead when both objects share the same plane.
+    for (const [u,v] of [[.25,.25],[.5,.5],[.75,.25],[.25,.75],[.75,.75]]) {
+      const point = projectedPoint(centerMetrics.points,u,v);
+      const hit = document.elementFromPoint(point.x,point.y);
+      if (!hit || !center.contains(hit)) tileIssues.push(`center drag target ${u},${v} miss; hit=${hit?.className||hit?.tagName||"none"}`);
+    }
     for(const tile of allTiles){
       const q=corners(tile);
       for(const [index,p] of q.entries())if(p.x<board.left-.5||p.y<board.top-.5||p.x>board.right+.5||p.y>board.bottom+.5)tileIssues.push(`projected tile corner outside table: ${tile.dataset.tileFace||tile.className} corner=${index}`);
       for(const [u,v] of [[.16,.16],[.5,.5],[.84,.16],[.16,.84],[.84,.84]]){
         const p=projectedPoint(q,u,v),hit=document.elementFromPoint(p.x,p.y);
-        if(!hit||!tile.contains(hit))tileIssues.push(`projected local ${u},${v} miss ${tile.dataset.tileFace||tile.className}; hit=${hit?.className||hit?.tagName||"none"}`);
+        // Upright opponent backs do not capture pointers. Their physical face
+        // must clear HUD overlays; the companion compositor test proves paint.
+        const clear = tile.matches("[data-motion-surface]") ? hit && surface.contains(hit) : hit && tile.contains(hit);
+        if(!clear)tileIssues.push(`projected local ${u},${v} miss ${tile.dataset.tileFace||tile.className}; hit=${hit?.className||hit?.tagName||"none"}`);
       }
     }
     const images=[...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")];
@@ -300,7 +310,7 @@ for (const engine of [chromium, webkit]) {
         assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0, "a local choice alone must not start the server-confirmed flight");
       } else {
         const sourceSelector = fixture.choice.value?.includes("_") ? "i.is-drawn" : "i:not(.is-drawn)";
-        const source = page.locator(`[data-motion-rack-seat="${fixture.actor}"] > ${sourceSelector}`).last();
+        const source = page.locator(`[data-motion-rack-seat="${fixture.actor}"] > ${sourceSelector} [data-motion-surface]`).last();
         expectedSource = await source.evaluate(element => (window as any).mahjongPhysicalSamples(element, [[0,0],[1,0],[1,1],[0,1]]));
       }
 

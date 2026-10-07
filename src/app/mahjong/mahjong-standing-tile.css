@@ -1,0 +1,146 @@
+/* The rack keeps its previous two-dimensional envelope; the cuboid rises from
+   its bottom edge so its physical depth does not change row spacing. */
+.mahjong-game .mahjong-player__hidden > i.mahjong-standing-tile {
+  --standing-w: min(2.6cqw, 5.4cqh, 37px);
+  --standing-h: min(3.64cqw, 7.5cqh, 52px);
+  --standing-d: calc(var(--standing-h) * .4);
+  position: relative;
+  display: block;
+  flex: 0 0 var(--standing-w);
+  box-sizing: border-box;
+  width: var(--standing-w);
+  height: var(--standing-h);
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  transform-style: preserve-3d;
+}
+
+.mahjong-game .mahjong-table__position--west .mahjong-player__hidden > i.mahjong-standing-tile,
+.mahjong-game .mahjong-table__position--east .mahjong-player__hidden > i.mahjong-standing-tile {
+  --standing-w: min(1.85cqw, 3.8cqh, 27px);
+  --standing-h: min(2.59cqw, 5.3cqh, 38px);
+}
+
+.mahjong-game .mahjong-table__surface > .mahjong-table__position {
+  display: contents;
+}
+
+.mahjong-game .mahjong-table__surface .mahjong-player {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.mahjong-game .mahjong-table__surface .mahjong-opponent-rack,
+.mahjong-game .mahjong-table__surface .mahjong-player__melds,
+.mahjong-game .mahjong-table__surface .mahjong-nuki-tray,
+.mahjong-game .mahjong-table__surface .mahjong-hand-public-melds {
+  pointer-events: auto;
+}
+
+.mahjong-game .mahjong-player,
+.mahjong-game .mahjong-table__surface,
+.mahjong-game .mahjong-opponent-rack,
+.mahjong-game .mahjong-player__hidden,
+.mahjong-game .mahjong-player__hidden > i.mahjong-standing-tile,
+.mahjong-game .mahjong-standing-tile__body {
+  transform-style: preserve-3d;
+}
+
+.mahjong-game .mahjong-player__hidden > i.mahjong-standing-tile > .mahjong-standing-tile__body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: block;
+  width: var(--standing-w);
+  height: var(--standing-d);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  transform-style: preserve-3d;
+}
+
+.mahjong-standing-tile__face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  border: 1px solid #d0c6ad;
+  border-radius: 1px;
+  backface-visibility: hidden;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+.mahjong-game .mahjong-player__hidden > i.mahjong-standing-tile .mahjong-standing-tile__face {
+  margin: 0;
+  padding: 0;
+}
+
+.mahjong-standing-tile__face--back {
+  width: var(--standing-w);
+  height: var(--standing-h);
+  border-color: #a85831;
+  background: #cf7339;
+  transform: rotateX(90deg);
+}
+
+.mahjong-standing-tile__face--front {
+  width: var(--standing-w);
+  height: var(--standing-h);
+  background: #f3efdf;
+  transform: translateY(var(--standing-d)) translateZ(var(--standing-h)) rotateX(-90deg);
+}
+
+.mahjong-standing-tile__face--top {
+  width: var(--standing-w);
+  height: var(--standing-d);
+  background: #f6f2e5;
+  transform: translateZ(var(--standing-h));
+}
+
+.mahjong-standing-tile__face--left {
+  width: var(--standing-d);
+  height: var(--standing-h);
+  background: #eee9d9;
+  transform: translateZ(var(--standing-h)) rotateZ(90deg) rotateX(-90deg);
+}
+
+.mahjong-standing-tile__face--right {
+  width: var(--standing-d);
+  height: var(--standing-h);
+  background: #e9e4d3;
+  transform: translateX(var(--standing-w)) translateY(var(--standing-d)) translateZ(var(--standing-h)) rotateZ(-90deg) rotateX(-90deg);
+}
+
+.mahjong-standing-tile__face--bottom {
+  width: var(--standing-w);
+  height: var(--standing-d);
+  background: #e9e4d3;
+  transform: translateY(var(--standing-d)) rotateX(180deg);
+}
+
+/* Public tiles and the center console sit above the felt so hit testing does
+   not choose the surface over visible content in the shared 3D scene. */
+.mahjong-game .mahjong-table__surface .mahjong-table__center,
+.mahjong-game .mahjong-table__surface .mahjong-river,
+.mahjong-game .mahjong-table__surface .mahjong-player__melds,
+.mahjong-game .mahjong-table__surface .mahjong-nuki-tray,
+.mahjong-game .mahjong-table__surface .mahjong-hand-public-melds {
+  translate: 0 0 1px;
+}
