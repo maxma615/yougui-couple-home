@@ -9,6 +9,7 @@ import { apiRequest, errorMessage } from "@/components/api-client";
 import { SessionProvider, useSession } from "@/hooks/use-session";
 import type { Choice, GameMode, GameVariant, GameView, MahjongCommand, MahjongResponse, PublicPlayer, RoomMember, RoomView } from "@/modules/mahjong/types";
 import { DiscardFlightLayer, measureDiscardElement, useDiscardMotion } from "./use-discard-motion";
+import { useHandReflow } from "./use-hand-reflow";
 import type { DiscardMotionIntent } from "./discard-motion";
 import { MahjongRules } from "./mahjong-rules";
 import { TileFace, tileKey, tileName } from "./mahjong-tile";
@@ -395,6 +396,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const [choiceSubmitted, setChoiceSubmitted] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const discardMotion = useDiscardMotion({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
+  const handReflow = useHandReflow({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
   const selectedHandTileRef = useRef<{ tileId: string; choiceId: string } | null>(null);
   const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
   const submittedChoiceRef = useRef(false);
@@ -431,6 +433,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
 
   const submitHandChoice = (choice: Choice, source: HTMLButtonElement) => {
     if (busy || !connected || submittedChoiceRef.current) return;
+    handReflow.captureBeforeInput();
     submittedChoiceRef.current = true;
     setChoiceSubmitted(true);
     const sourceGeometry = measureDiscardElement(source);
@@ -459,6 +462,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   };
   const activateHandTile = (tileId: string, choice: Choice, event: ReactMouseEvent<HTMLButtonElement>) => {
     if (busy || !connected || submittedChoiceRef.current) return;
+    handReflow.captureBeforeInput();
     drawArrival.cancel();
     if (suppressPointerClickRef.current && event.detail > 0) {
       suppressPointerClickRef.current = false;
@@ -482,6 +486,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       startX: event.clientX, startY: event.clientY, dragged: false, element: event.currentTarget,
     };
     try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* Pointer capture is unavailable in some embedded browsers. */ }
+    handReflow.captureBeforeInput();
   };
   const moveHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
     const active = activeTilePointerRef.current;
