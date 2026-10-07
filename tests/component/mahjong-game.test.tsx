@@ -110,7 +110,7 @@ it("renders actual three-seat settlement deltas and final ranks from a complete 
   expect(screen.getByLabelText("最终名次").textContent).toContain("玩家2");
 });
 
-it("opens readable public meld details without making a game decision or revealing closed kan faces", () => {
+it("opens readable public meld details with identifiable declared kans without making a game decision", () => {
   const view = fixtureGame().view(0);
   view.players[1].melds = ["p111+", "s4444"];
   const onChoice = show(view);
@@ -118,8 +118,8 @@ it("opens readable public meld details without making a game decision or reveali
   const dialog = document.querySelector(".mahjong-public-melds")!;
   expect(dialog.getAttribute("aria-label")).toBe("玩家1的公开副露");
   expect(dialog.querySelectorAll('[data-tile-face="p1"]')).toHaveLength(3);
-  expect(dialog.querySelectorAll('.mahjong-meld__back')).toHaveLength(4);
-  expect(dialog.querySelectorAll('[data-tile-face="s4"]')).toHaveLength(0);
+  expect(dialog.querySelectorAll('.mahjong-meld__back')).toHaveLength(2);
+  expect(dialog.querySelectorAll('[data-tile-face="s4"]')).toHaveLength(2);
   expect(onChoice).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", {name:"关闭副露详情", hidden:true}));
   expect(document.querySelector(".mahjong-public-melds")).toBeNull();

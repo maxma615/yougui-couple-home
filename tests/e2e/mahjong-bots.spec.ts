@@ -215,7 +215,7 @@ test("横屏点击公开副露放大、ESC关闭，不发送出牌请求", async
     members:[0,1,2].map(seat => ({userId:seat ? `fixture-${seat}` : user.id,displayName:`牌友${seat}`,seat,kind:"human",connected:true,ready:true})),
     game:{decisionId:"display",phase:"dapai",roundWind:0,roundNumber:1,honba:0,riichiSticks:0,remainingTiles:30,doraIndicators:["p2"],turnSeat:2,
       hand:["p1","p2","p3","p4","p5","p6","p7","p8","p9","s1","s2","s3","z4"],drawnTile:null,choices:[],settlement:null,ranking:null,
-      players:[0,1,2].map(seat => ({seat,wind:seat,score:35000,handCount:seat === 1 ? 6 : 13,discards:[],melds:seat === 1 ? ["p111+","s4444"] : [],riichi:false,nuki:0}))},
+      players:[0,1,2].map(seat => ({seat,wind:seat,score:35000,handCount:seat === 1 ? 7 : 13,discards:[],melds:seat === 1 ? ["p111+","s4444"] : [],riichi:false,nuki:0}))},
   };
   const posts:string[]=[];
   page.on('request', r => {if (r.url().endsWith('/api/mahjong') && r.method()==='POST') posts.push(r.url());});
@@ -226,8 +226,8 @@ test("横屏点击公开副露放大、ESC关闭，不发送出牌请求", async
   const dialog=page.getByRole('dialog',{name:'牌友1的公开副露'});
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('[data-tile-face="p1"]')).toHaveCount(3);
-  await expect(dialog.locator('[data-tile-face="s4"]')).toHaveCount(0);
-  await expect(dialog.locator('.mahjong-meld__back')).toHaveCount(4);
+  await expect(dialog.locator('[data-tile-face="s4"]')).toHaveCount(2);
+  await expect(dialog.locator('.mahjong-meld__back')).toHaveCount(2);
   const rect=await dialog.locator('[data-tile-face]').first().boundingBox();
   expect(rect!.width).toBeGreaterThanOrEqual(39);
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);

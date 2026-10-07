@@ -1,11 +1,12 @@
 import Majiang from "@kobalab/majiang-core";
-import { TileFace } from "./mahjong-tile";
+import { TileFace, tileName } from "./mahjong-tile";
 
 type MeldSource = "+" | "=" | "-";
 type MeldKind = "chi" | "pon" | "daiminkan" | "kakan" | "ankan";
 type CoreShoupai = { valid_mianzi: (meld: string) => string | undefined };
 
 type MeldSlot =
+  | { type: "back"; value: string }
   | { type: "tile"; value: string; sideways: boolean; called?: boolean }
   | { type: "stack"; called: string; added: string };
 
@@ -57,10 +58,19 @@ function parseMeld(meld: string): ParsedMeld | null {
   const markerMatches = [...meld.matchAll(/[+\-=]/g)];
   if (markerMatches.length === 0) {
     if (digits.length !== 4 || !hasOneSuitRank(digits)) return null;
+    // A declared closed kan is public. Keep both end tiles face-down and
+    // show its identity in the middle, including any physical red five.
+    const normal = `${suit}${digits.find(rank => rank !== "0")!}`;
+    const firstFace = digits.includes("0") ? `${suit}0` : normal;
     return {
       kind: "ankan",
       suit,
-      slots: digits.map(() => ({ type: "tile", value: "", sideways: false })),
+      slots: [
+        { type: "back", value: normal },
+        { type: "tile", value: firstFace, sideways: false },
+        { type: "tile", value: normal, sideways: false },
+        { type: "back", value: normal },
+      ],
     };
   }
   if (markerMatches.length !== 1) return null;
@@ -152,7 +162,10 @@ function kindName(kind: MeldKind) {
 }
 
 function accessibleName(parsed: ParsedMeld) {
-  if (parsed.kind === "ankan") return "暗杠，暗牌";
+  if (parsed.kind === "ankan") {
+    const face = parsed.slots.find(slot => slot.type === "tile");
+    return `暗杠，${face?.type === "tile" ? tileName(face.value) : ""}`;
+  }
   if (parsed.kind === "chi") return `吃，自${sourceNames[parsed.source!]}`;
   return `${kindName(parsed.kind)}，来自${sourceNames[parsed.source!]}`;
 }
@@ -192,9 +205,9 @@ export function MahjongMeld({ meld }: { meld: string }) {
     data-source={parsed.source}
   >
     <div className="mahjong-meld__tiles">
-      {parsed.kind === "ankan"
-        ? parsed.slots.map((_, index) => <span className="mahjong-meld__back" aria-hidden="true" key={index}/>)
-        : parsed.slots.map((slot, index) => slot.type === "stack"
+      {parsed.slots.map((slot, index) => slot.type === "back"
+        ? <span className="mahjong-meld__back" aria-hidden="true" key={`back-${index}`}/>
+        : slot.type === "stack"
           ? <KakanStack called={slot.called} added={slot.added} key={`stack-${index}`}/>
           : <TileSlot value={slot.value} sideways={slot.sideways} called={slot.called} key={`${slot.value}-${index}`}/>)
       }

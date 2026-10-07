@@ -101,14 +101,22 @@ it("stacks the kakan fourth tile above the original called red five", async () =
   expect(stack?.querySelector("[data-layer='called']")?.classList.contains("is-sideways")).toBe(true);
 });
 
-it("keeps concealed kan faces hidden until a Mahjong Soul reference confirms its display", async () => {
-  const meld = "m5550";
+it.each([
+  ["z7777", ["z7", "z7"], "暗杠，红中"],
+  ["s4444", ["s4", "s4"], "暗杠，四索"],
+  ["m5550", ["m0", "m5"], "暗杠，五萬（赤）"],
+  ["p5550", ["p0", "p5"], "暗杠，五筒（赤）"],
+  ["s5550", ["s0", "s5"], "暗杠，五索（赤）"],
+])("makes the declared ankan identifiable between two end backs: %s", async (meld, faces, name) => {
   expectEngineMeld(meld);
   const { container } = await renderMeld(meld);
-  expect(container.querySelectorAll(".mahjong-meld__back")).toHaveLength(4);
-  expect(visibleFaces(container)).toHaveLength(0);
-  expect(container.querySelector("img")).toBeNull();
-  expect(within(container).getByRole("group", { name: "暗杠，暗牌" })).toBeTruthy();
+  const group = container.querySelector(".mahjong-meld__tiles")!;
+  expect([...group.children].map(slot => slot.classList.contains("mahjong-meld__back")))
+    .toEqual([true, false, false, true]);
+  expect(visibleFaces(container).map(tile => tile.getAttribute("data-tile-face"))).toEqual(faces);
+  expect(sidewaysSlots(container)).toHaveLength(0);
+  expect(within(container).getByRole("group", { name })).toBeTruthy();
+  if (meld.includes("0")) expect(container.querySelectorAll("img[src$='5-Dora.svg']")).toHaveLength(1);
 });
 
 it("does not expose impossible duplicate red-five faces", async () => {
