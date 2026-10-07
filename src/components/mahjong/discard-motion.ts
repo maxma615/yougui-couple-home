@@ -11,6 +11,11 @@ export type MotionQuad = Readonly<{
   bottomRight: MotionPoint;
   bottomLeft: MotionPoint;
 }>;
+export type MotionTilePaint = Readonly<{
+  background: string; border: string; borderRadius: string; padding: string;
+  boxShadow: string; outline: string; outlineOffset: string; filter: string;
+}>;
+
 export type MotionSourceGeometry = Readonly<{ width: number; height: number; angle: number; scale: number; quad?: MotionQuad }>;
 
 function validQuad(quad: MotionQuad) {
@@ -35,6 +40,7 @@ export type DiscardMotionIntent = Readonly<{
   sourceTileId: string;
   sourceRect: MotionRect;
   sourceGeometry: MotionSourceGeometry;
+  sourcePaint?: MotionTilePaint;
   environmentEpoch: number;
 }>;
 
@@ -54,6 +60,7 @@ export type DiscardMotionFlight = Readonly<{
   sourceTileId?: string;
   sourceRect?: MotionRect;
   sourceGeometry?: MotionSourceGeometry;
+  sourcePaint?: MotionTilePaint;
 }>;
 
 export type DiscardMotionResult = Readonly<{
@@ -206,6 +213,7 @@ export class DiscardMotionTracker {
           sourceTileId: intent.sourceTileId,
           sourceRect: intent.sourceRect,
           sourceGeometry: intent.sourceGeometry,
+          sourcePaint: intent.sourcePaint,
         } : null,
         cancelledEventIds,
         reset: false,

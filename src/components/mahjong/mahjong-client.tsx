@@ -449,6 +449,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         sourceTileId: source.dataset.handInstanceId || "",
         sourceRect: sourceGeometry.rect,
         sourceGeometry: sourceGeometry.geometry,
+        sourcePaint: sourceGeometry.paint,
         environmentEpoch: discardMotion.environmentEpoch(),
       }
       : null;

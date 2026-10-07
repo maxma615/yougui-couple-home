@@ -13,6 +13,7 @@ const browserDescriptors = [
 
 afterEach(() => {
   cleanup();
+  document.querySelectorAll("style[data-motion-paint-fixture]").forEach(style => style.remove());
   vi.useRealTimers();
   for (const { target, key, descriptor } of browserDescriptors) {
     if (descriptor) Object.defineProperty(target, key, descriptor);
@@ -78,6 +79,10 @@ it("waits for the accepted snapshot and flies from the exact selected copy of a 
   const copies = screen.getAllByRole("button", { name: "切出 一筒" });
   rect(copies[0], { left: 80, top: 400, width: 44, height: 62 });
   rect(copies[1], { left: 160, top: 410, width: 44, height: 62 });
+  const paintStyle = document.createElement("style");
+  paintStyle.dataset.motionPaintFixture = "true";
+  paintStyle.textContent = ".mahjong-hand .mahjong-tile.is-selected {padding:2px 3px;border-top-left-radius:4px;outline:2px solid rgb(240,196,109);outline-offset:2px;}";
+  document.head.append(paintStyle);
 
   fireEvent.click(copies[0]);
   fireEvent.click(copies[1]);
@@ -91,10 +96,14 @@ it("waits for the accepted snapshot and flies from the exact selected copy of a 
     roomVersion: 10,
     decisionId: "opaque-decision-a",
   }));
+  expect(selectedIntent?.sourcePaint).toEqual(expect.objectContaining({ padding: "2px 3px", borderRadius: "4px", outlineOffset: "2px" }));
   expect(screen.queryByTestId("mahjong-discard-flight")).toBeNull();
 
   view.rerender(<GameRoom room={after} {...props} motionCanAnimate motionIntent={selectedIntent}/>);
   const flight = screen.getByTestId("mahjong-discard-flight");
+  const materialCall = vi.mocked(Element.prototype.animate).mock.calls.find(([frames]) => Array.isArray(frames) && (frames[0] as Keyframe)?.padding === "2px 3px");
+  expect(materialCall?.[0]).toEqual([selectedIntent?.sourcePaint, expect.objectContaining({ padding: expect.any(String) })]);
+  expect(materialCall?.[1]).toEqual(expect.objectContaining({ duration: 230, fill: "both" }));
   expect(flight).toHaveAttribute("data-motion-source", "own");
   expect(flight).toHaveAttribute("data-motion-seat", "0");
   expect(flight).toHaveAttribute("data-motion-event", "discard:room-a:game-a:4:0:0");

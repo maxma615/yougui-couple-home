@@ -12,7 +12,7 @@ import { SanmaWall, sanmaTiles } from "../../src/modules/mahjong/sanma-wall";
 import type { Choice, GameVariant, GameView, RoomView } from "../../src/modules/mahjong/types";
 
 type RealGame = { view(seat: number): GameView; respond(seat: number, decisionId: string, choiceId: string): void };
-type SceneSpec = { id: string; variant: GameVariant; actor: number; riichi?: boolean; nuki?: boolean };
+type SceneSpec = { id: string; variant: GameVariant; actor: number; riichi?: boolean; nuki?: boolean; drag?: boolean; red?: boolean };
 type Scene = SceneSpec & { game: RealGame; before: RoomView; after: RoomView; choice: Choice };
 type Point = { x: number; y: number };
 type Quad = [Point, Point, Point, Point];
@@ -76,7 +76,7 @@ function passPending(game: RealGame, capacity: number) {
 
 function scene(spec: SceneSpec): Scene {
   const capacity = spec.variant === "sanma" ? 3 : 4;
-  const hand = spec.nuki ? "p112233s45678z14" : spec.riichi ? "p123456789s123z2" : "p112233s456789z1";
+  const hand = spec.red ? "p012233s456789z1" : spec.nuki ? "p112233s45678z14" : spec.riichi ? "p123456789s123z2" : "p112233s456789z1";
   const draw = spec.nuki ? "s9" : spec.riichi ? "z3" : "z7";
   const game: RealGame = spec.variant === "sanma"
     ? new SanmaGame("east", names.slice(0, 3), sanmaWall(spec.actor, hand, draw))
@@ -92,7 +92,7 @@ function scene(spec: SceneSpec): Scene {
 
   const beforeGame = game.view(0), actorView = game.view(spec.actor);
   const choice = actorView.choices.find(item => item.type === (spec.riichi ? "riichi" : "discard")
-    && (spec.riichi ? item.value === `${draw}_` : item.value === "p1"));
+    && (spec.riichi ? item.value === `${draw}_` : item.value === (spec.red ? "p0" : "p1")));
   assert.ok(choice, `${spec.id}: choose a legal ${spec.riichi ? "riichi sideways" : "ordinary"} discard from the real engine`);
   game.respond(spec.actor, actorView.decisionId, choice.id);
   passPending(game, capacity);
@@ -117,6 +117,10 @@ const projectionScenes = [
   scene({ id: "yonma-own-riichi", variant: "yonma", actor: 0, riichi: true }),
 ];
 const flightScenes = [
+  scene({id:"sanma-own-drag",variant:"sanma",actor:0,drag:true}),
+  scene({id:"yonma-riichi-drag",variant:"yonma",actor:0,riichi:true,drag:true}),
+  scene({id:"sanma-own-red",variant:"sanma",actor:0,red:true}),
+  scene({id:"yonma-own-red",variant:"yonma",actor:0,red:true}),
   projectionScenes[0],
   scene({ id: "sanma-opponent-west", variant: "sanma", actor: 2 }),
   projectionScenes[1],
@@ -293,6 +297,7 @@ for (const engine of [chromium, webkit]) {
     if (!geometryOnly) for (const fixture of flightScenes) for (const size of widths) {
       await mount(page, fixture.before, size);
       let expectedSource: Point[];
+      let expectedPaint: Record<string,string> | null = null;
       if (fixture.actor === 0) {
         await page.mouse.move(1, 1);
         const drawSpacing = await page.getByTestId("mahjong-hand").evaluate(hand => {
@@ -306,7 +311,7 @@ for (const engine of [chromium, webkit]) {
         if (fixture.riichi) await page.getByRole("button", { name: "立直", exact: true }).click();
         const tile = fixture.riichi
           ? page.locator('.is-drawn[data-choice-type="riichi"]')
-          : page.getByTestId("mahjong-hand").locator('[data-tile-face="p1"]').nth(1);
+          : page.getByTestId("mahjong-hand").locator(`[data-tile-face="${fixture.red ? "p0" : "p1"}"]`).nth(fixture.red ? 0 : 1);
         await tile.click();
         await page.waitForTimeout(170);
         const selected = await tile.evaluate(element => {
@@ -321,7 +326,20 @@ for (const engine of [chromium, webkit]) {
         if (size.width === 844) await page.screenshot({path: `.local/audit/own-hand-selected-${engine.name()}-${fixture.id}-844.png`});
         assert.equal(selected.allHit, true, `${engine.name()} ${fixture.id}/${size.width}: raised tile points remain selectable ${JSON.stringify(selected)}`);
         assert.equal(await page.evaluate(() => (window as any).projectionApi.lastChoice), null, "the first selection must not submit a Choice");
-        await tile.click();
+        if(fixture.drag) {
+          const from=await tile.boundingBox(),to=await page.locator(".mahjong-table").boundingBox();
+          assert.ok(from&&to);
+          await page.mouse.move(from.x+from.width/2,from.y+from.height/2);
+          await page.mouse.down();
+          await page.mouse.move(to.x+to.width/2,to.y+to.height*.44,{steps:8});
+          assert.ok(await tile.evaluate(element=>element.classList.contains("is-dragging")),"source material comes from the actual dragged tile");
+        }
+        expectedPaint = await tile.evaluate(element => {
+          const style = getComputedStyle(element);
+          return { background:style.background,border:style.borderTop,borderRadius:style.borderTopLeftRadius,padding:style.padding,boxShadow:style.boxShadow,outline:style.outlineStyle === "none" ? "none" : style.outline,outlineOffset:style.outlineOffset,filter:style.filter === "brightness(1)" ? "none" : style.filter };
+        });
+        if(fixture.drag) await page.mouse.up();
+        else await tile.click();
         const intent = await page.evaluate(() => (window as any).projectionApi.lastIntent);
         assert.equal((await page.evaluate(() => (window as any).projectionApi.lastChoice))?.id, fixture.choice.id,
           `${fixture.id}: UI must submit the engine Choice`);
@@ -337,7 +355,7 @@ for (const engine of [chromium, webkit]) {
 
       await page.evaluate(after => (window as any).projectionApi.update(after), fixture.after);
       await page.getByTestId("mahjong-discard-flight").waitFor({ state: "attached", timeout: 2000 });
-      const measured = await page.evaluate(async ({ expectedSource, after, checkQuietResize }) => {
+      const measured = await page.evaluate(async ({ expectedSource, expectedPaint, after, checkQuietResize }) => {
         const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
         const quad = (element: HTMLElement) => (window as any).mahjongPhysicalSamples(element, [[0,0],[1,0],[1,1],[0,1]]) as Point[];
         const error = (left: Point[], right: Point[]) => Math.max(...left.map((point, index) => Math.hypot(point.x-right[index].x, point.y-right[index].y)));
@@ -353,32 +371,39 @@ for (const engine of [chromium, webkit]) {
         const target = [...document.querySelectorAll<HTMLElement>("[data-discard-event-id]")].find(element => element.dataset.discardEventId === eventId);
         const face = target?.querySelector<HTMLElement>(".mahjong-tile");
         if (!target || !face) throw new Error(`no rendered river face for event ${eventId}`);
-        const targetQuad = quad(face);
-        movement.currentTime = 0;
-        await nextFrame(); await nextFrame();
-        const startQuad = quad(node);
-        movement.currentTime = duration / 2;
-        await nextFrame(); await nextFrame();
-        const middleQuad = quad(node);
-        const middleTime = movement.currentTime;
-        movement.currentTime = duration - 0.5;
-        await nextFrame(); await nextFrame();
-        const endQuad = quad(node);
         const flyingFace = node.querySelector<HTMLElement>(".mahjong-discard-flight__face")!;
+        const material = flyingFace.getAnimations()[0];
+        material?.pause();
         const paint = (element: Element) => {
           const style = getComputedStyle(element);
-          return { background: style.background, border: style.borderTop, borderRadius: style.borderTopLeftRadius,
-            padding: style.padding, boxShadow: style.boxShadow, outline: style.outlineStyle === "none" ? "none" : style.outline };
+          return { background:style.background,border:style.borderTop,borderRadius:style.borderTopLeftRadius,padding:style.padding,boxShadow:style.boxShadow,outline:style.outlineStyle === "none" ? "none" : style.outline,outlineOffset:style.outlineOffset,filter:style.filter === "brightness(1)" ? "none" : style.filter };
         };
+        const targetQuad = quad(face);
+        movement.currentTime = 0;
+        if(material) material.currentTime = 0;
+        await nextFrame(); await nextFrame();
+        const startQuad = quad(node);
+        const startPaint = paint(flyingFace);
+        movement.currentTime = duration / 2;
+        if(material) material.currentTime = duration / 2;
+        await nextFrame(); await nextFrame();
+        const middleQuad = quad(node);
+        const middlePaint = paint(flyingFace);
+        const middleTime = movement.currentTime;
+        movement.currentTime = duration - 0.5;
+        if(material) material.currentTime = duration;
+        await nextFrame(); await nextFrame();
+        const endQuad = quad(node);
         const result: any = { eventId, source: node.dataset.motionSource, seat: Number(node.dataset.motionSeat), duration,
-          startQuad, expectedSource, targetQuad, endQuad, middleQuad, middleTime,
+          startQuad, expectedSource, targetQuad, endQuad, middleQuad, middleTime, startPaint, expectedPaint, middlePaint, materialAnimation: !!material,
           startError: error(startQuad, expectedSource), endError: error(endQuad, targetQuad),
           pointerEvents: getComputedStyle(node).pointerEvents, ariaHidden: node.getAttribute("aria-hidden"),
           targetHidden: getComputedStyle(target).opacity === "0" || getComputedStyle(face).opacity === "0",
-          flyingPaint: paint(flyingFace), targetPaint: paint(face),
+          flyingPaint: paint(flyingFace), targetPaint: { ...paint(face), filter: [getComputedStyle(face).filter,getComputedStyle(target).filter].filter(value => value && value !== "none").join(" ") || "none" },
           flyingFilter: getComputedStyle(flyingFace).filter, targetFilter: getComputedStyle(target).filter };
         if (checkQuietResize) {
           movement.currentTime = duration / 2;
+          if(material) material.currentTime = duration / 2;
           await nextFrame();
           const heldTime = movement.currentTime;
           (window as any).projectionApi.quietUpdate(structuredClone(after));
@@ -389,7 +414,7 @@ for (const engine of [chromium, webkit]) {
           (window as any).projectionHeldEvent = eventId;
         }
         return result;
-      }, { expectedSource, after: fixture.after, checkQuietResize: size.width === 844 && fixture.id === "sanma-nuki-own-discard" });
+      }, { expectedSource, expectedPaint, after: fixture.after, checkQuietResize: size.width === 844 && fixture.id === "sanma-nuki-own-discard" });
       assert.equal(measured.source, fixture.actor === 0 ? "own" : "opponent");
       assert.equal(measured.seat, fixture.actor);
       assert.ok(measured.startError < 1.5, `${engine.name()} ${fixture.id} ${size.width}: source quad error ${measured.startError}px`);
@@ -397,6 +422,11 @@ for (const engine of [chromium, webkit]) {
       assert.equal(measured.pointerEvents, "none");
       assert.equal(measured.ariaHidden, "true");
       assert.equal(measured.targetHidden, true);
+      if(fixture.actor===0) {
+        assert.deepEqual(measured.startPaint,measured.expectedPaint,`${engine.name()} ${fixture.id}/${size.width}: first flying face retains the selected source's actual paint`);
+        assert.equal(measured.materialAnimation,true,"own source paint transitions through a real finite browser animation");
+        assert.ok(Number.parseFloat(measured.middlePaint.padding)>Number.parseFloat(measured.targetPaint.padding) && Number.parseFloat(measured.middlePaint.padding)<Number.parseFloat(measured.expectedPaint.padding),"source padding interpolates rather than snapping at the hand or river");
+      }
       assert.deepEqual(measured.flyingPaint, measured.targetPaint, "own and opponent flights must land with the actual river's material, including the riichi outline");
       assert.equal(measured.flyingFilter, measured.targetFilter, "the actual tsumogiri marker controls landing brightness");
       if (size.width === 844) await page.screenshot({ path: `.local/audit/mahjong-table-projection-flight-${engine.name()}-${fixture.id}-844.png` });

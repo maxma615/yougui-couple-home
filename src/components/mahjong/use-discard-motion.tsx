@@ -12,6 +12,7 @@ import {
   type MotionQuad,
   type MotionRect,
   type MotionSourceGeometry,
+  type MotionTilePaint,
 } from "./discard-motion";
 
 type PointRect = MotionRect;
@@ -30,6 +31,8 @@ type FlightView = Readonly<{
   event: DiscardMotionEvent;
   source: "own" | "opponent";
   sourceTileId?: string;
+  sourcePaint?: MotionTilePaint;
+  targetPaint?: MotionTilePaint;
   from: FlightGeometry;
   to: FlightGeometry;
 }>;
@@ -143,6 +146,8 @@ export function useDiscardMotion({
           event: result.flight.event,
           source: result.flight.source,
           sourceTileId: result.flight.sourceTileId,
+          sourcePaint: result.flight.sourcePaint,
+          targetPaint: result.flight.source === "own" ? readTilePaint(face, target) : undefined,
           from,
           to,
         };
@@ -211,6 +216,7 @@ export function measureDiscardElement(element: HTMLElement) {
   const geometry = elementToFlight(element, rect);
   return {
     rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+    paint: readTilePaint(element),
     geometry: {
       width: geometry.width,
       height: geometry.height,
@@ -218,6 +224,24 @@ export function measureDiscardElement(element: HTMLElement) {
       scale: geometry.scale,
       quad: geometry.quad,
     },
+  };
+}
+
+// A source outside the table must keep its actual paint when the portal takes
+// over. Capture only visual properties; geometry and private tile state stay
+// separate. This snapshot never enters the server Choice payload.
+function readTilePaint(element: HTMLElement, wrapper?: HTMLElement): MotionTilePaint {
+  const style = getComputedStyle(element);
+  // Tsumogiri darkens the river wrapper as a whole. The portal has no such
+  // ancestor, so carry that actual composited filter onto its face once.
+  const wrapperFilter = wrapper ? getComputedStyle(wrapper).filter : "none";
+  const filter = [style.filter, wrapperFilter].filter(value => value && value !== "none").join(" ") || "none";
+  return {
+    background: style.background, border: style.borderTop,
+    borderRadius: style.borderTopLeftRadius, padding: style.padding,
+    boxShadow: style.boxShadow,
+    outline: style.outlineStyle === "none" ? "none" : style.outline,
+    outlineOffset: style.outlineOffset, filter,
   };
 }
 
@@ -348,12 +372,19 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
     if (!node) return;
     let movement: Animation | null = null;
     let flip: Animation | null = null;
+    let paint: Animation | null = null;
     try {
       movement = node.animate([
         keyframe(flight.from),
         keyframe(flight.to),
       ], { duration: 230, easing: "cubic-bezier(.18,.74,.28,1)", fill: "forwards" });
       movement.onfinish = () => onFinish(flight.event.id);
+      if (flight.source === "own" && flight.sourcePaint && flight.targetPaint) {
+        const face = node.querySelector<HTMLElement>(".mahjong-discard-flight__face");
+        if (face) paint = face.animate([flight.sourcePaint, flight.targetPaint], {
+          duration: 230, easing: "cubic-bezier(.18,.74,.28,1)", fill: "both",
+        });
+      }
       if (flight.source === "opponent") {
         const card = node.querySelector<HTMLElement>(".mahjong-discard-flight__card");
         if (card) flip = card.animate([{ transform: "rotateY(0deg)" }, { transform: "rotateY(180deg)" }], { duration: 230, easing: "ease-in-out", fill: "forwards" });
@@ -361,11 +392,13 @@ export function DiscardFlightLayer({ flight, onFinish }: { flight: FlightView; o
     } catch {
       movement?.cancel();
       flip?.cancel();
+      paint?.cancel();
       onFinish(flight.event.id);
     }
     return () => {
       movement?.cancel();
       flip?.cancel();
+      paint?.cancel();
     };
   }, [flight, onFinish]);
 
