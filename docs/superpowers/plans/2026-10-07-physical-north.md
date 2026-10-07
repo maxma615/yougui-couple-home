@@ -32,9 +32,9 @@
 
 **Interfaces:** Consumes the unchanged accepted nuki event, `measureDiscardElement`, `FlightView`, `TileFace`, existing face-up cuboid and tray seat/index. Produces a persistent `data-nuki-volume` around the cap and a six-plane `kind="nuki"` flight with positive measured target depth.
 
-- [ ] Add regressions that fail on the flat baseline: persistent sides absent, flight depth absent, cap-only hiding leaves body visible; run the focused Vitest files and retain actual RED output.
-- [ ] Implement the minimal cuboid, nuki depth measurement and whole-target visibility lifecycle; keep public count and accepted rules unchanged.
-- [ ] Run focused Vitest and typecheck; execute real-engine nuki → replacement → legal settlement in Chromium/WebKit, plus tray count/orientation and lifecycle cases. Save composited frames and endpoint geometry.
+- [x] Add regressions that fail on the flat baseline: persistent sides absent, flight depth absent, cap-only hiding leaves body visible; run the focused Vitest files and retain actual RED output.
+- [x] Implement the minimal cuboid, nuki depth measurement and whole-target visibility lifecycle; keep public count and accepted rules unchanged.
+- [x] Run focused Vitest and typecheck; execute real-engine nuki → replacement → legal settlement in Chromium/WebKit, plus tray count/orientation and lifecycle cases. Save composited frames and endpoint geometry.
 - [ ] Independent review of the final diff; resolve material findings and re-run covering checks.
 
 ### Task 2: Validate and publish the exact revision

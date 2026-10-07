@@ -140,6 +140,9 @@
 
 .mahjong-page .mahjong-game .mahjong-nuki-tray > small {
   font-size: clamp(9px, min(1.1cqw, 1.8cqh), 10px);
+  position: relative;
+  z-index: 1;
+  transform: translateZ(var(--nuki-depth));
 }
 
 /* Extra kan tiles lengthen the rotated rack. Reserve one back-tile depth
@@ -156,6 +159,11 @@
 .mahjong-page .mahjong-game .mahjong-nuki-tray__footprint {
   position: relative;
   --nuki-tile-h: min(3.7cqw, 6cqh, 44px);
+}
+
+.mahjong-page .mahjong-game .mahjong-nuki-tray {
+  --nuki-tile-h: min(3.7cqw, 6cqh, 44px);
+  --nuki-depth: calc(var(--nuki-tile-h) * .4);
 }
 
 .mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-nuki-tray__footprint,
