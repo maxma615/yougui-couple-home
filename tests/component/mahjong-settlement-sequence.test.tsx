@@ -85,3 +85,13 @@ it("uses relative elapsed time despite device wall-clock jumps",()=>{const {onCh
 it("shows final numbers under reduced motion while preserving the confirmation delay",()=>{vi.stubGlobal("matchMedia",()=>({matches:true,addEventListener(){},removeEventListener(){}}));show();expect(screen.getByTestId("settlement-score-0").textContent).toBe("29,800");expect((screen.getByRole("button",{name:/继续/}) as HTMLButtonElement).disabled).toBe(true);tick(4500);expect((screen.getByRole("button",{name:/继续/}) as HTMLButtonElement).disabled).toBe(false);});
 it("does not send leftover result ACKs after terminal ranking appears",()=>{const {onChoice,rerenderProps,props}=show();tick(7000);const g=structuredClone(props.game);g.ranking=[{seat:0,rank:1,score:40000}];rerenderProps({game:g});tick(10000);expect(onChoice).not.toHaveBeenCalled();expect(screen.queryByRole('region')).toBeNull();});
 it("finishes a zero-transfer score page at 1200ms and auto confirms at 4200ms",()=>{const r=result("scores");r.game!.settlementFlow!.delta=[0,0,0];r.game!.settlementFlow!.newScores=[35000,35000,35000];const {onChoice}=show(r);tick(1199);expect((screen.getByRole('button',{name:/继续/}) as HTMLButtonElement).disabled).toBe(true);tick(1);expect((screen.getByRole('button',{name:/继续/}) as HTMLButtonElement).disabled).toBe(false);tick(3000);expect(onChoice).toHaveBeenCalledTimes(1);});
+
+it("shows waiting for other players after the viewer confirms their final score page",()=>{const r=result("scores");r.game!.choices=[];show(r);expect(screen.getByText("等待其他玩家")).toBeTruthy();expect(screen.queryByRole("button",{name:/继续/})).toBeNull();});
+it("starts a new winner at the top while preserving scroll on same-page updates",()=>{
+ const r=result("detail"),{props,rerenderProps}=show(r);
+ const body=document.querySelector<HTMLElement>('.mahjong-settlement-panel__content')!;body.scrollTop=80;
+ const update=structuredClone(props.game);update.settlementFlow!.elapsedMs=500;
+ rerenderProps({game:update});expect(document.querySelector<HTMLElement>('.mahjong-settlement-panel__content')!.scrollTop).toBe(80);
+ const next=structuredClone(update);next.decisionId="flow:detail:1";next.settlementFlow!.detailIndex=1;next.settlementFlow!.elapsedMs=0;next.settlement!.winnerSeat=2;
+ rerenderProps({game:next});expect(document.querySelector<HTMLElement>('.mahjong-settlement-panel__content')!.scrollTop).toBe(0);
+});

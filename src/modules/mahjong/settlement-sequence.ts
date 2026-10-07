@@ -8,9 +8,9 @@ type Sequence = {
   details: Settlement[];
   oldScores: number[];
   delta: number[];
-  index: number;
-  startedAt: number;
-  pending: Set<number>;
+  indices: number[];
+  startedAt: number[];
+  confirmed: Set<number>;
 };
 
 /** Native engines calculate their usual payments. This adapter keeps the next
@@ -56,7 +56,7 @@ export class SettlementSequenceGame implements MahjongGame {
       if (page === this.seatCount - 1) throw Error("Native result exceeded seat bound");
     }
     const delta = this.seats().map(seat => details.reduce((sum, detail) => sum + detail.delta[seat], 0));
-    this.sequence = { id: randomUUID(), snapshots, details, oldScores, delta, index: 0, startedAt: this.now(), pending: new Set(this.seats()) };
+    this.sequence = { id: randomUUID(), snapshots, details, oldScores, delta, indices: this.seats().map(() => 0), startedAt: this.seats().map(() => this.now()), confirmed: new Set() };
   }
 
   respond(seat: number, decisionId: string, choiceId: string) {
@@ -66,31 +66,37 @@ export class SettlementSequenceGame implements MahjongGame {
       this.collectWin();
       return;
     }
-    if (decisionId !== `${sequence.id}:${sequence.index}`) throw new AppError(409, "stale_decision", "牌局已更新，请按当前牌面操作");
-    if (choiceId !== "ack" || !sequence.pending.has(seat)) throw new AppError(409, "illegal_choice", "当前不能执行这个操作");
-    sequence.pending.delete(seat);
-    if (sequence.pending.size) return;
-    sequence.index++;
-    if (sequence.index > sequence.details.length) { this.sequence = null; return; }
-    sequence.pending = new Set(this.seats());
-    sequence.startedAt = this.now();
+    if (!Number.isInteger(seat) || seat < 0 || seat >= this.seatCount) throw new AppError(403, "seat_required", "你没有牌桌席位");
+    const index = sequence.indices[seat];
+    if (decisionId !== `${sequence.id}:${index}`) throw new AppError(409, "stale_decision", "牌局已更新，请按当前牌面操作");
+    if (choiceId !== "ack" || sequence.confirmed.has(seat)) throw new AppError(409, "illegal_choice", "当前不能执行这个操作");
+    if (index === sequence.details.length) {
+      sequence.confirmed.add(seat);
+      if (sequence.confirmed.size === this.seatCount) this.sequence = null;
+    } else {
+      // Detail navigation belongs to this viewer. The only table-wide barrier
+      // is after everyone confirms their final aggregate score page.
+      sequence.indices[seat]++;
+      sequence.startedAt[seat] = this.now();
+    }
   }
 
   view(seat: number): GameView {
     if (!Number.isInteger(seat) || seat < 0 || seat >= this.seatCount) throw new AppError(403, "seat_required", "你没有牌桌席位");
     const sequence = this.sequence;
     if (!sequence) return this.engine.view(seat);
-    const scores = sequence.index === sequence.details.length;
+    const index = sequence.indices[seat];
+    const scores = index === sequence.details.length;
     const view = structuredClone(sequence.snapshots[seat]);
-    view.decisionId = `${sequence.id}:${sequence.index}`;
+    view.decisionId = `${sequence.id}:${index}`;
     view.phase = scores ? "score_change" : "hule";
     view.ranking = null;
-    view.settlement = structuredClone(sequence.details[Math.min(sequence.index, sequence.details.length - 1)]);
+    view.settlement = structuredClone(sequence.details[Math.min(index, sequence.details.length - 1)]);
     if (scores) view.settlement.delta = sequence.delta.slice();
-    view.choices = sequence.pending.has(seat) ? [{ id: "ack", type: "ack" }] : [];
+    view.choices = sequence.confirmed.has(seat) ? [] : [{ id: "ack", type: "ack" }];
     view.settlementFlow = {
-      id: sequence.id, stage: scores ? "scores" : "detail", detailIndex: sequence.index, detailCount: sequence.details.length,
-      elapsedMs: Math.max(0, this.now() - sequence.startedAt), oldScores: sequence.oldScores.slice(), delta: sequence.delta.slice(),
+      id: sequence.id, stage: scores ? "scores" : "detail", detailIndex: index, detailCount: sequence.details.length,
+      elapsedMs: Math.max(0, this.now() - sequence.startedAt[seat]), oldScores: sequence.oldScores.slice(), delta: sequence.delta.slice(),
       newScores: sequence.oldScores.map((score, seat) => score + sequence.delta[seat]),
     };
     return view;

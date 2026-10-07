@@ -68,7 +68,8 @@ it.each(['sanma','yonma'] as const)('pushes private %s multi-ron pages and one n
     const forbidden=await post(4,{action:'respond',roomId:room.id,decisionId:decision,choiceId:'ack'});expect(forbidden.status).toBe(409);expect((await forbidden.json()).error.code).toBe('seat_required');expect(view().game!.decisionId).toBe(decision);
     await choose(0,'ack');
     const repeat=await post(0,{action:'respond',decisionId:decision,choiceId:'ack'});expect(repeat.status).toBe(409);
-    expect(view().game!.settlementFlow?.detailIndex).toBe(0);
+    expect(view().game!.settlementFlow?.detailIndex).toBe(1);
+    expect(view(1).game!.settlementFlow?.detailIndex).toBe(0);
     clients[1].socket.disconnect();
     const fetched=await fetch(`${address}/internal/room`,{headers:{cookie:cookies[1]}});
     const restored=(await fetched.json() as MahjongResponse).room!;expect(restored.game!.decisionId).toBe(decision);expect(restored.game!.hand).toEqual(hands[1]);

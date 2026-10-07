@@ -13,8 +13,8 @@
 - 新增只依赖 `view(seat)` / `respond(seat, decisionId, choiceId)` 的 `SettlementSequenceGame`；RoomStore 在原生 factory 产物外包装，注入真实引擎/物理墙的测试仍走同一入口。
 - 遇到原生和牌结果，保存各席结束时的私有快照与按实际 seat 索引的旧分。严格以原生公开的合法 ACK/decisionId 排空同一手的结果页，收集每页原生 delta；只到原生 handId 变化或终局排名出现为止。循环以席位数为上限，无法推进时抛错，不猜测下一页。
 - 内部已经计算好的下一手/排名保持封装；对外显示被冻结的结束快照。先播放 N 个赢家详情，再显示一张汇总分数页。汇总 delta 为各原生 delta 按 seat 求和，newScores 为 oldScores + delta；不从番符或牌型点数反算，不改既有支付/包牌/棒分算法。
-- 每个展示阶段有独立 decisionId，各席仅有一次合法 ACK。阶段只有全席确认后推进，重复、过期、其他席或伪造操作拒绝。最终分数页确认后才对外返回原生下一手/排名。
-- `GameView.settlementFlow` 为可选 DTO：`id`、`stage: detail|scores`、`detailIndex`、`detailCount`、`elapsedMs`、`oldScores`、`delta`、`newScores`。elapsedMs 由服务器注入时钟计算；客户端使用接收时的相对耗时，不依赖设备绝对时间一致。
+- 每席各自持有展示索引、开始时钟和当前 decisionId；同一账号多个客户端共享该索引。点击合法 ACK 立即推进自己的下一赢家或总分页面，不等待其他席翻页。最终总分 ACK 后停在等待状态，直到全席均完成最终总分确认才对外返回原生下一手/排名。重复、过期或伪造操作拒绝。
+- `GameView.settlementFlow` 为可选 DTO：`id`、`stage: detail|scores`、`detailIndex`、`detailCount`、`elapsedMs`、`oldScores`、`delta`、`newScores`。elapsedMs 由服务器注入时钟计算；每席的时钟从自己进入该页面起算；客户端使用接收时的相对耗时，不依赖设备绝对时间一致。
 - 快照逐席隔离，不把下一手或别人的私有手牌放进返回 DTO；view 的返回值不得修改内存状态。原生引擎的内部结算推进与用户展示 ACK 是不同层，文档不能声称原生内存延迟到最后才记分。
 
 ## 界面与时序
@@ -33,3 +33,5 @@
 本场多荣分配尚无足够官方一手材料：四麻原生只有首赢家本场、三麻当前各赢家200；本步骤不得把其中任一种称作雀魂标准。真实安卓、厂商语音/全部动画、荒牌/流满贯序列与完整终局通知时序继续属于整体未完成项。
 
 继续使用已锁定 Next 16.3.6、React 19.3、Vitest 5、Playwright 1.63；仅修改 couple-home。禁止备份、下载真实数据/照片；保持原资源限制和清理器。实际发布前使用权威空桌/排空保护门，保留原用户资料及并行更改。
+
+2026-10-08 独立审查修订：公开客户端的赢家翻页是个人展示导航，全桌屏障仅在最终分数确认。撤销初稿逐赢家全席屏障，并新增真实三/四席独立推进、最终等待与40字姓名横屏翻页滚动重置验证。

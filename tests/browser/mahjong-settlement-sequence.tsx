@@ -25,7 +25,7 @@ for(const engine of [chromium,webkit]) {
  try {for(const variant of ["sanma","yonma"] as const) for(const viewport of [{width:667,height:375},{width:1440,height:810}]) {
   const label=`${engine.name()}-${variant}-${viewport.width}`;
   const count=variant==="sanma"?3:4;
-  const users=Array.from({length:count},(_,seat)=>({userId:randomUUID(),displayName:seat===1?"玩家乙的很长显示姓名":`玩家${seat}`}));
+  const users=Array.from({length:count},(_,seat)=>({userId:randomUUID(),displayName:seat===1?"玩家乙".repeat(13)+"乙":seat===2?"玩家丙".repeat(13)+"丙":`玩家${seat}`}));
   const store=new RoomStore({gameFactory:()=>physicalEngine(variant,{1:"p123456789s123z2",2:"p123456789s123z2"},"z2")});
   const send=(seat:number,input:object)=>store.execute(users[seat],{nonce:randomUUID(),...input} as MahjongCommand)!;
   const room=send(0,{action:"create",variant,mode:"east"});
@@ -43,7 +43,7 @@ for(const engine of [chromium,webkit]) {
   await page.exposeFunction("realResultChoice",(input:{decisionId:string;choiceId:string})=>{
    const previous=view().game!;assert.equal(input.decisionId,previous.decisionId);
    send(0,{action:"respond",roomId:room.id,...input});
-   for(let seat=1;seat<count;seat++)choose(seat,"ack");
+   if(previous.settlementFlow!.stage === "scores") for(let seat=1;seat<count;seat++) { choose(seat,"ack"); choose(seat,"ack"); choose(seat,"ack"); }
    acknowledgements.push({phase:previous.settlementFlow!.stage,index:previous.settlementFlow!.detailIndex,at:previous.settlementFlow!.elapsedMs,choiceId:input.choiceId});
    return view();
   });
@@ -55,9 +55,12 @@ for(const engine of [chromium,webkit]) {
   await detail.waitFor();
   assert.equal(await detail.locator('[data-settlement-seat]').count(),0);
   assert.equal(await detail.locator('.mahjong-winning-hand [data-tile-face]').count(),14);
+  await detail.locator(".mahjong-settlement-panel__content").evaluate(el => { el.scrollTop=el.scrollHeight; });
   await detail.getByRole('button',{name:/继续/}).click();
   await page.waitForFunction(()=>document.querySelector('.mahjong-settlement-panel__page')?.textContent?.includes('第 2'));
   assert.deepEqual(view().game!.players.map(p=>p.score),old);
+  assert.equal(store.view(users[1].userId)!.game!.settlementFlow!.detailIndex,0);
+  assert.equal(await detail.locator('.mahjong-settlement-panel__content').evaluate(el=>el.scrollTop),0);
   await detail.getByRole('button',{name:/继续/}).click();
   const scores=page.getByRole('region',{name:'本局收支'});await scores.waitFor();
   const initial=await scores.getByTestId('settlement-score-0').textContent();

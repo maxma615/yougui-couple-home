@@ -21,7 +21,7 @@
 ## Review Focus
 
 - 多荣中旧分必须固定，各原生 delta 只计一次；棒分不能被多页重复增加。
-- 最后一个 ACK、旧阶段 ACK、刷新与多个同账号客户端不能跳过阶段。
+- 个人详情立即推进；最终 ACK 全席屏障、旧阶段 ACK、刷新与多个同账号客户端不能跳过阶段。
 - 结果尚在展示时，不提前暴露新手牌或完成/重开房间。
 - 自动确认遇到忙碌、离线、卸载、已确认不能重复发送；服务器与设备时钟偏差不影响倒数。
 - 长姓名、役种、三/四席和手机横屏保持内容可达，确认行不遮挡正文。
@@ -33,7 +33,7 @@ Files: `src/modules/mahjong/types.ts`、新 `settlement-sequence.ts`、`rooms.ts
 Interfaces: `MahjongGame` 提供 `view/respond`；`SettlementFlow` 使用 spec 固定字段；`SettlementSequenceGame(engine, seatCount, {now})` 包装原生引擎。
 
 - [x] 写 RoomStore+真实物理墙双荣测试，先观察当前 DTO 缺少 flow、第二赢家前已入账的有效 RED。
-- [x] 实现 wrapper 与 RoomStore 包装入口。严格界限、独立 ACK、快照/返回值隔离；不改原生支付代码。
+- [x] 实现 wrapper 与 RoomStore 包装入口。严格界限、逐席索引与时钟、最终全席 ACK、快照/返回值隔离；不改原生支付代码。
 - [x] GREEN 覆盖三/四人、自摸、终局、陈旧/重复操作及原生最终分数一致；运行 rooms/engine/sanma 相关现有测试。
 - [x] 提交服务器步骤，记录实际 RED/GREEN 和产品 SHA。
 

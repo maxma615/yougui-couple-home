@@ -67,6 +67,30 @@ describe("authoritative whole-hand result sequence", () => {
     expect(t.view().settlementFlow).toBeUndefined();
   });
 
+  it.each(["sanma", "yonma"] as const)("advances each %s viewer independently and waits only after their final score ACK", variant => {
+    const t = table(variant, physicalEngine(variant, { 1: "p123456789s123z2", 2: "p123456789s123z2" }, "z2"));
+    t.choose(0, "discard", "z2_"); t.choose(1, "ron"); t.choose(2, "ron");
+    const first = t.view(), endingHand = first.hand.slice(), old = first.players.map(p => p.score);
+    t.choose(0, "ack");
+    expect(t.view().settlementFlow?.detailIndex).toBe(1);
+    expect(t.view(1).settlementFlow?.detailIndex).toBe(0);
+    t.choose(0, "ack"); expect(t.view().settlementFlow?.stage).toBe("scores");
+    const expected = t.view().settlementFlow!.newScores;
+    const scoreDecision = t.view().decisionId;
+    t.choose(0, "ack");
+    expect(t.view().choices).toEqual([]);
+    expect(t.view().players.map(p => p.score)).toEqual(old);
+    expect(t.view().hand).toEqual(endingHand); expect(t.view().ranking).toBeNull();
+    expect(t.view().handId).toBe(first.handId);
+    expect(() => t.send(0, { action: "respond", roomId: t.room.id, decisionId: scoreDecision, choiceId: "ack" })).toThrow();
+    for (let seat = 1; seat < t.count; seat++) {
+      expect(t.view(seat).settlementFlow?.detailIndex).toBe(0);
+      t.choose(seat, "ack"); t.choose(seat, "ack"); t.choose(seat, "ack");
+    }
+    expect(t.view().handId).toBe(first.handId! + 1);
+    expect(t.view().players.slice().sort((a,b) => a.seat-b.seat).map(p => p.score)).toEqual(expected);
+  });
+
   it.each(["sanma", "yonma"] as const)("presents one real %s tsumo then one score stage without altering native totals", variant => {
     const raw = physicalEngine(variant, { 0: "p123456789s123z2" }, "z2"), t = table(variant, raw);
     t.choose(0, "tsumo");
@@ -89,7 +113,9 @@ describe("authoritative whole-hand result sequence", () => {
     const before = t.view();
     t.choose(0, "ack");
     expect(() => t.send(0, { action: "respond", roomId: t.room.id, decisionId: before.decisionId, choiceId: "ack" })).toThrow();
-    expect(t.view().choices).toEqual([]);
+    expect(t.view().choices).toEqual([{ id: "ack", type: "ack" }]);
+    expect(t.view().settlementFlow?.detailIndex).toBe(1);
+    expect(t.view(1).settlementFlow?.detailIndex).toBe(0);
     t.choose(1, "ack"); t.choose(2, "ack");
     expect(t.view().decisionId).not.toBe(before.decisionId);
     expect(() => t.send(1, { action: "respond", roomId: t.room.id, decisionId: before.decisionId, choiceId: "ack" })).toThrow();
