@@ -56,6 +56,7 @@ test("相册封面用预览、照片墙用懒加载缩略图，只有打开大�
   try {
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto("/moments");
+    await page.getByRole("button", { name: "封面", exact: true }).click();
     const cover = page.locator(".space-cover__image");
     await expect(cover).toBeVisible();
     await expect.poll(() => cover.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
@@ -71,14 +72,14 @@ test("相册封面用预览、照片墙用懒加载缩略图，只有打开大�
     await expect.poll(() => thumbnail.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     expect(photoRequests.some((url) => url.includes(`/api/photos/${latestPhoto.photo.id}?variant=thumbnail`))).toBe(true);
 
-    await tile.click();
+    await page.goto(`/moments/${latest.id}`);
     const detail = page.locator(".space-memory__lead-photo");
     await expect(detail).toBeVisible();
     await expect.poll(() => detail.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     expect(new URL((await detail.getAttribute("src"))!, process.env.E2E_ORIGIN!).searchParams.get("variant")).toBe("preview");
     expect(photoRequests.some((url) => new URL(url).pathname === `/api/photos/${latestPhoto.photo.id}` && !new URL(url).searchParams.has("variant"))).toBe(false);
 
-    await page.getByRole("button", { name: "放大查看：latest.jpg" }).click();
+    await page.getByRole("button", { name: "放大查看：手机相册性能回归，第 1 张照片" }).click();
     const viewer = page.getByRole("dialog", { name: "大图查看：手机相册性能回归" });
     const original = viewer.getByRole("img");
     await expect(viewer).toBeVisible();
@@ -104,6 +105,7 @@ test("封面预览加载失败后重试仍使用预览尺寸并成功恢复", as
 
   try {
     await page.goto("/moments");
+    await page.getByRole("button", { name: "封面", exact: true }).click();
     await expect(page.getByRole("button", { name: "重试封面" })).toBeVisible();
     await page.getByRole("button", { name: "重试封面" }).click();
     const cover = page.locator(".space-cover__image");

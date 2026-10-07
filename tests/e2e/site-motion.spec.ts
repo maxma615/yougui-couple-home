@@ -159,16 +159,17 @@ test("相册切换到照片墙会揭示内容，大图关闭保留 Escape 和焦
     await page.goto("/home");
     await page.getByRole("navigation", { name: "主要导航" }).getByRole("link", { name: "相册", exact: true }).click();
     const gallery = page.locator(".space-gallery[data-gallery-view]");
-    await expect(gallery).toHaveAttribute("data-gallery-view", "cover");
+    await expect(gallery).toHaveAttribute("data-gallery-view", "wall");
+    await page.getByRole("button", { name: "封面", exact: true }).click();
     await page.getByRole("button", { name: "照片墙", exact: true }).click();
     await expect(gallery).toHaveAttribute("data-gallery-view", "wall");
     await expect(page.locator(".space-gallery__group")).toHaveCount(1);
     await expect.poll(() => motionStarts(page, "galleryTimeline")).toBeGreaterThan(0);
     await savePreview(page, "site-motion-gallery-wall", testInfo);
 
-    await page.getByRole("link", { name: /夜航相册动效验收/ }).click();
+    await page.goto(`/moments/${momentId}`);
     await expect(page).toHaveURL(new RegExp(`/moments/${momentId}$`));
-    const opener = page.getByRole("button", { name: "放大查看：motion-check.jpg" });
+    const opener = page.getByRole("button", { name: "放大查看：夜航相册动效验收，第 1 张照片" });
     await opener.click();
     const viewer = page.getByRole("dialog", { name: "大图查看：夜航相册动效验收" });
     await expect(viewer).toBeVisible();
@@ -351,7 +352,7 @@ test("较新照片上传经SSE到达后，晚到删除响应保留最新照片",
     const oldPhoto = initial.photos[0];
 
     await page.goto(`/moments/${momentId}`);
-    await expect(page.locator(".space-memory__lead-name")).toContainText(oldPhoto.filename);
+    await expect(page.locator(".space-memory__lead-photo")).toHaveAttribute("src", `/api/photos/${oldPhoto.id}?variant=preview`);
     let notifyHeldResponse!: () => void;
     const heldResponseReady = new Promise<void>((resolve) => { notifyHeldResponse = resolve; });
     const releaseGate = new Promise<void>((resolve) => { releaseHeldResponse = resolve; });
@@ -365,7 +366,9 @@ test("较新照片上传经SSE到达后，晚到删除响应保留最新照片",
       await route.fulfill({ response });
     });
 
-    await page.getByRole("button", { name: `删除“${oldPhoto.filename}”` }).click();
+    await page.getByRole("button", { name: "管理回忆", exact: true }).click();
+    await page.getByRole("button", { name: "管理照片", exact: true }).click();
+    await page.getByRole("button", { name: "删除第 1 张照片", exact: true }).click();
     await page.getByRole("button", { name: "确认删除" }).click();
     await heldResponseReady;
     expect(heldStatus).toBe(200);
@@ -392,14 +395,16 @@ test("较新照片上传经SSE到达后，晚到删除响应保留最新照片",
     await momentRefresh;
     expect(refreshedMoment?.version).toBe(uploaded.version);
     expect(refreshedMoment?.photos.map((photo) => photo.id)).toEqual([uploaded.photo.id]);
-    await expect(page.locator(".space-memory__lead-name")).toContainText("新拍的一张.jpg");
-    await expect(page.getByRole("button", { name: `删除“${oldPhoto.filename}”` })).toHaveCount(0);
+    await expect(page.locator(".space-memory__lead-photo")).toHaveAttribute("src", `/api/photos/${uploaded.photo.id}?variant=preview`);
+    await expect(page.getByRole("dialog", { name: "删除照片", exact: true }).getByRole("button", { name: "正在删除…", exact: true })).toBeDisabled();
 
     releaseHeldResponse();
-    await expect(page.getByText(`照片“${oldPhoto.filename}”已删除。`, { exact: true })).toBeVisible();
-    await expect(page.locator(".space-memory__lead-name")).toContainText("新拍的一张.jpg");
-    await expect(page.getByRole("button", { name: "放大查看：新拍的一张.jpg" })).toBeVisible();
-    await expect(page.getByRole("button", { name: `放大查看：${oldPhoto.filename}` })).toHaveCount(0);
+    await expect(page.getByText("照片已删除。", { exact: true })).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "关闭弹窗", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page.locator(".space-memory__lead-photo")).toHaveAttribute("src", `/api/photos/${uploaded.photo.id}?variant=preview`);
+    await expect(page.getByRole("button", { name: "放大查看：并发照片更新验收，第 1 张照片" })).toBeVisible();
+    expect((await page.locator(".space-memory__lead-photo").getAttribute("src"))).not.toContain(oldPhoto.id);
   } finally {
     releaseHeldResponse();
     await pair.cleanup();
@@ -439,9 +444,9 @@ test("桌面和手机的非首页动效体验可录制并保持主要交互", as
     await page.getByRole("navigation", { name: "主要导航" }).getByRole("link", { name: "相册", exact: true }).click();
     await page.getByRole("button", { name: "照片墙", exact: true }).click();
     await expect(page.locator(".space-gallery")).toHaveAttribute("data-gallery-view", "wall");
-    await page.getByRole("link", { name: /非首页动效体验片段/ }).click();
+    await page.goto(`/moments/${momentId}`);
     await expect(page).toHaveURL(new RegExp(`/moments/${momentId}$`));
-    await page.getByRole("button", { name: "放大查看：motion-check.jpg" }).click();
+    await page.getByRole("button", { name: "放大查看：非首页动效体验片段，第 1 张照片" }).click();
     await expect(page.getByRole("dialog", { name: "大图查看：非首页动效体验片段" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog", { name: "大图查看：非首页动效体验片段" })).toBeHidden();

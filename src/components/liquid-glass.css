@@ -1,0 +1,430 @@
+/*
+ * Liquid Glass-inspired shared material layer.
+ * Navigation and controls get the stronger glass; content surfaces stay lightly tinted.
+ * Keep media sharp and leave the standalone Mahjong route outside these app scopes.
+ */
+
+/* Static, restrained light sources make the glass read against the existing cinematic palette. */
+.app-shell.app-shell {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 13% 4%, rgb(129 110 158 / 12%), transparent 34rem),
+    radial-gradient(ellipse at 88% 30%, rgb(80 108 145 / 8%), transparent 39rem),
+    linear-gradient(160deg, rgb(255 255 255 / 1.5%), transparent 38%);
+  background-attachment: fixed;
+}
+
+.public-shell.public-shell {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 14% 20%, rgb(129 110 158 / 15%), transparent 32rem),
+    radial-gradient(ellipse at 82% 84%, rgb(80 108 145 / 10%), transparent 35rem);
+}
+
+.admin-page.admin-page {
+  background-image:
+    radial-gradient(ellipse at 14% 75%, rgb(80 108 145 / 8%), transparent 32rem),
+    radial-gradient(ellipse at 78% 4%, rgb(95 79 116 / 22%), transparent 38rem),
+    linear-gradient(155deg, var(--surface) 4%, var(--bg) 54%, var(--surface) 100%);
+}
+
+/* Fixed navigation stays available and keeps its current touch dimensions. */
+.app-shell .mobile-topbar,
+.app-shell .bottom-nav,
+.app-shell .side-rail,
+.admin-page .admin-header {
+  border-color: var(--glass-control-edge);
+  box-shadow: var(--glass-inner-shadow), 0 14px 34px rgb(0 0 0 / 18%);
+}
+
+.app-shell .mobile-topbar,
+.app-shell .bottom-nav {
+  background-color: var(--glass-control-fallback);
+  background-image: linear-gradient(135deg, rgb(255 255 255 / 10%), rgb(25 27 39 / 84%) 38%, rgb(17 19 29 / 92%));
+}
+
+.app-shell .side-rail {
+  background-color: var(--glass-control-fallback);
+  background-image: linear-gradient(145deg, rgb(255 255 255 / 7%), rgb(22 24 35 / 94%) 44%, rgb(13 14 21 / 97%));
+}
+
+.admin-page .admin-header {
+  border: 1px solid var(--glass-control-edge);
+  border-radius: 18px;
+  background-color: var(--glass-control-fallback);
+  background-image: var(--glass-control-fill);
+}
+
+.app-shell .nav-link,
+.app-shell .bottom-nav__link {
+  min-height: 3rem;
+  border: 1px solid transparent;
+}
+
+.app-shell .nav-link.is-active,
+.app-shell .bottom-nav__link.is-active {
+  border-color: rgb(228 217 244 / 25%);
+  background: linear-gradient(140deg, rgb(210 196 232 / 20%), rgb(210 196 232 / 8%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 13%), 0 4px 18px rgb(0 0 0 / 12%);
+}
+
+/* Hero headings and page toolbars are control-adjacent; the artwork beneath remains untouched. */
+.app-shell .space-home__top {
+  border: 1px solid rgb(245 242 255 / 15%);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, rgb(255 255 255 / 8%), rgb(13 14 21 / 30%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 16%);
+  padding: 0.25rem 0.75rem;
+}
+
+.app-shell .page-container :is(.space-gallery__toolbar, .life-calendar-toolbar, .calendar-toolbar, .life-todo-filters) {
+  border: 1px solid var(--glass-content-edge);
+  border-radius: 16px;
+  background-color: var(--glass-content-fallback);
+  background-image: var(--glass-content-fill);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%);
+}
+
+.app-shell .page-container .space-gallery__toolbar {
+  padding: 0.4rem 0.65rem;
+}
+
+.app-shell .page-container .life-calendar-toolbar,
+.app-shell .page-container .calendar-toolbar {
+  padding: 0.4rem;
+}
+
+.app-shell .page-container .life-todo-filters {
+  padding: 0.28rem;
+}
+
+/* Secondary controls use a uniform, contrast-conscious edge instead of heavy effects. */
+.app-shell :is(.button--secondary, .quiet-button, .icon-button, .space-gallery__icon-button, .life-calendar-today, .life-todo-filter, .segmented-button, .space-gallery__switch button, .space-setting-link),
+.admin-page :is(.admin-button--quiet, .admin-button--secondary, .admin-icon-action),
+body .public-shell .auth-card .field input {
+  border-color: var(--glass-control-edge);
+  background-image: var(--glass-control-fill);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 3px 12px rgb(0 0 0 / 10%);
+}
+
+.app-shell :is(.button--secondary, .quiet-button, .icon-button, .space-gallery__icon-button, .life-calendar-today, .life-todo-filter, .segmented-button, .space-gallery__switch button, .space-setting-link),
+.admin-page :is(.admin-button--quiet, .admin-button--secondary, .admin-icon-action) {
+  background-color: var(--glass-control-fallback);
+}
+
+.app-shell .space-gallery__switch button[aria-pressed="true"],
+.app-shell .life-todo-filter.is-active,
+.app-shell .segmented-button.is-active {
+  border-color: rgb(228 217 244 / 42%);
+  background-color: rgb(210 196 232 / 17%);
+  background-image: linear-gradient(145deg, rgb(228 217 244 / 20%), rgb(210 196 232 / 8%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 17%), 0 4px 16px rgb(0 0 0 / 12%);
+}
+
+/* Large content panels use a thin frost. Repeated list rows and image tiles stay unblurred. */
+.app-shell .page-container :is(.surface-card, .summary-card, .list-card, .form-card, .detail-card, .empty-card, .state-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature, .life-todo-empty),
+body .public-shell .auth-card,
+.admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+  border-color: var(--glass-content-edge);
+  background-color: var(--glass-content-fallback);
+  background-image: var(--glass-content-fill);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 10px 34px rgb(0 0 0 / 12%);
+}
+
+.app-shell .page-container :is(.surface-card, .form-card, .detail-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature),
+body .public-shell .auth-card,
+.admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+  border-radius: var(--radius-card);
+}
+
+.admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+  border: 1px solid var(--glass-content-edge);
+  overflow: hidden;
+}
+
+/* The settings page already uses editorial section dividers; give them a soft material wash. */
+.app-shell .space-pairing,
+.app-shell .space-setting-section {
+  background-image: linear-gradient(145deg, rgb(255 255 255 / 3.8%), transparent 58%);
+}
+
+/* One modal shell for forms and confirmations. The photo itself is intentionally never blurred. */
+.app-shell .home-modal,
+.app-shell .space-memory .home-modal.space-settings-modal,
+.admin-page .home-modal.space-settings-modal {
+  border-color: var(--glass-control-edge);
+  background-color: rgb(23 25 35 / 92%);
+  background-image: linear-gradient(145deg, rgb(255 255 255 / 10%), rgb(23 25 35 / 93%) 36%, rgb(17 19 29 / 96%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 22%), inset 0 0 0 1px rgb(255 255 255 / 3%), 0 28px 90px rgb(0 0 0 / 52%);
+}
+
+.app-shell .home-modal::backdrop,
+.admin-page .home-modal.space-settings-modal::backdrop {
+  background: rgb(5 7 10 / 66%);
+}
+
+/* Full-screen image stays crisp. Only the viewer's compact control rails receive glass. */
+.app-shell .space-photo-viewer__bar,
+.app-shell .space-photo-viewer__footer {
+  border: 1px solid rgb(245 242 255 / 16%);
+  border-radius: 16px;
+  background-color: rgb(13 14 21 / 96%);
+  background-image: linear-gradient(135deg, rgb(255 255 255 / 10%), rgb(13 14 21 / 78%) 58%, rgb(13 14 21 / 90%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 17%), 0 8px 24px rgb(0 0 0 / 18%);
+  padding-inline: 0.6rem;
+}
+
+/* Real background refraction is progressive enhancement; opaque tinted fills are the fallback. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .app-shell .mobile-topbar,
+  .app-shell .bottom-nav,
+  .app-shell .side-rail,
+  .admin-page .admin-header {
+    backdrop-filter: blur(18px) saturate(138%);
+    -webkit-backdrop-filter: blur(18px) saturate(138%);
+  }
+
+  .app-shell .mobile-topbar,
+  .app-shell .bottom-nav {
+    background-color: transparent;
+    background-image: linear-gradient(135deg, rgb(255 255 255 / 15%), rgb(24 26 38 / 66%) 40%, rgb(15 17 27 / 78%));
+  }
+
+  .app-shell .side-rail {
+    background-color: transparent;
+    background-image: linear-gradient(145deg, rgb(255 255 255 / 12%), rgb(22 24 35 / 72%) 44%, rgb(13 14 21 / 84%));
+  }
+
+  .admin-page .admin-header {
+    background-color: transparent;
+    background-image: linear-gradient(135deg, rgb(255 255 255 / 15%), rgb(24 26 38 / 65%) 42%, rgb(15 17 27 / 77%));
+  }
+
+  .app-shell .page-container :is(.space-gallery__toolbar, .life-calendar-toolbar, .calendar-toolbar, .life-todo-filters),
+  .app-shell .space-home__top,
+  .app-shell .space-photo-viewer__bar,
+  .app-shell .space-photo-viewer__footer {
+    backdrop-filter: blur(9px) saturate(128%);
+    -webkit-backdrop-filter: blur(9px) saturate(128%);
+  }
+
+  .app-shell .space-home__top {
+    background-color: rgb(13 14 21 / 30%);
+    background-image: linear-gradient(135deg, rgb(255 255 255 / 16%), rgb(13 14 21 / 28%));
+  }
+
+  .app-shell .space-photo-viewer__bar,
+  .app-shell .space-photo-viewer__footer {
+    background-color: transparent;
+    background-image: linear-gradient(135deg, rgb(255 255 255 / 19%), rgb(13 14 21 / 52%) 58%, rgb(13 14 21 / 68%));
+  }
+
+  .app-shell .page-container :is(.space-gallery__toolbar, .life-calendar-toolbar, .calendar-toolbar, .life-todo-filters) {
+    background-color: rgb(25 27 38 / 78%);
+  }
+
+  .app-shell .page-container :is(.surface-card, .form-card, .detail-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature),
+  body .public-shell .auth-card,
+  .admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+    backdrop-filter: blur(5px) saturate(112%);
+    -webkit-backdrop-filter: blur(5px) saturate(112%);
+  }
+
+  .app-shell .home-modal,
+  .app-shell .space-memory .home-modal.space-settings-modal,
+  body .admin-page .home-modal.space-settings-modal {
+    background-color: transparent;
+    background-image: linear-gradient(145deg, rgb(255 255 255 / 18%), rgb(23 25 35 / 58%) 40%, rgb(17 19 29 / 72%));
+    backdrop-filter: blur(22px) saturate(135%);
+    -webkit-backdrop-filter: blur(22px) saturate(135%);
+  }
+
+  .app-shell .home-modal::backdrop,
+  body .admin-page .home-modal.space-settings-modal::backdrop {
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+
+  .app-shell :is(.button--secondary, .quiet-button, .icon-button, .space-gallery__icon-button, .life-calendar-today, .life-todo-filter, .segmented-button, .space-gallery__switch button, .space-setting-link),
+  .admin-page :is(.admin-button--quiet, .admin-button--secondary, .admin-icon-action) {
+    background-color: rgb(27 29 41 / 58%);
+  }
+}
+
+/* Keep low-end Android/WebViews readable if backdrop-filter is unavailable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-shell .mobile-topbar,
+  .app-shell .bottom-nav,
+  .app-shell .side-rail,
+  .admin-page .admin-header {
+    background-color: rgb(18 20 30 / 97%);
+    background-image: none;
+  }
+
+  .app-shell .page-container :is(.surface-card, .summary-card, .list-card, .form-card, .detail-card, .empty-card, .state-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature, .life-todo-empty),
+  body .public-shell .auth-card,
+  .admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+    background-color: rgb(25 27 38 / 98%);
+  }
+
+  .app-shell .home-modal,
+  .app-shell .space-memory .home-modal.space-settings-modal,
+  body .admin-page .home-modal.space-settings-modal {
+    background-color: rgb(20 22 32 / 99%);
+    background-image: none;
+  }
+
+  .app-shell .home-modal::backdrop,
+  body .admin-page .home-modal.space-settings-modal::backdrop {
+    background: rgb(5 7 10 / 86%);
+  }
+
+  .app-shell .space-home__top,
+  .app-shell .space-photo-viewer__bar,
+  .app-shell .space-photo-viewer__footer {
+    background-color: rgb(13 14 21 / 96%);
+    background-image: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell .mobile-topbar {
+    top: max(0.5rem, env(safe-area-inset-top));
+    margin: 0.5rem 0.5rem 0;
+    border: 1px solid var(--glass-control-edge);
+    border-radius: 22px;
+    padding-inline: 0.65rem;
+  }
+
+  .app-shell .mobile-topbar__logout {
+    border-radius: var(--radius-pill);
+  }
+
+  .app-shell .bottom-nav {
+    right: max(0.5rem, env(safe-area-inset-right));
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    left: max(0.5rem, env(safe-area-inset-left));
+    min-height: 3.9rem;
+    border: 1px solid var(--glass-control-edge);
+    border-radius: 22px;
+    padding: 0.3rem 0.35rem;
+  }
+
+  .app-shell .bottom-nav__link {
+    border-radius: 17px;
+  }
+
+  .app-shell .mobile-topbar,
+  .app-shell .bottom-nav {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 16%), 0 10px 26px rgb(0 0 0 / 16%);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .app-shell .mobile-topbar,
+    .app-shell .bottom-nav {
+      backdrop-filter: blur(12px) saturate(128%);
+      -webkit-backdrop-filter: blur(12px) saturate(128%);
+    }
+
+    .app-shell .page-container :is(.surface-card, .form-card, .detail-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature),
+    body .public-shell .auth-card,
+    .admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+      backdrop-filter: blur(3px) saturate(108%);
+      -webkit-backdrop-filter: blur(3px) saturate(108%);
+    }
+  }
+}
+
+/* Accessibility overrides: opacity rises and blur falls when users request less transparency or more contrast. */
+@media (prefers-reduced-transparency: reduce) {
+  .app-shell .mobile-topbar,
+  .app-shell .bottom-nav,
+  .app-shell .side-rail,
+  .admin-page .admin-header,
+  .app-shell .page-container :is(.space-gallery__toolbar, .life-calendar-toolbar, .calendar-toolbar, .life-todo-filters),
+  .app-shell .space-home__top,
+  .app-shell .space-photo-viewer__bar,
+  .app-shell .space-photo-viewer__footer,
+  .app-shell .home-modal,
+  .app-shell .space-memory .home-modal.space-settings-modal,
+  body .admin-page .home-modal.space-settings-modal {
+    background-color: rgb(18 20 30 / 98%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .app-shell .home-modal::backdrop,
+  body .admin-page .home-modal.space-settings-modal::backdrop {
+    background: rgb(5 7 10 / 86%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .app-shell .page-container :is(.surface-card, .summary-card, .list-card, .form-card, .detail-card, .empty-card, .state-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature, .life-todo-empty),
+  body .public-shell .auth-card,
+  .admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+    background-color: rgb(25 27 38 / 98%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .app-shell :is(.mobile-topbar, .bottom-nav, .side-rail, .home-modal, .space-memory .home-modal.space-settings-modal),
+  body .public-shell .auth-card,
+  .admin-page .admin-header,
+  body .admin-page .home-modal.space-settings-modal {
+    border-color: rgb(255 255 255 / 48%);
+  }
+
+  .app-shell :is(.mobile-topbar, .bottom-nav, .side-rail, .home-modal),
+  .admin-page .admin-header,
+  body .admin-page .home-modal.space-settings-modal {
+    background-color: rgb(18 20 30 / 97%);
+    background-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  body .public-shell .auth-card {
+    background-color: rgb(25 27 38 / 98%);
+    background-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .app-shell .page-container :is(.surface-card, .summary-card, .list-card, .form-card, .detail-card, .empty-card, .state-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature, .life-todo-empty),
+  body .public-shell .auth-card,
+  .admin-page :is(.admin-overview, .admin-member-list, .admin-space-list) {
+    border-color: rgb(255 255 255 / 34%);
+    background-color: rgb(25 27 38 / 98%);
+  }
+}
+
+@media (forced-colors: active) {
+  .app-shell .mobile-topbar,
+  .app-shell .bottom-nav,
+  .app-shell .side-rail,
+  .app-shell .home-modal,
+  .app-shell .space-memory .home-modal.space-settings-modal,
+  .app-shell .page-container :is(.space-gallery__toolbar, .life-calendar-toolbar, .calendar-toolbar, .life-todo-filters),
+  .app-shell .space-home__top,
+  .app-shell .space-photo-viewer__bar,
+  .app-shell .space-photo-viewer__footer,
+  .app-shell .home-modal::backdrop,
+  body .admin-page .home-modal.space-settings-modal::backdrop,
+  .app-shell :is(.button--secondary, .quiet-button, .icon-button, .space-gallery__icon-button, .life-calendar-today, .life-todo-filter, .segmented-button, .space-gallery__switch button, .space-setting-link),
+  .admin-page :is(.admin-button--quiet, .admin-button--secondary, .admin-icon-action),
+  .app-shell .page-container :is(.surface-card, .summary-card, .list-card, .form-card, .detail-card, .empty-card, .state-card, .conflict-card, .calendar-card, .life-calendar-panel, .life-calendar-agenda, .life-anniversary-feature, .life-todo-empty),
+  body .public-shell .auth-card,
+  .admin-page :is(.admin-header, .admin-overview, .admin-member-list, .admin-space-list),
+  body .admin-page .home-modal.space-settings-modal {
+    forced-color-adjust: auto;
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    color: CanvasText;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

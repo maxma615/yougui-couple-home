@@ -200,3 +200,10 @@ WebKit affine fallback、厂商相机/布局/完整鸣牌和和牌时序、牌�
 
 
 产品152e4fb / BuildycYid6qqus1QrnRxwIhyF已实际发布，462源码/432运行摘要一致，保护发布器actualexit0/gone并恢复入口，8助手保持。默认TLS健康200+124公网资源SHA一致；12表/3会话/28照片、清理CID/镜像和1CPU/768MiB限制保持，无OOM。新鲜29成员备份20261007T073446Z-01065a0c0aaa及站外tar全摘要核验。仅回收897成员已全摘要/归档验证的本轮context/upload，完整数据/镜像/release/备份及6380ef0回滚保留；最后实际可用约1.28GB。主目录限定16owned安全同步，451其它文件/索引/next-env以最终证明为准；整个目标继续active。
+
+
+## 旧版官方验牌说明的新增证据（研究完成，当前协议仍未验收）
+
+已保存的一手v0.11.252.w客户端定位到UI_Info_MD5和配置str.str的10001/10002/10003说明。日文步骤明确要求牌山编码后直接接盐字符串、不插入空格，并另校验盐字符串；对应显示字段是sha256和saltSha256。根实际核验10段源码及6行配置原始字节切片与SHA，全部一致，证据在`.local/audit/wall-legacy-code-checker-audit.md`及`.local/audit/wall-legacy-code-checker-root-integrity-proof.json`。此前“未取得任何拼接说明”的状态现已收窄：取得的是旧版官方的人类可读字符串拼接说明。
+
+这仍未证明当前Unity/server随机生成机制、盐生成、确切字节编码或t标记处理，没有完整官方牌墙/盐/两项预期摘要的可复算样例。客户端中的MarathonWallGenerator是活动逻辑，不能替代标准对局RNG。未据此改动洗牌、牌墙或自造官方golden vector；完整目标继续active。下一步应取得有权访问的官方已结束牌谱完整校验字段，验证原始输入和摘要。

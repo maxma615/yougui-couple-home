@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import "./globals.css";
+import "@/components/liquid-glass.css";
 
 export const metadata: Metadata = {
   title: "有归 · 情侣空间",

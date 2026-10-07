@@ -226,7 +226,17 @@ export function TodoEditor({ initial, members }: { initial?: Todo; members: Memb
   );
 }
 
-export function MomentEditor({ initial }: { initial?: Moment }) {
+export function MomentEditor({
+  initial,
+  onSaved,
+  onCancel,
+  onSavingChange,
+}: {
+  initial?: Moment;
+  onSaved?: (moment: Moment) => void;
+  onCancel?: () => void;
+  onSavingChange?: (saving: boolean) => void;
+}) {
   const router = useRouter();
   const [draft, setDraft] = useState<MomentDraft>(() => initial ? momentDraft(initial) : { title: "", date: shanghaiToday(), body: "" });
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -237,6 +247,7 @@ export function MomentEditor({ initial }: { initial?: Moment }) {
 
   async function save(version?: number) {
     setSaving(true);
+    onSavingChange?.(true);
     setMessage(null);
     setFields({});
     try {
@@ -244,7 +255,8 @@ export function MomentEditor({ initial }: { initial?: Moment }) {
         method: initial ? "PATCH" : "POST",
         body: jsonBody(initial ? { ...draft, version: version ?? baseVersion } : draft),
       });
-      router.push(`/moments/${result.id}`);
+      if (onSaved) onSaved(result);
+      else router.push(`/moments/${result.id}`);
     } catch (requestError) {
       if (requestError instanceof ApiError) {
         setFields(requestError.fields);
@@ -253,6 +265,7 @@ export function MomentEditor({ initial }: { initial?: Moment }) {
       setMessage(errorMessage(requestError));
     } finally {
       setSaving(false);
+      onSavingChange?.(false);
     }
   }
 
@@ -276,7 +289,7 @@ export function MomentEditor({ initial }: { initial?: Moment }) {
         </div>
         {message ? <StatusMessage tone="error">{message}</StatusMessage> : null}
         <div className="button-row">
-          <button className="button button--secondary" type="button" onClick={() => router.back()}>取消</button>
+          <button className="button button--secondary" type="button" disabled={saving} onClick={() => { if (onCancel) onCancel(); else router.back(); }}>取消</button>
           <button className="button" type="submit" disabled={saving}>
             {saving ? <LoaderCircle className="spin" size={18} /> : <Save size={18} />}
             {saving ? "正在保存…" : initial ? "保存修改" : "保存并继续添加照片"}

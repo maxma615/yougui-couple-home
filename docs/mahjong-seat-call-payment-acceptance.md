@@ -2,7 +2,7 @@
 
 ## Current status
 
-Implementation follows `docs/superpowers/plans/2026-10-07-mahjong-seat-call-payment.md`; Task1 is approved at `f4fcb495` and Task2 at `99b642da`; Task3 is approved after fix1 at `4f0d8508`; Task4 and joint publication remain pending. Current public release remains `152e4fb`. No candidate from this plan has been frozen or published.
+Tasks1–4 and the separate North sequence are locally implemented and task-approved; Task4 head is `c8be043d`. Joint production review, Linux checks and publication remain pending. Live changed concurrently to `5b92e32e3a74` (album/Liquid Glass); its14 exact changed source bytes are pinned to `f182006` and imported into this candidate, preserving that publication. No candidate from this plan has been frozen or published.
 
 ## Confirmed before-state
 
@@ -27,3 +27,10 @@ Ordinary drag clear of the rack must submit one legal Choice while drag-back/out
 Sanma child mangan ron with honba2 must pay8400. Physical child50fu1han honba2+stick1 must retain hand value1600 with delta[-2000,3000,0]. Result rendering must name the hand value separately from each seat's authoritative gain/payment, current score and current winner's settlement; no client scoring formula or invented combined final score.
 
 Task reports, actual commands/exits/hashes and unique browser artifacts will be appended after verified implementation. Joint review and protected publication include the completed North sequence. Actual Android and unseen vendor choreography/protocol remain outside proven acceptance.
+
+
+## Task4 local acceptance
+
+Shared local lanes12/88%, north9%, south86%, rear floor6px outward plus actual front depth; one camera and own touch rack retained.71 component,66 native geometry scenes,84 exact legal selections,96 drag,84 public-call,24 nuki,12 preserved reflow,48 projection and24 named settlement cases passed. Final standing/line angle≤0.292° and native endpoint residual≤0.519px. Root viewed actual WebKit844 table/dialog/result compositor frames. Task review Approved with a shared tile-size-formula maintenance minor; no current alignment defect.45 fixed-name existing audit files were restored byte-for-byte.
+
+Concurrent publication provenance: fresh server manifests show exactly14 album/material paths changed since152e4fb; every byte matches pinnedf182006. These were copied only into the isolated candidate and will not be copied over primary foreign files. New parent/rollback is5b92e32e3a74 with imageb412760 and BuildV_TVYGZEDFpn3RZel_S5k. Final readiness and actual publication are still pending.

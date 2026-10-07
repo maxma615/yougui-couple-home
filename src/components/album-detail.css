@@ -1,0 +1,288 @@
+.space-memory .home-modal.space-settings-modal {
+  width: min(39rem, calc(100vw - 2rem));
+  max-height: min(54rem, calc(100dvh - 2rem));
+  overscroll-behavior: contain;
+  scroll-padding-block: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-bottom));
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--hairline));
+  background:
+    radial-gradient(ellipse at 92% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 47%),
+    var(--overlay);
+}
+
+.space-memory .home-modal.space-settings-modal > .modal-footer {
+  margin-top: 0.8rem;
+}
+
+.space-memory .home-modal:has(.space-memory__edit-panel) > .modal-footer,
+.space-memory .home-modal:has(.space-memory__delete-photo-panel) > .modal-footer {
+  display: none;
+}
+
+.space-memory__manage-actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.space-memory__manage-actions .button {
+  min-height: 3.1rem;
+  justify-content: flex-start;
+}
+
+.space-memory__manage-actions .button--danger {
+  margin-top: 0.3rem;
+}
+
+.space-memory__edit-panel .form-card {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.space-memory__edit-panel .form-card .button-row {
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
+}
+
+.space-memory__photo-manager {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.space-memory__back-to-manager {
+  justify-self: start;
+  min-height: 2.55rem;
+  margin: -0.25rem 0 0.1rem;
+}
+
+.space-memory__photo-manager .space-memory__picker label {
+  min-height: 5.5rem;
+}
+
+.space-memory__photo-manager .space-memory__help,
+.space-memory__photo-manager .space-memory__photo-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.space-memory__photo-manager .space-memory__error {
+  margin: 0;
+}
+
+.space-memory__upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.space-memory__upload-actions .button {
+  min-height: 2.75rem;
+}
+
+.space-memory__photo-list {
+  display: grid;
+  gap: 0.45rem;
+  max-height: min(38vh, 20rem);
+  overflow-y: auto;
+  margin: 0.1rem 0 0;
+  padding: 0.1rem;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.space-memory__photo-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-input);
+  padding: 0.45rem;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+
+.space-memory__photo-row > img {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 7px;
+  background: var(--bg);
+  object-fit: cover;
+}
+
+.space-memory__photo-row > span {
+  color: var(--text-muted);
+  font-size: 0.83rem;
+}
+
+.space-memory__photo-delete {
+  display: inline-flex;
+  min-width: 2.8rem;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+  padding: 0.35rem 0.5rem;
+  color: var(--danger);
+  background: transparent;
+  cursor: pointer;
+}
+
+.space-memory__photo-delete:hover {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--hairline));
+  background: var(--danger-soft);
+}
+
+.space-memory__delete-photo-panel,
+.space-memory__delete-moment-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.space-memory__delete-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-input);
+  padding: 0.6rem;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.space-memory__delete-preview img {
+  display: block;
+  width: 5.5rem;
+  height: 5.5rem;
+  flex: none;
+  border-radius: 7px;
+  background: var(--bg);
+  object-fit: cover;
+}
+
+.space-memory__delete-preview span {
+  font-size: 0.9rem;
+}
+
+.space-memory__delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.space-memory__delete-actions .button,
+.space-memory__delete-moment-panel > .button {
+  min-height: 2.85rem;
+}
+
+.space-memory__delete-moment-panel > p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.space-memory__empty-photo {
+  display: grid;
+  min-height: 19rem;
+  align-content: center;
+  justify-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+  color: var(--text-muted);
+  background:
+    radial-gradient(ellipse at 50% 15%, var(--accent-soft), transparent 54%),
+    linear-gradient(145deg, var(--surface), var(--bg));
+  text-align: center;
+}
+
+.space-memory__empty-photo svg {
+  margin-bottom: 0.25rem;
+  color: var(--accent);
+}
+
+.space-memory__empty-photo p {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
+}
+
+.space-memory__empty-photo span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.space-memory .space-photo-viewer__image-wrap {
+  touch-action: pan-y;
+}
+
+@media (max-width: 600px) {
+  .space-memory .home-modal.space-settings-modal {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: min(88dvh, 56rem);
+    margin: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 22px 22px 0 0;
+    padding: 1.15rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    animation: album-sheet-enter 260ms var(--motion-ease-reveal) both;
+  }
+
+  .space-memory .home-modal.space-settings-modal.is-closing {
+    animation: album-sheet-exit 180ms var(--motion-ease-soft) both;
+  }
+
+  .space-memory .home-modal.space-settings-modal .modal-heading h2 {
+    font-size: 1.4rem;
+  }
+
+  .space-memory__photo-row {
+    grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+    gap: 0.6rem;
+  }
+
+  .space-memory__photo-row > img {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .space-memory__photo-delete {
+    min-width: 2.75rem;
+    padding-inline: 0.4rem;
+  }
+
+  .space-memory__upload-actions {
+    display: grid;
+  }
+
+  .space-memory__upload-actions .button {
+    justify-content: center;
+  }
+}
+
+@keyframes album-sheet-enter {
+  from { opacity: 0.75; transform: translateY(1.1rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes album-sheet-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(0.8rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-memory .home-modal.space-settings-modal[open],
+  .space-memory .home-modal.space-settings-modal.is-closing {
+    animation: none;
+  }
+}
