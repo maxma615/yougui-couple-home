@@ -234,6 +234,7 @@ for (const method of ["tsumo", "ron"] as const) {
 // Optional exact-name selection bounds native reruns without hiding missing fixtures.
 const requestedFixtures = process.env.SETTLEMENT_FIXTURES?.split(",").filter(Boolean);
 if (requestedFixtures) {
+  assert.ok(requestedFixtures.length > 0, "fixture filter must select at least one fixture");
   assert.equal(new Set(requestedFixtures).size, requestedFixtures.length, "fixture filter must contain unique names");
   for (const name of requestedFixtures) assert.ok(fixtures.some(fixture => fixture.name === name), `requested fixture is missing: ${name}`);
   const selected = fixtures.filter(fixture => requestedFixtures.includes(fixture.name));

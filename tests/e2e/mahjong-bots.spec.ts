@@ -307,7 +307,10 @@ test("多个杠牌方案按需展开，取消不出牌，选中后提交原始�
   await expect(page.getByRole('button',{name:'杠',exact:true})).toHaveCount(1);
   await page.getByRole('button',{name:'杠',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'选择杠牌'});
-  await expect(dialog).toBeVisible(); await expect(dialog.locator('[data-tile-face="p1"]')).toHaveCount(4);
+  await expect(dialog).toBeVisible();
+  const closedKan=dialog.locator('[data-choice-id="kan:p1111"]');
+  await expect(closedKan.locator('[data-tile-face="p1"]')).toHaveCount(2);
+  await expect(closedKan.locator('.mahjong-meld__back')).toHaveCount(2);
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); expect(submitted).toEqual([]);
   await page.getByRole('button',{name:'杠',exact:true}).click();
   await dialog.locator('[data-choice-id="kan:s2222"]').click();

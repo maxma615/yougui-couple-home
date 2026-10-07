@@ -6,7 +6,7 @@ The bounded nuki task was implemented in `fac6422` and its stale layout correcti
 
 ## Verified behavior
 
-Consecutive, same-room/game/hand accepted nuki increments produce one physical source-to-indexed-public-North flight when the own source occurrence is uniquely identified. Survivors reflow by exact face occurrence, retaining red identity, and the replacement entrance starts after flight/reflow. Duplicate own North and concealed opponent sources use finite emphasis of the authoritative North tray. Rob-nuki reaction windows do not prematurely increment or replay the extraction. Input cancels visuals immediately without delaying the legal action.
+Consecutive, same-room/game/hand accepted nuki increments produce one physical source-to-indexed-public-North flight when the own source occurrence is uniquely identified. Survivors reflow by exact face occurrence, retaining red identity, and the replacement entrance starts after the 230ms transfer; survivor reflow can still be finishing at 250ms. Duplicate own North and concealed opponent sources use finite emphasis of the authoritative North tray. Rob-nuki reaction windows do not prematurely increment or replay the extraction. Input cancels visuals immediately without delaying the legal action.
 
 Source and target measurements use the actual shared projected tile paint. Resize/orientation/fullscreen invalidates cached sources immediately; an eligible frame recaptures current geometry. Acceptance before recapture falls back to actual current public target emphasis. Table-only size change cancels delayed draw entrance.
 
