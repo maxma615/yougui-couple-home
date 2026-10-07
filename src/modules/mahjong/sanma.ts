@@ -132,10 +132,10 @@ export class SanmaGame {
     for (const p of this.players) p.ippatsu = false;
   }
 
-  private draw(kind: "zimo" | "gangzimo" | "nukizimo") {
+  private draw(kind: "zimo" | "gangzimo" | "nukizimo", revealKanIndicator = kind === "gangzimo") {
     const p = this.players[this.turn];
     p.temporaryFuriten = false;
-    p.hand.zimo(kind === "zimo" ? this.wall.draw() : this.wall.replace(kind === "gangzimo"));
+    p.hand.zimo(kind === "zimo" ? this.wall.draw() : this.wall.replace(kind === "gangzimo", revealKanIndicator));
     this.phase = kind;
     this.ownChoices();
   }
@@ -148,7 +148,7 @@ export class SanmaGame {
       lizhi: p.riichi,
       yifa: p.ippatsu,
       qianggang: ron?.kind === "kakan",
-      lingshang: !ron && this.phase === "gangzimo",
+      lingshang: !ron && (this.phase === "gangzimo" || this.phase === "nukizimo"),
       haidi: this.wall.remaining === 0 ? (ron?.kind === "discard" ? 2 : !ron && this.phase === "zimo" ? 1 : 0 ): 0,
       tianhu: !ron && this.uninterrupted && p.discards.length === 0 ? (seat === this.dealer ? 1 : 2 ): 0,
       baopai: this.wall.dora,
@@ -244,7 +244,7 @@ export class SanmaGame {
       } else {
         p.hand.gang(r.meld!);
         p.kans++;
-        this.draw("gangzimo");
+        this.draw("gangzimo", r.kind === "ankan");
       }
       this.reaction = null;
       return;
@@ -272,7 +272,7 @@ export class SanmaGame {
         this.reaction = null;
         if (reply.type === "kan") {
           this.players[seat].kans++;
-          this.draw("gangzimo");
+          this.draw("gangzimo", false);
         } else {
           this.phase = "fulou";
           this.ownChoices();
@@ -428,6 +428,9 @@ export class SanmaGame {
     }
     if (choice.type === "kan") {
       this.cancelFirstTurn();
+      // The prior open-kan indicator is revealed when a subsequent kan is
+      // declared, even if that new added kan is then robbed.
+      this.wall.revealPendingKanDora();
       const meld = choice.value!;
       this.react({
         kind: /^[mpsz]\d{4}$/.test(meld) ? "ankan" : "kakan",
@@ -444,6 +447,7 @@ export class SanmaGame {
       p.riichi = this.uninterrupted && p.discards.length === 0 ? 2 : 1;
       p.ippatsu = true;
     }
+    this.wall.revealPendingKanDora();
     p.hand.dapai(tile + (riichi ? "*" : ""));
     p.discards.push(tile + (riichi ? "*" : ""));
     this.react({

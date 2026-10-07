@@ -133,7 +133,40 @@ describe("Sanma special rules with physical fixtures",()=>{
     expect([...dealt,...replacement,...remaining,...indicatorSlots,...deadReserve].sort()).toEqual(ordered.sort());
     expect(()=>wall.replace(false)).toThrow();
   });
-  it("offers north extraction with no new dora and no first-turn/rinshan yaku",()=>{
+  it("keeps completed open kans separate from revealed Dora/Ura and reserves the fifth Kan boundary",()=>{
+    const ordered=sanmaTiles(),wall=new SanmaWall(ordered),dealt=Array.from({length:40},()=>wall.draw()),replacement:string[]=[];
+    const indicatorSlots=ordered.slice(98);
+    for(let kan=0;kan<4;kan++) {
+      if(kan)wall.revealPendingKanDora();
+      replacement.push(wall.replace(true,false));
+      expect(wall.dora).toEqual(indicatorSlots.filter((_,i)=>i%2===0).slice(0,kan+1));
+      expect(wall.ura).toEqual(indicatorSlots.filter((_,i)=>i%2===1).slice(0,kan+1));
+    }
+    expect(wall.canKan).toBe(false);
+    expect(wall.canReplace).toBe(true);
+    expect(wall.dora).toHaveLength(4);
+    wall.revealPendingKanDora();
+    expect(wall.dora).toEqual(indicatorSlots.filter((_,i)=>i%2===0));
+    expect(wall.ura).toEqual(indicatorSlots.filter((_,i)=>i%2===1));
+    replacement.push(...Array.from({length:4},()=>wall.replace(false)));
+    expect(wall.canReplace).toBe(false);
+    const remaining=Array.from({length:wall.remaining},()=>wall.draw());
+    const deadReserve=ordered.slice(86,90).reverse();
+    expect([...dealt,...replacement,...remaining,...indicatorSlots,...deadReserve].sort()).toEqual(ordered.sort());
+  });
+  it("allows a last-live open-kan replacement, then blocks draws and waits to expose its indicator",()=>{
+    const ordered=sanmaTiles(),wall=new SanmaWall(ordered);
+    for(let i=0;i<93;i++)wall.draw();
+    expect(wall.remaining).toBe(1);expect(wall.canKan).toBe(true);
+    expect(wall.replace(true,false)).toBe(ordered[94]);
+    expect(wall.remaining).toBe(0);expect(wall.canReplace).toBe(false);expect(wall.canKan).toBe(false);
+    expect(wall.dora).toEqual([ordered[98]]);expect(wall.ura).toEqual([ordered[99]]);
+    expect(()=>wall.draw()).toThrow("Live wall exhausted");
+    wall.revealPendingKanDora();
+    expect(wall.dora).toEqual([ordered[98],ordered[100]]);
+    expect(wall.ura).toEqual([ordered[99],ordered[101]]);
+  });
+  it("offers North extraction with no new dora and scores its replacement without restoring first-turn status",()=>{
     const game=new SanmaGame("east",names,fixture({0:"p123456789s123z2"},["z4"],["z2"]));
     const before=game.view(0);expect(before.choices.some(c=>c.type==="nuki")).toBe(true);
     act(game,0,"nuki");passAll(game);
@@ -144,11 +177,49 @@ describe("Sanma special rules with physical fixtures",()=>{
     act(game,0,"tsumo");
     const settlement=game.view(0).settlement!;
     expect(settlement).toMatchObject({kind:"win",winnerSeat:0,winMethod:"tsumo",winningTile:"z2"});
+    expect(settlement).toMatchObject({fu:30,han:6,points:12000,delta:[12000,-6000,-6000]});
+    expect(settlement.delta.reduce((sum,points)=>sum+points,0)).toBe(0);
     const settlementViews=[0,1,2].map(seat=>game.view(seat));
     expect(settlementViews.every(view=>view.settlement?.hand===settlement.hand)).toBe(true);
     expect(settlementViews.map(view=>view.settlement?.winMethod)).toEqual(["tsumo","tsumo","tsumo"]);
     const yaku=settlement.yaku.map(y=>y.name);
-    expect(yaku).toContain("抜きドラ");expect(yaku).not.toContain("天和");expect(yaku).not.toContain("嶺上開花");
+    expect(yaku).toContain("抜きドラ");expect(yaku).toContain("嶺上開花");expect(yaku).not.toContain("天和");
+  });
+  it("awards rinshan only for a winning North replacement, including an open hand whose only yaku is rinshan",()=>{
+    const options=fixture({0:"m11p12s123456z77z4"},["s9","m1","z1","z2","p2"],["p3"]);
+    const game=new SanmaGame("east",names,options);
+    act(game,0,"discard:s9_");
+    act(game,1,"discard:m1_");
+    const pon=game.view(0).choices.find(choice=>choice.type==="pon");
+    expect(pon).toBeDefined();act(game,0,pon!.id);passAll(game);
+    act(game,0,"discard:p2");passAll(game);
+    act(game,1,"discard:z1_");passAll(game);
+    act(game,2,"discard:z2_");passAll(game);
+    expect(game.view(0).drawnTile).toBe("p2");
+    expect(game.view(0).choices.some(choice=>choice.type==="tsumo")).toBe(false);
+    act(game,0,"nuki");passAll(game);
+
+    const replacement=game.view(0);
+    expect(replacement.phase).toBe("nukizimo");
+    expect(replacement.drawnTile).toBe("p3");
+    expect(replacement.choices.some(choice=>choice.type==="tsumo")).toBe(true);
+    act(game,0,"tsumo");
+    const settlement=game.view(0).settlement!;
+    expect(settlement).toMatchObject({fu:30,han:2,points:2000,delta:[2000,-1000,-1000]});
+    expect(settlement.delta.reduce((sum,points)=>sum+points,0)).toBe(0);
+    expect(settlement.yaku.map(yaku=>yaku.name)).toContain("嶺上開花");
+    expect(settlement.yaku.map(yaku=>yaku.name).filter(name=>name!=="抜きドラ"&&name!=="ドラ")).toEqual(["嶺上開花"]);
+
+    const ordinary=new SanmaGame("east",names,fixture({0:"m11p12s123456z77z4"},["s9","m1","z1","z2","p3"]));
+    act(ordinary,0,"discard:s9_");act(ordinary,1,"discard:m1_");
+    const ordinaryPon=ordinary.view(0).choices.find(choice=>choice.type==="pon")!;
+    act(ordinary,0,ordinaryPon.id);passAll(ordinary);
+    act(ordinary,0,"discard:z4");passAll(ordinary);
+    act(ordinary,1,"discard:z1_");passAll(ordinary);
+    act(ordinary,2,"discard:z2_");passAll(ordinary);
+    expect(ordinary.view(0).drawnTile).toBe("p3");
+    expect(ordinary.view(0).phase).toBe("zimo");
+    expect(ordinary.view(0).choices.some(choice=>choice.type==="tsumo")).toBe(false);
   });
   it("publishes a shared draw flag for a real replacement draw and clears it on discard",()=>{
     const game=new SanmaGame("east",names,fixture({0:"p123456789s123z2"},["z4"],["z2"]));
@@ -180,6 +251,7 @@ describe("Sanma special rules with physical fixtures",()=>{
     expect(settlement).toMatchObject({kind:"win",winnerSeat:1,winMethod:"ron",winningTile:"z4"});
     expect([0,1,2].map(seat=>game.view(seat).settlement?.winMethod)).toEqual(["ron","ron","ron"]);
     expect(settlement.yaku.map(y=>y.name)).not.toContain("槍槓");
+    expect(settlement.yaku.map(y=>y.name)).not.toContain("嶺上開花");
     const passed=new SanmaGame("east",names,options);act(passed,0,"nuki");passAll(passed);
     act(passed,0,"nuki");
     expect(passed.view(1).choices.some(c=>c.type==="ron")).toBe(false);
@@ -338,6 +410,33 @@ describe("Sanma score boundaries and late-hand rules",()=>{
     expect(split.view(0).settlement!.name).toBe("四開槓");
     expect(split.view(0).settlement!.delta).toEqual([0,0,0]);
   });
+  it("withholds daiminkan Dora through a replacement tsumo, then reveals it before discard reactions",()=>{
+    const options=fixture({0:"p111p234s123s45z77"},["s9","p1"],["s6"],["z1","z2","p3","p2"]);
+    const game=new SanmaGame("east",names,options);
+    act(game,0,"discard:s9_");act(game,1,"discard:p1_");
+    const kan=game.view(0).choices.find(choice=>choice.type==="kan");
+    expect(kan).toBeDefined();act(game,0,kan!.id);passAll(game);
+
+    const replacement=game.view(0);
+    expect(replacement.phase).toBe("gangzimo");
+    expect(replacement.drawnTile).toBe("s6");
+    expect(replacement.doraIndicators).toEqual(["z1"]);
+    expect(replacement.choices.some(choice=>choice.type==="tsumo")).toBe(true);
+    act(game,0,"tsumo");
+    const win=game.view(0).settlement!;
+    expect(win.yaku.map(yaku=>yaku.name)).toContain("嶺上開花");
+    expect(win.yaku.map(yaku=>yaku.name)).not.toContain("ドラ");
+    expect(win.han).toBe(1);
+
+    const discarding=new SanmaGame("east",names,options);
+    act(discarding,0,"discard:s9_");act(discarding,1,"discard:p1_");
+    const secondKan=discarding.view(0).choices.find(choice=>choice.type==="kan")!;
+    act(discarding,0,secondKan.id);passAll(discarding);
+    expect(discarding.view(0).doraIndicators).toEqual(["z1"]);
+    const discard=discarding.view(0).choices.find(choice=>choice.type==="discard")!;
+    act(discarding,0,discard.id);
+    expect(discarding.view(1).doraIndicators).toEqual(["z1","p3"]);
+  });
   it("disallows extraction and kan when no legal replacement remains",()=>{
     const wall=new SanmaWall(sanmaTiles());
     while(wall.remaining)wall.draw();
@@ -486,12 +585,58 @@ it("omits nuki on the final live-wall North and supports nine-terminals abort wi
 
 it("offers a real added kan after pon and gives its robber the chankan yaku",()=>{
   const game=new SanmaGame("east",names,fixture({1:"p11s123456789z22",2:"p23s123456789z44"},["p1","z3","z4","p1"]));
+  const before=game.view(0).doraIndicators;
   act(game,0,"discard:p1_");act(game,1,"pon:p111-");passAll(game);
   act(game,1,"discard:s9");passAll(game);act(game,2,"discard:z3_");passAll(game);act(game,0,"discard:z4_");passAll(game);
   expect(game.view(1).choices.some(c=>c.id==="kan:p111-1")).toBe(true);
-  act(game,1,"kan:p111-1");expect(game.view(2).choices.some(c=>c.type==="ron")).toBe(true);act(game,2,"ron");passAll(game);
+  act(game,1,"kan:p111-1");expect(game.view(2).choices.some(c=>c.type==="ron")).toBe(true);
+  expect(game.view(2).doraIndicators).toEqual(before);
+  act(game,2,"ron");passAll(game);
   expect(game.view(0).settlement).toMatchObject({winnerSeat:2,winMethod:"ron",winningTile:"p1"});
   expect(game.view(0).settlement!.yaku.map(y=>y.name)).toContain("槍槓");
+  expect(game.view(0).doraIndicators).toEqual(before);
+});
+
+it("defers a successful added-kan indicator until discard",()=>{
+  const simple=new SanmaGame("east",names,fixture(
+    {1:"p11s123456789z22",2:"m19p9s123456z1234"},
+    ["p1","z3","z4","p1"],[],["z1","z2","p3","p2"]
+  ));
+  act(simple,0,"discard:p1_");act(simple,1,"pon:p111-");passAll(simple);
+  act(simple,1,"discard:s9");passAll(simple);act(simple,2,"discard:z3_");passAll(simple);act(simple,0,"discard:z4_");passAll(simple);
+  const kakan=simple.view(1).choices.find(choice=>choice.type==="kan")!;
+  act(simple,1,kakan.id);passAll(simple);
+  expect(simple.view(1).phase).toBe("gangzimo");
+  expect(simple.view(1).doraIndicators).toEqual(["z1"]);
+  const afterReplacement=simple.view(1).choices.find(choice=>choice.type==="discard")!;
+  act(simple,1,afterReplacement.id);
+  expect(simple.view(0).doraIndicators).toEqual(["z1","p3"]);
+});
+
+it("reveals an earlier pending open-kan indicator before a later added kan can be robbed",()=>{
+  const chained=new SanmaGame("east",names,fixture(
+    {0:"p11p222s123456z77",1:"m19p9s123456z2345",2:"m19p9s19z11234567"},
+    ["s9","p1","z1","p2"],["p1"],["z1","z2","z6","z3"]
+  ));
+  act(chained,0,"discard:s9_");act(chained,1,"discard:p1_");
+  const pon=chained.view(0).choices.find(choice=>choice.type==="pon")!;
+  act(chained,0,pon.id);passAll(chained);
+  act(chained,0,"discard:z7");passAll(chained);
+  act(chained,1,"discard:z1_");passAll(chained);
+  expect(chained.view(2).drawnTile).toBe("p2");act(chained,2,"discard:p2_");
+  const daiminkan=chained.view(0).choices.find(choice=>choice.type==="kan")!;
+  act(chained,0,daiminkan.id);passAll(chained);
+  expect(chained.view(0).phase).toBe("gangzimo");
+  expect(chained.view(0).drawnTile).toBe("p1");
+  expect(chained.view(0).doraIndicators).toEqual(["z1"]);
+  const nextKan=chained.view(0).choices.find(choice=>choice.type==="kan")!;
+  act(chained,0,nextKan.id);
+  expect(chained.view(2).choices.some(choice=>choice.type==="ron")).toBe(true);
+  expect(chained.view(2).doraIndicators).toEqual(["z1","z6"]);
+  act(chained,2,"ron");passAll(chained);
+  expect(chained.view(2).settlement!.yaku.map(yaku=>yaku.name)).toContain("国士無双");
+  expect(chained.view(2).settlement!.yaku.map(yaku=>yaku.name)).not.toContain("槍槓");
+  expect(chained.view(2).doraIndicators).toEqual(["z1","z6"]);
 });
 
 

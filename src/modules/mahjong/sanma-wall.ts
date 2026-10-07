@@ -12,13 +12,14 @@ export function sanmaTiles(): string[] {
 
 /** The ordered fixture is draw order, followed by four reserve tiles and ten
  * fixed alternating dora/ura slots. A replacement refills the reserve from the
- * live tail. Thus all eight replacements remain disjoint from every indicator. */
+ * live tail. Open-kan dora can remain pending without changing physical order. */
 export class SanmaWall {
   private live: string[];
   private reserve: string[];
   private indicators: string[];
   private replacements = 0;
-  private kans = 0;
+  private completedKans = 0;
+  private revealedKans = 0;
 
   constructor(ordered?: string[]) {
     const tiles = ordered?.slice() ?? sanmaTiles();
@@ -41,18 +42,18 @@ export class SanmaWall {
   }
 
   get canKan() {
-    return this.canReplace && this.kans < 4;
+    return this.canReplace && this.completedKans < 4;
   }
 
   get dora() {
     return Array.from({
-      length: 1 + this.kans
+      length: 1 + this.revealedKans
     }, (_, i) => this.indicators[2 * i]);
   }
 
   get ura() {
     return Array.from({
-      length: 1 + this.kans
+      length: 1 + this.revealedKans
     }, (_, i) => this.indicators[2 * i + 1]);
   }
 
@@ -61,12 +62,19 @@ export class SanmaWall {
     return this.live.shift()!;
   }
 
-  replace(kan: boolean) {
+  revealPendingKanDora() {
+    this.revealedKans = this.completedKans;
+  }
+
+  replace(kan: boolean, revealKanIndicator = kan) {
     if (!this.canReplace || (kan && !this.canKan)) throw new Error("Replacement unavailable");
     const tile = this.reserve.shift()!;
     this.reserve.push(this.live.pop()!);
     this.replacements++;
-    if (kan) this.kans++;
+    if (kan) {
+      this.completedKans++;
+      if (revealKanIndicator) this.revealedKans = this.completedKans;
+    }
     return tile;
   }
 }
