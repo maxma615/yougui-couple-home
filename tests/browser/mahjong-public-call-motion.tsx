@@ -120,7 +120,48 @@ for(const engine of [chromium,webkit]) {
     await render(f.before);await render(f.after,true,false);assert.equal(await page.getByTestId('mahjong-call-flight').count(),0,'silent hydration');
     
     // Real opponent discard remains in flight when the legal call is accepted.
-    if(viewer===1){const rapid=fixture(kind,variant,viewer);await render(rapid.initial,true,false);await page.waitForTimeout(40);await render(rapid.before);assert.equal(await page.getByTestId('mahjong-discard-flight').count(),1);await render(rapid.after);assert.equal(await page.getByTestId('mahjong-call-flight').count(),0,'hidden old river must not be invented');assert.equal(await page.locator('[data-meld-seat="1"]').evaluate(e=>e.getAnimations().filter(a=>a.id.startsWith('mahjong-public-call:')).length),1,'hidden source group emphasis');}
+    if(viewer===1){
+     const rapid=fixture(kind,variant,viewer);await render(rapid.initial,true,false);await page.waitForTimeout(40);
+     const overlap=await page.evaluate(({before,after})=>{
+      const api=(window as any).callApi;api.render(before);const discardAcceptedAt=performance.now();
+      const discardFlight=document.querySelector<HTMLElement>('[data-testid="mahjong-discard-flight"]');
+      const hiddenSource=document.querySelector<HTMLElement>('.is-discard-motion-hidden[data-discard-event-id]');
+      const hiddenSourceId=hiddenSource?.dataset.discardEventId??null;
+      api.render(after);const callAcceptedAt=performance.now();
+      const callFlight=document.querySelector<HTMLElement>('[data-testid="mahjong-call-flight"]');
+      const targetGroup=document.querySelector<HTMLElement>('[data-meld-seat="1"][data-meld-index="0"]');
+      const targetFace=targetGroup?.querySelector<HTMLElement>('[data-called] .mahjong-tile');
+      const targetVolume=targetFace?.closest<HTMLElement>('[data-meld-volume]');
+      return {
+       elapsedMs:callAcceptedAt-discardAcceptedAt,discardFlightAtCallStart:Boolean(discardFlight),hiddenSourceId,
+       sourceEventId:callFlight?.dataset.motionSourceTileId??null,flightSource:callFlight?.dataset.motionSource??null,
+       callFlightCount:document.querySelectorAll('[data-testid="mahjong-call-flight"]').length,
+       discardFlightCount:document.querySelectorAll('[data-testid="mahjong-discard-flight"]').length,
+       sourceEventStillInRiver:Boolean(hiddenSourceId&&document.querySelector(`[data-discard-event-id="${hiddenSourceId}"]`)),
+       targetVolumeVisibility:targetVolume?getComputedStyle(targetVolume).visibility:null,
+       targetPhysicalVisibility:targetVolume?[...targetVolume.querySelectorAll<HTMLElement>('[data-meld-surface], [data-meld-side]')].map(e=>getComputedStyle(e).visibility):[],
+       sideCount:targetVolume?.querySelectorAll('[data-meld-side]').length??0,
+      };
+     },{before:rapid.before,after:rapid.after});
+     assert.ok(overlap.elapsedMs<230,`legal ${kind} accepted ${overlap.elapsedMs.toFixed(2)} ms after the real discard`);
+     assert.equal(overlap.discardFlightAtCallStart,true,'the accepted call overlaps the real opponent discard flight');
+     assert.ok(overlap.hiddenSourceId,'the accepted discard is hidden under its flight portal');
+     assert.equal(overlap.sourceEventId,overlap.hiddenSourceId,'the same hidden discard is consumed by the call flight');
+     assert.equal(overlap.flightSource,'public');assert.equal(overlap.callFlightCount,1);
+     assert.equal(overlap.discardFlightCount,0,'the cancelled discard leaves no duplicate portal');
+     assert.equal(overlap.sourceEventStillInRiver,false,'the call flight owns the claimed river source');
+     assert.equal(overlap.targetVolumeVisibility,'hidden');assert.equal(overlap.targetPhysicalVisibility.length,6);
+     assert.ok(overlap.targetPhysicalVisibility.every(value=>value==='hidden'));assert.equal(overlap.sideCount,4);
+     await page.evaluate(()=>{for(const a of document.querySelector('[data-testid="mahjong-call-flight"]')?.getAnimations()??[])a.finish()});await page.waitForTimeout(30);
+     const cleanup=await page.evaluate(()=>{const target=document.querySelector<HTMLElement>('[data-meld-seat="1"][data-meld-index="0"] [data-called] .mahjong-tile')!,volume=target.closest<HTMLElement>('[data-meld-volume]')!;return {
+      callFlightCount:document.querySelectorAll('[data-testid="mahjong-call-flight"]').length,
+      discardFlightCount:document.querySelectorAll('[data-testid="mahjong-discard-flight"]').length,
+      sourceEventCount:document.querySelectorAll('[data-discard-event-id$=":0:0"]').length,
+      volumeInlineVisibility:volume.style.visibility,volumeVisibility:getComputedStyle(volume).visibility,
+      physicalVisibility:[...volume.querySelectorAll<HTMLElement>('[data-meld-surface], [data-meld-side]')].map(e=>getComputedStyle(e).visibility),
+     }});
+     assert.deepEqual(cleanup,{callFlightCount:0,discardFlightCount:0,sourceEventCount:0,volumeInlineVisibility:'',volumeVisibility:'visible',physicalVisibility:Array(6).fill('visible')});
+    }
     await render(f.before);await render(f.after);await page.evaluate(async()=>{window.dispatchEvent(new Event('resize'));await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))});assert.equal(await page.getByTestId('mahjong-call-flight').count(),0,'resize restores hidden target');
     assert.equal(await page.locator('[data-meld-seat="1"] [data-called] .mahjong-tile').evaluate(e=>getComputedStyle(e).visibility),'visible');
     if(viewer===1){await render(f.before);await render(f.after);await page.locator('.mahjong-hand button').first().click();assert.equal(await page.getByTestId('mahjong-call-flight').count(),0,'own input cancels visual without delay');assert.equal(await page.locator('[data-meld-seat="1"]').evaluate(e=>e.getAnimations().length),0);}

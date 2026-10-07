@@ -4,21 +4,26 @@ import type {RoomView} from '@/modules/mahjong/types';
 import {acceptedPublicCallEvent} from './public-call-motion';
 import {measureDiscardElement,rectToFlight,type FlightView} from './use-discard-motion';
 type Measurement = NonNullable<ReturnType<typeof measureDiscardElement>>;
-type Baseline = {room:RoomView;connected:boolean;sources:Map<string,Measurement>};
+type Baseline = {room:RoomView;connected:boolean;environmentEpoch:number;sources:Map<string,Measurement>};
 type Active = {id:string;decision:string;group:HTMLElement;emphasis:Animation|null;target?:HTMLElement;visibility:string;priority:string;volume?:HTMLElement;volumeVisibility:string;volumePriority:string};
-function readRivers(table:HTMLElement|null) {
+function readRivers(table:HTMLElement|null, retained:ReadonlyMap<string,Measurement> = new Map()) {
   const sources = new Map<string,Measurement>();
   table?.querySelectorAll<HTMLElement>('[data-discard-event-id]').forEach(wrapper=>{
+    const id = wrapper.dataset.discardEventId;
+    if (wrapper.closest('.is-discard-motion-hidden')) {
+      const active = id && retained.get(id);
+      if (active) sources.set(id!,active);
+      return;
+    }
     const face = wrapper.querySelector<HTMLElement>('.mahjong-tile');
-    if (!face || !face.isConnected || getComputedStyle(face).visibility !== 'visible'
+    if (!id || !face || !face.isConnected || getComputedStyle(face).visibility !== 'visible'
       || getComputedStyle(wrapper).visibility !== 'visible' || Number(getComputedStyle(face).opacity) === 0
-      || Number(getComputedStyle(wrapper).opacity) === 0
-      || wrapper.closest('.is-discard-motion-hidden')) return;
+      || Number(getComputedStyle(wrapper).opacity) === 0) return;
     const measurement = measureDiscardElement(face);
     if (measurement) {
       const filter = getComputedStyle(wrapper).filter;
       const paint = {...measurement.paint,filter:[measurement.paint.filter,filter].filter(f=>f&&f!=='none').join(' ')||'none'};
-      sources.set(wrapper.dataset.discardEventId!,{...measurement,paint});
+      sources.set(id,{...measurement,paint});
     }
   });
   return sources;
@@ -27,6 +32,7 @@ export function usePublicCallMotion({room,ownSeat,connected,canAnimate,tableRef}
   room:RoomView;ownSeat:number;connected:boolean;canAnimate:boolean;tableRef:RefObject<HTMLDivElement|null>;
 }) {
   const previous = useRef<Baseline|null>(null), active = useRef<Active|null>(null);
+  const environmentEpoch = useRef(0);
   const [flight,setFlight] = useState<FlightView|null>(null);
   const restoreTarget = useCallback(()=>{
     const current=active.current;
@@ -57,8 +63,11 @@ export function usePublicCallMotion({room,ownSeat,connected,canAnimate,tableRef}
     const hidden=document.visibilityState==='hidden';
     const eligible=connected&&canAnimate&&!reduced&&!hidden;
     const event=eligible&&old?.connected?acceptedPublicCallEvent(old.room,room):null;
-    const sameScope=old&&old.room.id===room.id&&old.room.mySeat===room.mySeat
+    const sameScope=old&&old.room.id===room.id&&old.room.variant===room.variant
+      &&old.room.status===room.status&&old.room.mySeat===room.mySeat
       &&old.room.game?.gameInstanceId===room.game?.gameInstanceId&&old.room.game?.handId===room.game?.handId;
+    const retainActiveSources=Boolean(eligible&&sameScope&&old?.connected===connected
+      &&old.environmentEpoch===environmentEpoch.current);
     if(active.current&&(!connected||reduced||hidden||room.status!=='playing'||!active.current.group.isConnected||!sameScope||old?.connected!==connected
       ||room.game?.settlement||room.game?.decisionId!==active.current.decision))cancel();
     if(event&&table){
@@ -91,15 +100,17 @@ export function usePublicCallMotion({room,ownSeat,connected,canAnimate,tableRef}
         }
       }
     }
-    previous.current={room,connected,sources:readRivers(table)};
+    previous.current={room,connected,environmentEpoch:environmentEpoch.current,
+      sources:readRivers(table,retainActiveSources?old!.sources:undefined)};
   });
   useEffect(()=>{
     const table=tableRef.current,query=window.matchMedia?.('(prefers-reduced-motion: reduce)');
     let size=table?.getBoundingClientRect(),frame:number|null=null;
     const invalidate=()=>{
+      environmentEpoch.current++;
       cancel();if(frame!==null)cancelAnimationFrame(frame);frame=null;
       const baseline=previous.current;if(!baseline)return;
-      const invalidated={...baseline,sources:new Map<string,Measurement>()};previous.current=invalidated;
+      const invalidated={...baseline,environmentEpoch:environmentEpoch.current,sources:new Map<string,Measurement>()};previous.current=invalidated;
       if(typeof requestAnimationFrame!=='function')return;
       frame=requestAnimationFrame(()=>{
         frame=null;

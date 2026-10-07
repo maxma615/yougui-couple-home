@@ -9,7 +9,9 @@
   inset: 0;
   z-index: 1;
   transform-origin: 50% 44%;
-  transform: perspective(150cqh) rotateX(28deg) scaleX(.94);
+  /* Keep the wider near rail inside the viewport without changing the shared
+     camera or the independent concealed-hand touch lane. */
+  transform: perspective(150cqh) rotateX(28deg) scale(.84);
   background:
     radial-gradient(ellipse at 50% 44%, rgb(126 170 195 / 6%), transparent 42%),
     radial-gradient(ellipse at 50% 43%, #293e50 0, #233648 48%, #1c2d3c 78%, #172632 100%);
