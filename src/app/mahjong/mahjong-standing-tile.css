@@ -144,3 +144,20 @@
 .mahjong-game .mahjong-table__surface .mahjong-hand-public-melds {
   translate: 0 0 1px;
 }
+
+/* Keep contextual buttons inward from the side rack, above the viewer's hand. */
+.mahjong-page .mahjong-game:not(.is-finished) .mahjong-action-dock {
+  right: max(14%, env(safe-area-inset-right));
+}
+
+/* A kan adds a physical tile to the side row. Reserve a standing tile's full
+   height and a small gap below the indicators on short landscape tables. */
+@media (max-height: 600px) and (orientation: landscape) {
+  .mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-opponent-rack {
+    top: calc(50% + min(2.59cqw, 5.3cqh, 38px) + 4px);
+  }
+
+  .mahjong-page .mahjong-game .mahjong-table__own .mahjong-player__head {
+    width: clamp(48px, 7.2cqw, 84px);
+  }
+}
