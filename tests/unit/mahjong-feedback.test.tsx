@@ -7,6 +7,7 @@ import { useTableFeedback } from "@/components/mahjong/use-table-feedback";
 import { RiichiGame } from "@/modules/mahjong/engine";
 import { SanmaGame } from "@/modules/mahjong/sanma";
 import { SanmaWall, sanmaTiles } from "@/modules/mahjong/sanma-wall";
+import { northReplacementFixture } from "../fixtures/mahjong-view-game";
 
 function game(overrides: Partial<GameView> = {}): GameView {
   return {
@@ -41,6 +42,108 @@ function members(names = ["P0", "P1", "P2"]): RoomMember[] {
 
 describe("useTableFeedback lifecycle and event recognition", () => {
   afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+  it("keeps confirmed North feedback through a fast legal discard without extending its deadline", () => {
+    vi.useFakeTimers();
+    const engine = northReplacementFixture();
+    const before = engine.view(0);
+    const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(), 0, "room-a"), {
+      initialProps: { current: before },
+    });
+    const nuki = before.choices.find(choice => choice.type === "nuki");
+    expect(nuki).toBeDefined();
+    engine.respond(0, before.decisionId, nuki!.id);
+    for (const seat of [1, 2]) {
+      const view = engine.view(seat), pass = view.choices.find(choice => choice.type === "pass");
+      if (pass) engine.respond(seat, view.decisionId, pass.id);
+    }
+    rerender({ current: engine.view(0) });
+    expect(result.current).toMatchObject({ kind: "nuki", text: "你 · 拔北" });
+    act(() => vi.advanceTimersByTime(250));
+    const replacement = engine.view(0), discard = replacement.choices.find(choice => choice.type === "discard");
+    expect(discard).toBeDefined();
+    engine.respond(0, replacement.decisionId, discard!.id);
+    const after = engine.view(0);
+    expect(after.players[0].discards).toHaveLength(1);
+    expect(after.players[0].nuki).toBe(1);
+    rerender({ current: after });
+    expect(result.current).toMatchObject({ kind: "nuki", text: "你 · 拔北" });
+    act(() => vi.advanceTimersByTime(649));
+    expect(result.current?.kind).toBe("nuki");
+    act(() => vi.advanceTimersByTime(1));
+    expect(result.current).toBeNull();
+    expect(after.players[0].nuki).toBe(1);
+  });
+
+  it("announces each real double-ron winner and gives the second announcement its own deadline", () => {
+    vi.useFakeTimers();
+    const engine = new SanmaGame("east", ["A", "B", "C"], sanmaFixture({
+      1: "p123456789s123z2", 2: "p123456789s123z2",
+    }, ["z2"]));
+    const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(), 0, "room-a"), {
+      initialProps: { current: engine.view(0) },
+    });
+    const dealer = engine.view(0);
+    expect(dealer.choices.some(choice => choice.id === "discard:z2_")).toBe(true);
+    engine.respond(0, dealer.decisionId, "discard:z2_");
+    for (const seat of [2, 1]) {
+      const view = engine.view(seat);
+      expect(view.choices.some(choice => choice.type === "ron")).toBe(true);
+      engine.respond(seat, view.decisionId, "ron");
+    }
+    const first = engine.view(0);
+    expect(first.settlement?.winnerSeat).toBe(1);
+    rerender({ current: first });
+    expect(result.current).toMatchObject({ kind: "win", seat: 1, text: "P1 · 和牌" });
+    for (const seat of [0, 1, 2]) {
+      act(() => vi.advanceTimersByTime(100));
+      const view = engine.view(seat);
+      expect(view.choices.some(choice => choice.id === "ack")).toBe(true);
+      engine.respond(seat, view.decisionId, "ack");
+      rerender({ current: engine.view(0) });
+    }
+    const second = engine.view(0);
+    expect(second.settlement?.winnerSeat).toBe(2);
+    expect(second.decisionId).not.toBe(first.decisionId);
+    expect(result.current).toMatchObject({ key: second.decisionId, kind: "win", seat: 2, text: "P2 · 和牌" });
+    act(() => vi.advanceTimersByTime(899));
+    expect(result.current?.seat).toBe(2);
+    act(() => vi.advanceTimersByTime(1));
+    expect(result.current).toBeNull();
+    rerender({ current: second });
+    expect(result.current).toBeNull();
+  });
+
+  it("lets a new special action replace North feedback while an ordinary draw cannot", () => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(), 0, "room-a"), {
+      initialProps: { current: game() },
+    });
+    const nuki = game({ decisionId: "nuki", players: game().players.map(p => p.seat === 1 ? { ...p, nuki: 1 } : p) });
+    rerender({ current: nuki });
+    const draw = { ...nuki, decisionId: "draw", phase: "zimo", drawnTile: "p3", turnSeat: 0 };
+    rerender({ current: draw });
+    expect(result.current?.kind).toBe("nuki");
+    const riichi = { ...draw, decisionId: "riichi", players: draw.players.map(p => p.seat === 2 ? { ...p, riichi: true } : p) };
+    rerender({ current: riichi });
+    expect(result.current).toMatchObject({ kind: "riichi", seat: 2 });
+    act(() => vi.advanceTimersByTime(900));
+    rerender({ current: { ...riichi, decisionId: "next-draw", drawnTile: "p4" } });
+    expect(result.current?.kind).toBe("draw");
+  });
+
+  it("does not replay a quietly recovered settlement when its decision or member name changes", () => {
+    const { result, rerender } = renderHook(({ current, source, people }) => useTableFeedback(current, people, 0, "room-a", source), {
+      initialProps: { current: game(), source: { connected: true, canAnimate: true }, people: members() },
+    });
+    const recovered = game({ decisionId: "recovered", phase: "hule", settlement: {
+      kind: "win", name: "和了", winnerSeat: 2, yaku: [], delta: [0, -1000, 1000], uraIndicators: [],
+    } });
+    rerender({ current: recovered, source: { connected: true, canAnimate: false }, people: members() });
+    expect(result.current).toBeNull();
+    rerender({ current: { ...recovered, decisionId: "ack-update" }, source: { connected: true, canAnimate: true }, people: members(["P0", "P1", "新名字"]) });
+    expect(result.current).toBeNull();
+  });
 
   it("uses a new game instance as a quiet baseline even when the round is unchanged", () => {
     const { result, rerender } = renderHook(({ current }) => useTableFeedback(current, members(), 0, "room-a"), {
