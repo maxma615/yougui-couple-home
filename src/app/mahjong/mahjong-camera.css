@@ -66,28 +66,3 @@
   padding: 2px 10px;
   font-size: 12px;
 }
-
-/* WebKit's projective paint path can shear the table despite returning correct
-   DOM quads. Keep its physical scene affine until that path is verified. */
-@supports (font: -apple-system-body) {
-  .mahjong-page .mahjong-game .mahjong-table__surface {
-    transform: scale(.94, .8829476);
-  }
-  .mahjong-page .mahjong-game .mahjong-table__own-public .mahjong-hand-public-melds {
-    right: 1.5%;
-    bottom: 1%;
-  }
-  .mahjong-page .mahjong-game:not(.is-finished) .mahjong-action-dock {
-    bottom: calc(14dvh + 16px);
-  }
-  .mahjong-page:has(.mahjong-game:not(.is-finished)) .mahjong-notice {
-    top: max(55px, env(safe-area-inset-top));
-  }
-  .mahjong-page .mahjong-game:not(.is-finished) > .mahjong-screen-hint,
-  .mahjong-page .mahjong-game:not(.is-finished) > .mahjong-reconnect {
-    top: max(12px, env(safe-area-inset-top));
-    right: calc(100px + env(safe-area-inset-right));
-    left: auto;
-    transform: none;
-  }
-}
