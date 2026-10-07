@@ -1,6 +1,6 @@
 # 飞牌材质与手牌操作比例验收
 
-2026-10-07。本步骤完成本地验证，待受保护发布；整个体验对齐目标未完成。
+2026-10-07。本步骤已发布9213443；整个体验对齐目标未完成。
 
 ## 本次实现
 
@@ -19,8 +19,17 @@
 - 最终26/26相关浏览器回归实际exit0，20真实Socket和6显示/API夹具。两真人联机、电脑补位、刷新恢复、解散牌桌、选牌/拖牌、按需碰杠选择及北牌确认后保留都通过。隔离数据库与附件已清理，生成编译配置恢复原字节。
 - 371/371单元和集成测试、45文件实际exit0，包含权限、并发、持久化、迁移及备份恢复。这一批在飞牌运行逻辑和材质修正后、最后手牌比例CSS修改前运行，未将它称作最后CSS后的重跑。最后交互CSS由上述浏览器矩阵验证。
 
-日志位于忽略目录`.local/audit/flight-material-{full-tests,red-five-green,standing-after-dock,e2e-final}.log`及`own-hand-reference-{red,hit-red,visual-final}.log`。最终生产构建Build `NM7ph1DhztJwUpHifsxBv`、恢复配置后的类型检查及360构建文件秘密扫描均实际exit0。独立复核与实际发布结果在验证后补记。
+日志位于忽略目录`.local/audit/flight-material-{full-tests,red-five-green,standing-after-dock,e2e-final}.log`及`own-hand-reference-{red,hit-red,visual-final}.log`。最终生产构建Build `NM7ph1DhztJwUpHifsxBv`、恢复配置后的类型检查及360构建文件秘密扫描均实际exit0。独立只读复核无Critical或Important阻塞，核对最终CSS、材质/比例测试及日志，没有独立重跑整套。Minor为五点命中检查尚未直接排除取消行矩形的所有边缘相交；667真实遮挡RED已由持久五点断言覆盖，最终三宽度通过，不把有界测试声称为所有尺寸穷举。实际发布结果见下节。
 
 ## 限制
 
 仍使用固定版本FluffyStuff CC0标准日麻牌面与本产品原创桌面/牌背/角色素材。只对上述已观察比例作接近处理，没有声称相机、完整鸣牌/和牌/出牌动画及隐藏发牌协议完全一致。公开新闻API再次确认验牌SHA功能，但未公开实际paishan/salt/SHA输入向量或私有随机算法；没有以第三方字段或候选测试墙冒充官方算法。真实Android设备仍需验收。
+
+
+## 实际发布与保存
+
+产品源码92134430d25d363fba2cc5a50e37a7498fc62dc1，Build `NM7ph1DhztJwUpHifsxBv`，Linux/amd64镜像 `sha256:c8ae574ec666bcfd92d5e07bdca519eb9e11cd81efde4125925ecfd91a777426`。451源码与432运行构建文件全摘要核验，只排除构建缓存；最后运行源码五文件与本地冻结摘要相同。发布前新鲜嵌套只读探针actual exit0确认无运行牌局、原会话保留，受保护发布器actual exit0且已退出，入口恢复、8助手及发布器摘要保持。
+
+公网默认TLS健康200和124资源SHA完全一致。12表完整摘要、3会话和28照片保持，原照片清理CID及镜像保持；应用1CPU/768MiB，运行且没有OOM。新鲜一致备份 `20261007T060718Z-41e5c77c571c` 的29成员与站外tar实际逐项核验，tar137512960字节、SHA `493969421430039e4d3a0c2587e2f2cf8726379c40f125cf1aa199d3b38a3c3f`；站外文件0600、目录0700。
+
+发布前仅回收全摘要已验证的旧自有stock-548ff62和placement-1fc7170构建上下文及上传包572394403字节：本地冻结包、远端1712文件、两个站外完整备份58成员全部实际核对后删除。当前及回滚镜像、release、备份、数据卷均保留，没有Docker全局prune。最终可用存储983359488字节，f47c816回滚保留。主目录只同步本步骤10owned；446其它文件、Git索引及next-env保持的结果以最终同步证明为准。完整目标仍active。
