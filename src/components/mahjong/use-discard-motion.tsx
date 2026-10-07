@@ -3,7 +3,6 @@
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import type { RoomView } from "@/modules/mahjong/types";
-import { TileFace } from "./mahjong-tile";
 import { MahjongFaceUpFlightTile, MahjongSolidFlightTile } from "./mahjong-solid-flight-tile";
 import { quadToMatrix3d } from "./projected-geometry";
 import {
@@ -279,7 +278,7 @@ function elementToFlight(element: HTMLElement, rect: DOMRect): FlightGeometry {
 function physicalDepth(element: HTMLElement) {
   const standing = element.closest<HTMLElement>("[data-standing-body]");
   if (standing) return numeric(getComputedStyle(standing).height);
-  const volume = element.closest<HTMLElement>("[data-river-volume], [data-meld-volume]");
+  const volume = element.closest<HTMLElement>("[data-river-volume], [data-meld-volume], [data-nuki-volume]");
   return volume ? numeric(getComputedStyle(volume).height) * .4 : 0;
 }
 
@@ -497,7 +496,7 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
       movement.onfinish = () => onFinish(flight.event.id);
       const sourceDepth = flight.from.depth ?? (flight.source === "opponent" ? flight.from.height * .4 : 0);
       const targetDepth = flight.to.depth ?? flight.to.height * .4;
-      if (kind !== "nuki") depthAnimations = animateVolumeDepth(node, sourceDepth, targetDepth);
+      depthAnimations = animateVolumeDepth(node, sourceDepth, targetDepth);
       if (flight.source !== "opponent" && flight.sourcePaint && flight.targetPaint) {
         const face = node.querySelector<HTMLElement>(".mahjong-discard-flight__face");
         if (face) paint = face.animate([flight.sourcePaint, flight.targetPaint], {
@@ -566,10 +565,6 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
           <span className="mahjong-discard-flight__card">
             <MahjongSolidFlightTile value={flight.event.tile}/>
           </span>
-        </span>
-      ) : kind === "nuki" ? (
-        <span className="mahjong-discard-flight__card">
-          <TileFace value={flight.event.tile} className={`mahjong-discard-flight__face${flight.event.tile.includes("_") ? " is-tsumogiri" : ""}${flight.event.tile.includes("*") ? " is-riichi" : ""}`}/>
         </span>
       ) : (
         <span className="mahjong-discard-flight__card" style={{ transformStyle: "preserve-3d", WebkitTransformStyle: "preserve-3d" }}>

@@ -11,6 +11,7 @@ let reduced = false;
 let sourceOffset = 0;
 const media = new Set<() => void>();
 const animations: any[] = [];
+const initialNorthStyles = new Map<string, string>();
 const source = {
   id: 'r',
   code: 'ABCDEFGH',
@@ -118,6 +119,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   delete (Element.prototype as any).animate;
   animations.length = 0;
+  initialNorthStyles.clear();
   reduced = false;
   sourceOffset = 0;
   media.clear();
@@ -125,13 +127,28 @@ afterEach(() => {
 function Harness({
   room,
   connected = true,
-  canAnimate = true
+  canAnimate = true,
+  importantNorthStyles = false
 }: {
   room: RoomView;
   connected?: boolean;
   canAnimate?: boolean;
+  importantNorthStyles?: boolean;
 }) {
   const tableRef = useRef<HTMLDivElement>(null);
+  const nukiRefs = useRef(new Map<string, (element: HTMLElement | null) => void>());
+  const nukiRef = (key: string) => {
+    let callback = nukiRefs.current.get(key);
+    if (!callback) {
+      callback = element => {
+        if (!element || !importantNorthStyles) return;
+        element.style.setProperty('visibility', 'visible', 'important');
+        initialNorthStyles.set(key, element.getAttribute('style') || '');
+      };
+      nukiRefs.current.set(key, callback);
+    }
+    return callback;
+  };
   const motion = useNukiMotion({
     room,
     ownSeat: room.mySeat,
@@ -156,7 +173,7 @@ function Harness({
     hand = g.hand.slice(0, -1);
   return <div ref={tableRef}><div className="mahjong-hand">{hand.map((f, i) => <button key={`hand:${i}:${f}`} data-hand-instance-id={`hand:${i}:${f}`} data-tile-face={f} />)}<button data-hand-instance-id={`drawn:${g.decisionId}:${g.drawnTile}`} data-tile-face={g.drawnTile} data-testid="draw" data-arriving={draw.arriving} data-held={motion.heldDecisionId} /></div><div data-nuki-seat="0">{Array.from({
         length: g.players[0].nuki || 0
-      }, (_, i) => <span key={i} data-nuki-index={i}><span className="mahjong-tile" data-testid={`north-${i}`} /></span>)}</div><button onClick={() => {
+      }, (_, i) => <span key={i} data-nuki-index={i}><span data-testid={`north-volume-${i}`} data-nuki-volume style={{width:'40px',height:'60px'}} ref={nukiRef(`volume-${i}`)}><span data-flight-base/><span data-flight-cap><span className="mahjong-tile" data-testid={`north-${i}`} data-tile-face="z4" style={importantNorthStyles ? {outline:'2px solid rgb(10, 20, 30)'} : undefined} ref={nukiRef(`cap-${i}`)}/></span><span data-flight-contact/>{(['top','left','right','bottom'] as const).map(side=><span key={side} data-flight-side={side}/>)}</span></span>)}</div><button onClick={() => {
       draw.cancel();
       motion.cancel();
       reflow.cancel();
@@ -179,6 +196,51 @@ it('acceptedNorthRestoresTray', () => {
   expect(screen.getByTestId('draw').dataset.arriving).toBe('true');
   v.unmount();
   expect(animations.every(r => r.a.cancel.mock.calls.length > 0)).toBe(true);
+});
+it('keeps a face-up six-plane volume in the North flight and grows sides to measured tray depth', () => {
+  const v = start();
+  const flight = screen.getByTestId('mahjong-nuki-flight');
+  expect(flight.querySelector('[data-flight-volume]')).not.toBeNull();
+  expect([...flight.querySelectorAll<HTMLElement>('[data-flight-side]')].map(side=>side.dataset.flightSide).sort())
+    .toEqual(['bottom','left','right','top']);
+  expect(flight.querySelector('[data-flight-base]')).not.toBeNull();
+  expect(flight.querySelector('[data-flight-contact]')).not.toBeNull();
+  expect(flight.querySelector('[data-tile-face="z4"]')).not.toBeNull();
+  const sideAnimations = animations.filter(record => (record.target as HTMLElement).dataset.flightSide);
+  expect(sideAnimations).toHaveLength(4);
+  expect(sideAnimations.every(record=>Object.values(record.frames.at(-1)).includes('24px'))).toBe(true);
+  v.unmount();
+});
+it('hides and restores the whole North volume and cap visibility with their exact priorities', () => {
+  const v = render(<Harness room={source} importantNorthStyles/>);
+  v.rerender(<Harness room={accepted} importantNorthStyles/>);
+  const volume = screen.getByTestId('north-volume-0');
+  const cap = screen.getByTestId('north-0');
+  const volumeStyle = initialNorthStyles.get('volume-0');
+  const capStyle = initialNorthStyles.get('cap-0');
+  expect([volume.style.getPropertyValue('visibility'),volume.style.getPropertyPriority('visibility')]).toEqual(['hidden','important']);
+  expect([cap.style.getPropertyValue('visibility'),cap.style.getPropertyPriority('visibility')]).toEqual(['hidden','important']);
+  expect(cap.style.getPropertyValue('outline')).toBe('2px solid rgb(10, 20, 30)');
+  fireEvent.click(screen.getByText('input'));
+  expect([volume.style.getPropertyValue('visibility'),volume.style.getPropertyPriority('visibility')]).toEqual(['visible','important']);
+  expect([cap.style.getPropertyValue('visibility'),cap.style.getPropertyPriority('visibility')]).toEqual(['visible','important']);
+  expect(volume.getAttribute('style')).toBe(volumeStyle);
+  expect(cap.getAttribute('style')).toBe(capStyle);
+  v.unmount();
+});
+it('restores both visible North cap and volume byte-for-byte when unmounted mid-flight', () => {
+  const v = render(<Harness room={source} importantNorthStyles/>);
+  v.rerender(<Harness room={accepted} importantNorthStyles/>);
+  const volume = screen.getByTestId('north-volume-0');
+  const cap = screen.getByTestId('north-0');
+  const volumeStyle = initialNorthStyles.get('volume-0');
+  const capStyle = initialNorthStyles.get('cap-0');
+  expect(screen.getByTestId('mahjong-nuki-flight')).toBeTruthy();
+  expect(volume.style.visibility).toBe('hidden');
+  expect(cap.style.visibility).toBe('hidden');
+  v.unmount();
+  expect(volume.getAttribute('style')).toBe(volumeStyle);
+  expect(cap.getAttribute('style')).toBe(capStyle);
 });
 it('quietUpdateDoesNotReplay', () => {
   const v = start(),

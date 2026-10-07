@@ -16,10 +16,23 @@ type Active = {
   id: string;
   decision: string;
   target: HTMLElement;
-  visibility: string;
-  priority: string;
+  volume: HTMLElement;
+  visibility: { value: string; priority: string };
+  volumeVisibility: { value: string; priority: string };
   emphasis?: Animation;
 };
+
+function saveVisibility(element: HTMLElement) {
+  return {
+    value: element.style.getPropertyValue("visibility"),
+    priority: element.style.getPropertyPriority("visibility"),
+  };
+}
+
+function setVisibility(element: HTMLElement, visibility: { value: string; priority: string }) {
+  if (visibility.value) element.style.setProperty("visibility", visibility.value, visibility.priority);
+  else element.style.removeProperty("visibility");
+}
 
 function readHandGeometry(table: HTMLElement | null): Pick<Baseline, "tiles" | "sources"> {
   const sources: Baseline["sources"] = new Map();
@@ -56,8 +69,8 @@ export function useNukiMotion({ room, ownSeat, connected, canAnimate, tableRef }
     if (current) {
       if (current.emphasis) current.emphasis.onfinish = null;
       current.emphasis?.cancel();
-      if (current.visibility) current.target.style.setProperty("visibility", current.visibility, current.priority);
-      else current.target.style.removeProperty("visibility");
+      setVisibility(current.volume, current.volumeVisibility);
+      setVisibility(current.target, current.visibility);
     }
     setFlight(null);
     setHeld(null);
@@ -86,18 +99,20 @@ export function useNukiMotion({ room, ownSeat, connected, canAnimate, tableRef }
     if (event && table) {
       restore();
       const target = table.querySelector<HTMLElement>(`[data-nuki-seat="${event.seat}"] [data-nuki-index="${event.index}"] .mahjong-tile`);
+      const volume = target?.closest<HTMLElement>("[data-nuki-volume]") ?? null;
       const destination = target && measureDiscardElement(target);
-      if (target && destination) {
+      if (target && volume && destination) {
         const next: Active = {
-          id: event.id, decision: room.game!.decisionId, target,
-          visibility: target.style.getPropertyValue("visibility"), priority: target.style.getPropertyPriority("visibility"),
+          id: event.id, decision: room.game!.decisionId, target, volume,
+          visibility: saveVisibility(target), volumeVisibility: saveVisibility(volume),
         };
         active.current = next;
         const sourceId = event.seat === ownSeat ? uniqueOwnNorthInstance(old!.tiles) : null;
         const source = sourceId ? old!.sources.get(sourceId) : null;
         if (event.seat === ownSeat) setHeld(room.game!.decisionId);
         if (source && sourceId) {
-          target.style.setProperty("visibility", "hidden");
+          volume.style.setProperty("visibility", "hidden", "important");
+          target.style.setProperty("visibility", "hidden", "important");
           setFlight({
             event: { ...event, roomId: room.id, gameInstanceId: room.game!.gameInstanceId!, handId: room.game!.handId!, tile: "z4" },
             source: "own", sourceTileId: sourceId, sourcePaint: source.paint, targetPaint: destination.paint,

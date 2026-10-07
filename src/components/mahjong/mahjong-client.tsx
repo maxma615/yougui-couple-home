@@ -26,6 +26,7 @@ import { MahjongStandingTile } from "./mahjong-standing-tile";
 import { useDrawArrival } from "./use-draw-arrival";
 import { settlementTitle } from "./mahjong-winning-hand";
 import { MahjongSettlementPanel } from "./mahjong-settlement-panel";
+import { MahjongFaceUpFlightTile } from "./mahjong-solid-flight-tile";
 
 const windNames = ["東", "南", "西", "北"];
 const choiceNames: Record<Choice["type"], string> = {
@@ -691,7 +692,7 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
     {offset !== 0 && player.melds.length ? <div className="mahjong-player__melds" role="group" aria-label={`${member?.displayName || "牌友"}的副露`}>
       {player.melds.map((meld, index) => <MeldView key={`${index}-${meld}`} meld={meld} seat={player.seat} index={index}/>) }
     </div> : null}</div> : player.melds.length ? <div className="mahjong-hand-public-melds" role="group" aria-label="你的公开副露">{player.melds.map((meld, index) => <MeldView meld={meld} seat={player.seat} index={index} key={`${index}-${meld}`}/>)}</div> : null}
-    {(player.nuki ?? 0) > 0 ? <div className="mahjong-nuki-tray" role="group" aria-label={`${member?.displayName || "牌友"}已拔北 ${player.nuki} 张`} data-nuki-seat={player.seat} data-testid={`nuki-tiles-${player.seat}`} style={{"--nuki-count": Math.min(4, player.nuki ?? 0)} as CSSProperties}><small>拔北 × {player.nuki}</small><div className="mahjong-nuki-tray__footprint"><div className="mahjong-nuki-tray__tiles">{Array.from({length: Math.min(4, player.nuki ?? 0)}, (_, index) => <span key={index} data-nuki-index={index} style={{display: "contents"}}><TileFace value="z4"/></span>)}</div></div></div> : null}
+    {(player.nuki ?? 0) > 0 ? <div className="mahjong-nuki-tray" role="group" aria-label={`${member?.displayName || "牌友"}已拔北 ${player.nuki} 张`} data-nuki-seat={player.seat} data-testid={`nuki-tiles-${player.seat}`} style={{"--nuki-count": Math.min(4, player.nuki ?? 0)} as CSSProperties}><small>拔北 × {player.nuki}</small><div className="mahjong-nuki-tray__footprint"><div className="mahjong-nuki-tray__tiles">{Array.from({length: Math.min(4, player.nuki ?? 0)}, (_, index) => <span key={index} data-nuki-index={index}><span className="mahjong-nuki-volume" data-nuki-volume><MahjongFaceUpFlightTile value="z4"/></span></span>)}</div></div></div> : null}
   </div>;
 }
 
