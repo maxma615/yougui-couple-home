@@ -2,7 +2,7 @@
 
 ## Current status
 
-The bounded nuki task was implemented in `fac6422` and its stale layout correction in `6d31341`. Task review and scoped re-review approved runtime/spec behavior. This document records local evidence; the candidate has not yet been published. It will join the seat/drag/public-call/payment changes in one guarded ECS release.
+The bounded nuki task was implemented in `fac6422` and its stale layout correction in `6d31341`. Task review and scoped re-review approved runtime/spec behavior. This accepted behavior is published jointly with seat/drag/public-call/payment and solid-meld changes as70e7060 / BuildAUKuXj4nb2WJFNFVaBwVN; actual guarded publisher exit0, trusted public checks and fresh offsite backup are verified.
 
 ## Verified behavior
 
@@ -25,4 +25,4 @@ A fixed-name ignored historical hand-reflow JSON artifact was overwritten during
 
 The product durations are not measured vendor choreography. Official private wall generation/RNG, full vendor camera/choreography and Android hardware acceptance remain unproven. A joint final review, stable-source full tests/E2E/projection/build/type/secrets, combined interaction checks, Linux payment tests and guarded ECS publication/backup/public-asset verification must precede a live-completion claim.
 
-Joint release update: the subsequent public-meld volume repair atd43cf20 has a clean scoped review and fresh55-file/473-test Node validation, plus6 served-route cases including North/self-draw display. Nuki timing/identity and historical ignored-proof loss disclosures remain as recorded. The new final candidate will preserve currentccfe navigation/photo work and the observed cleaner; protected publication is still pending.
+Joint release update: the subsequent public-meld volume repair atd43cf20 has a clean scoped review and fresh55-file/473-test Node validation, plus6 served-route cases including North/self-draw display. Nuki timing/identity and historical ignored-proof loss disclosures remain as recorded. Actual70e7060 publication preserves currentccfe navigation/photo work and the observed cleaner. Linux40/40, immediate12-table equality, public126 hashes and fresh29-member backup/offsite verification pass. Later append writes are separately captured by the actual repeatable-read original-row proof; complete-current dataset equality is not claimed. See joint acceptance for exact identities and retained RED evidence.
