@@ -82,8 +82,8 @@ for (const engine of [chromium, webkit]) {
     }, {
       width: 1440,
       height: 810
-    }]) {
-      for (const kind of ['drawnNorth', 'closedNorthWithDrawnSurvivor', 'duplicateNorthFallback', 'secondNorthCumulative'] as const) {
+    }].filter(viewport => !process.env.NUKI_RESIZE_ONLY || viewport.width === 844)) {
+      for (const kind of (['drawnNorth', 'closedNorthWithDrawnSurvivor', 'duplicateNorthFallback', 'secondNorthCumulative'] as const).filter(kind => !process.env.NUKI_RESIZE_ONLY || kind === 'drawnNorth')) {
         const game = new SanmaGame('east', names, fixture(kind === 'drawnNorth' || kind === 'secondNorthCumulative' ? 'p123456789s123z2' : kind === 'duplicateNorthFallback' ? 'p123456789s12z44' : 'p123455789s123z4', kind === 'closedNorthWithDrawnSurvivor' ? 'p0' : 'z4', kind === 'secondNorthCumulative' ? ['z4', 's4'] : ['s4']));
         let current = room(game);
         const page = await browser.newPage({
@@ -112,6 +112,39 @@ for (const engine of [chromium, webkit]) {
             viewport,
             steps: []
           };
+          if (kind === 'drawnNorth' && viewport.width === 844) {
+            const resizedGame = new SanmaGame('east', names, fixture('p123456789s123z2', 'z4', ['s4']));
+            const beforeResize = room(resizedGame);
+            await page.evaluate(value => (window as any).nukiApi.render(value), beforeResize);
+            const oldSource = await page.locator('.mahjong-hand .is-drawn').boundingBox();
+            await page.setViewportSize({width: 1440, height: 810});
+            // No room update may refresh the geometry between resize and acceptance.
+            await page.waitForTimeout(60);
+            const actualSource = await page.locator('.mahjong-hand .is-drawn').boundingBox();
+            assert.ok(oldSource && actualSource);
+            await page.getByRole('button', {name: '拔北', exact: true}).click();
+            const sent = (await page.evaluate(() => (window as any).nukiChoices)).at(-1);
+            assert.equal(sent.id, beforeResize.game!.choices.find(c => c.type === 'nuki')!.id);
+            resizedGame.respond(0, beforeResize.game!.decisionId, sent.id);
+            const afterResize = room(resizedGame, beforeResize.version + 1);
+            await page.evaluate(value => (window as any).nukiApi.render(value), afterResize);
+            const measured = await page.evaluate(async () => {
+              const flight = document.querySelector<HTMLElement>('[data-testid="mahjong-nuki-flight"]');
+              const animation = flight?.getAnimations()[0];
+              if (animation) { animation.pause(); animation.currentTime = 0; await new Promise(resolve => requestAnimationFrame(resolve)); }
+              return {origin: flight?.getBoundingClientRect().toJSON(), pageTarget: document.querySelector<HTMLElement>('[data-nuki-seat="0"] .mahjong-tile')?.getBoundingClientRect().toJSON()};
+            });
+            const originError = measured.origin ? Math.hypot(measured.origin.x - actualSource.x, measured.origin.y - actualSource.y) : null;
+            evidence.preAcceptanceResize = {from: viewport, to: {width: 1440, height: 810}, oldSource, actualSource, measured, originError, before: beforeResize, after: afterResize, pageErrors: errors};
+            writeFileSync(`${out}/${engine.name()}-pre-acceptance-resize.json`, JSON.stringify(evidence.preAcceptanceResize, null, 2));
+            console.log(`PRE_ACCEPTANCE_RESIZE ${engine.name()} ${JSON.stringify(evidence.preAcceptanceResize)}`);
+            assert.deepEqual(errors, []);
+            assert.ok(measured.origin, 'eligible post-resize North must use its refreshed actual physical source');
+            assert.ok(originError! < 2, `post-resize North flight must start at actual new geometry, error=${originError}`);
+            assert.ok(Math.abs(measured.origin.width - actualSource.width) < 2, 'post-resize source size must be refreshed');
+            await page.setViewportSize(viewport);
+            await page.evaluate(value => (window as any).nukiApi.render(value), current);
+          }
           for (let step = 0; step < count; step++) {
             const beforeHand = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.mahjong-hand button[data-hand-instance-id]')].map(e => ({
               id: e.dataset.handInstanceId!,

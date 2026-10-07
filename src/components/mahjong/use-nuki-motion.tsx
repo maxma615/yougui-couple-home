@@ -21,6 +21,23 @@ type Active = {
   emphasis?: Animation;
 };
 
+function readHandGeometry(table: HTMLElement | null): Pick<Baseline, "tiles" | "sources"> {
+  const sources: Baseline["sources"] = new Map();
+  const tiles: HandReflowTile[] = [];
+  table?.querySelectorAll<HTMLElement>(".mahjong-hand [data-hand-instance-id][data-tile-face]").forEach(element => {
+    const id = element.dataset.handInstanceId!;
+    const face = element.dataset.tileFace!;
+    const measurement = measureDiscardElement(element);
+    if (measurement) {
+      sources.set(id, measurement);
+      tiles.push({ instanceId: id, face, rect: {
+        x: measurement.rect.left, y: measurement.rect.top, width: measurement.rect.width, height: measurement.rect.height,
+      } });
+    }
+  });
+  return { tiles, sources };
+}
+
 export function useNukiMotion({ room, ownSeat, connected, canAnimate, tableRef }: {
   room: RoomView;
   ownSeat: number;
@@ -100,45 +117,53 @@ export function useNukiMotion({ room, ownSeat, connected, canAnimate, tableRef }
       }
     }
 
-    const sources: Baseline["sources"] = new Map();
-    const tiles: HandReflowTile[] = [];
-    table?.querySelectorAll<HTMLElement>(".mahjong-hand [data-hand-instance-id][data-tile-face]").forEach(element => {
-      const id = element.dataset.handInstanceId!;
-      const face = element.dataset.tileFace!;
-      const measurement = measureDiscardElement(element);
-      if (measurement) {
-        sources.set(id, measurement);
-        tiles.push({ instanceId: id, face, rect: {
-          x: measurement.rect.left, y: measurement.rect.top, width: measurement.rect.width, height: measurement.rect.height,
-        } });
-      }
-    });
-    previous.current = { room, connected, tiles, sources };
+    previous.current = { room, connected, ...readHandGeometry(table) };
   }, [room, ownSeat, connected, canAnimate, eligible, reducedMotion, hidden, tableRef, restore, finishFlight]);
 
   useEffect(() => {
     const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     const table = tableRef.current;
     let size = table?.getBoundingClientRect();
+    let captureFrame: number | null = null;
+    // Environment invalidation differs from input cancellation: the old
+    // room is still useful for acceptance, but its old layout is no longer a
+    // physical source. Clear it until a frame captures the current layout.
+    const invalidateEnvironment = () => {
+      cancel();
+      if (captureFrame !== null) window.cancelAnimationFrame(captureFrame);
+      captureFrame = null;
+      const baseline = previous.current;
+      if (!baseline) return;
+      const invalidated = { ...baseline, tiles: [], sources: new Map() };
+      previous.current = invalidated;
+      if (typeof window.requestAnimationFrame !== "function") return;
+      captureFrame = window.requestAnimationFrame(() => {
+        captureFrame = null;
+        if (previous.current !== invalidated || !invalidated.connected || document.visibilityState === "hidden"
+          || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+        previous.current = { ...invalidated, ...readHandGeometry(table) };
+      });
+    };
     const observer = typeof ResizeObserver === "undefined" || !table ? null : new ResizeObserver(() => {
       const next = table.getBoundingClientRect();
-      if (!size || Math.abs(next.width - size.width) > .5 || Math.abs(next.height - size.height) > .5) cancel();
+      if (!size || Math.abs(next.width - size.width) > .5 || Math.abs(next.height - size.height) > .5) invalidateEnvironment();
       size = next;
     });
     observer?.observe(table!);
     const events = ["resize", "orientationchange", "fullscreenchange", "webkitfullscreenchange"];
-    events.forEach(event => window.addEventListener(event, cancel));
-    window.visualViewport?.addEventListener("resize", cancel);
-    screen.orientation?.addEventListener?.("change", cancel);
-    document.addEventListener("visibilitychange", cancel);
-    query?.addEventListener?.("change", cancel);
+    events.forEach(event => window.addEventListener(event, invalidateEnvironment));
+    window.visualViewport?.addEventListener("resize", invalidateEnvironment);
+    screen.orientation?.addEventListener?.("change", invalidateEnvironment);
+    document.addEventListener("visibilitychange", invalidateEnvironment);
+    query?.addEventListener?.("change", invalidateEnvironment);
     return () => {
       observer?.disconnect();
-      events.forEach(event => window.removeEventListener(event, cancel));
-      window.visualViewport?.removeEventListener("resize", cancel);
-      screen.orientation?.removeEventListener?.("change", cancel);
-      document.removeEventListener("visibilitychange", cancel);
-      query?.removeEventListener?.("change", cancel);
+      if (captureFrame !== null) window.cancelAnimationFrame(captureFrame);
+      events.forEach(event => window.removeEventListener(event, invalidateEnvironment));
+      window.visualViewport?.removeEventListener("resize", invalidateEnvironment);
+      screen.orientation?.removeEventListener?.("change", invalidateEnvironment);
+      document.removeEventListener("visibilitychange", invalidateEnvironment);
+      query?.removeEventListener?.("change", invalidateEnvironment);
       restore();
     };
   }, [cancel, restore, tableRef]);

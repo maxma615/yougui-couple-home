@@ -8,6 +8,7 @@ import { useDrawArrival } from '@/components/mahjong/use-draw-arrival';
 import { useHandReflow } from '@/components/mahjong/use-hand-reflow';
 import type { RoomView } from '@/modules/mahjong/types';
 let reduced = false;
+let sourceOffset = 0;
 const media = new Set<() => void>();
 const animations: any[] = [];
 const source = {
@@ -80,7 +81,7 @@ beforeEach(() => {
   }));
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
     const id = this.dataset.handInstanceId || '';
-    const x = id.startsWith('drawn:') ? 500 : id ? Number(id.split(':')[1]) * 50 : 20;
+    const x = (id.startsWith('drawn:') ? 500 : id ? Number(id.split(':')[1]) * 50 : 20) + (id ? sourceOffset : 0);
     return {
       x,
       y: 100,
@@ -118,6 +119,7 @@ afterEach(() => {
   delete (Element.prototype as any).animate;
   animations.length = 0;
   reduced = false;
+  sourceOffset = 0;
   media.clear();
 });
 function Harness({
@@ -297,4 +299,35 @@ it('preserves flight across a quiet GET of the same decision', () => {
   expect(screen.getByTestId('mahjong-nuki-flight')).toBeTruthy();
   expect(animations.length).toBe(initial);
   expect(screen.getByTestId('north-0').style.visibility).toBe('hidden');
+});
+
+it('environment invalidation emphasizes target until geometry has been recaptured', () => {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.push(callback); return frames.length; });
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  const view = render(<Harness room={source}/>);
+  sourceOffset = 300;
+  fireEvent(window, new Event('resize'));
+  view.rerender(<Harness room={accepted}/>);
+  expect(screen.queryByTestId('mahjong-nuki-flight')).toBeNull();
+  expect(animations.some(record => record.a.id.startsWith('mahjong-nuki-arrival:'))).toBe(true);
+  act(() => frames.forEach(callback => callback(16)));
+  expect(screen.queryByTestId('mahjong-nuki-flight')).toBeNull();
+});
+it.each(['resize', 'orientationchange', 'fullscreenchange', 'webkitfullscreenchange'])('recaptures source after %s without changing room state', event => {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.push(callback); return frames.length; });
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  const view = render(<Harness room={source}/>);
+  sourceOffset = 300;
+  fireEvent(window, new Event(event));
+  act(() => frames.forEach(callback => callback(16)));
+  view.rerender(<Harness room={accepted}/>);
+  expect(screen.getByTestId('mahjong-nuki-flight').style.left).toBe('420px');
+});
+it('input cancellation retains the eligible source baseline', () => {
+  const view = render(<Harness room={source}/>);
+  fireEvent.click(screen.getByText('input'));
+  view.rerender(<Harness room={accepted}/>);
+  expect(screen.getByTestId('mahjong-nuki-flight').style.left).toBe('120px');
 });
