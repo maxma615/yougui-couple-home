@@ -193,7 +193,7 @@ function KakanStack({ called, added }: { called: string; added: string }) {
   </span>;
 }
 
-export function MahjongMeld({ meld }: { meld: string }) {
+export function MahjongMeld({ meld, seat, index }: { meld: string; seat?: number; index?: number }) {
   const parsed = parseMeld(meld);
   if (!parsed) return null;
 
@@ -201,6 +201,9 @@ export function MahjongMeld({ meld }: { meld: string }) {
     className={`mahjong-meld mahjong-meld--public mahjong-meld--${parsed.kind}`}
     role="group"
     aria-label={accessibleName(parsed)}
+    data-meld-seat={seat}
+    data-meld-index={index}
+    data-meld-value={seat === undefined ? undefined : meld}
     data-kind={parsed.kind}
     data-source={parsed.source}
   >

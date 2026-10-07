@@ -31,7 +31,7 @@ export type FlightGeometry = Readonly<{
 
 export type FlightView = Readonly<{
   event: DiscardMotionEvent;
-  source: "own" | "opponent";
+  source: "own" | "opponent" | "public";
   sourceTileId?: string;
   sourcePaint?: MotionTilePaint;
   targetPaint?: MotionTilePaint;
@@ -370,7 +370,7 @@ function parseTransform(transform: string) {
   return { a: 1, b: 0, c: 0, d: 1 };
 }
 
-export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { flight: FlightView; onFinish: (eventId: string) => void; kind?: "discard" | "nuki" }) {
+export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { flight: FlightView; onFinish: (eventId: string) => void; kind?: "discard" | "nuki" | "call" }) {
   const element = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = element.current;
@@ -384,7 +384,7 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
         keyframe(flight.to),
       ], { duration: 230, easing: "cubic-bezier(.18,.74,.28,1)", fill: "forwards" });
       movement.onfinish = () => onFinish(flight.event.id);
-      if (flight.source === "own" && flight.sourcePaint && flight.targetPaint) {
+      if (flight.source !== "opponent" && flight.sourcePaint && flight.targetPaint) {
         const face = node.querySelector<HTMLElement>(".mahjong-discard-flight__face");
         if (face) paint = face.animate([flight.sourcePaint, flight.targetPaint], {
           duration: 230, easing: "cubic-bezier(.18,.74,.28,1)", fill: "both",

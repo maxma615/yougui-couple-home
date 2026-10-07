@@ -8,6 +8,7 @@ import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, Ex
 import { apiRequest, errorMessage } from "@/components/api-client";
 import { SessionProvider, useSession } from "@/hooks/use-session";
 import type { Choice, GameMode, GameVariant, GameView, MahjongCommand, MahjongResponse, PublicPlayer, RoomMember, RoomView } from "@/modules/mahjong/types";
+import { usePublicCallMotion } from "./use-public-call-motion";
 import { DiscardFlightLayer, measureDiscardElement, useDiscardMotion } from "./use-discard-motion";
 import { useNukiMotion } from "./use-nuki-motion";
 import { useHandReflow } from "./use-hand-reflow";
@@ -396,6 +397,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const [choiceSubmitted, setChoiceSubmitted] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const nukiMotion = useNukiMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
+  const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const drawArrival = useDrawArrival(game, room.id, ownSeat, {connected, canAnimate: motionCanAnimate, heldDecisionId: nukiMotion.heldDecisionId});
   const discardMotion = useDiscardMotion({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
   const handReflow = useHandReflow({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
@@ -447,6 +449,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
 
   const submitHandChoice = (choice: Choice, source: HTMLButtonElement) => {
     if (busy || !connected || submittedChoiceRef.current) return;
+    publicCallMotion.cancel();
     handReflow.captureBeforeInput();
     submittedChoiceRef.current = true;
     setChoiceSubmitted(true);
@@ -574,6 +577,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     if (event.target instanceof Element && event.target.closest(".mahjong-hand, .mahjong-action-dock")) {
       drawArrival.cancel();
       nukiMotion.cancel();
+      publicCallMotion.cancel();
       handReflow.cancel();
     }
   };
@@ -632,14 +636,15 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     {!isFinished && (otherChoices.length > 0 || riichiChoices.length > 0 || game.settlement) ? <div className="mahjong-action-dock" aria-label="可执行操作">
       {tsumoChoice && !game.settlement ? <button type="button" className="mahjong-button mahjong-button--win mahjong-button--tsumo" disabled={busy || !connected || !tsumoChoice} data-choice-id={tsumoChoice?.id} data-choice-type={tsumoChoice?.type} title={tsumoChoice ? "点击自摸和牌" : game.turnSeat !== ownSeat ? "等待你的摸牌回合" : "当前没有合法自摸选项"} onClick={() => connected && !busy && tsumoChoice && onChoice(tsumoChoice)}>自摸</button> : null}
       {riichiChoices.length > 0 && !game.settlement ? <button type="button" className={`mahjong-button mahjong-button--riichi${riichiMode ? " is-selected" : ""}`} aria-pressed={riichiMode} disabled={busy || !connected || !riichiChoices.length} title={riichiChoices.length ? "选择高亮牌切出并宣告立直" : ownPlayer?.riichi ? "已经立直" : "当前没有合法立直选项"} onClick={() => connected && !busy && setRiichiMode((value) => !value)}>{riichiMode ? "选择立直牌" : "立直"}</button> : null}
-      {[...callGroups].map(([type, choices]) => <button key={type} type="button" className={`mahjong-button ${type === "ron" ? "mahjong-button--win" : type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`} disabled={busy || !connected} data-choice-id={choices.length === 1 ? choices[0].id : undefined} data-choice-type={type} aria-haspopup={choices.length > 1 ? "dialog" : undefined} onClick={() => { if (!connected || busy) return; choices.length > 1 ? setPendingCallType(type) : onChoice(choices[0]); }}>{choiceNames[type]}{choices.length === 1 && choices[0].value ? <small>{choiceDescription(choices[0].value)}</small> : null}</button>)}
+      {[...callGroups].map(([type, choices]) => <button key={type} type="button" className={`mahjong-button ${type === "ron" ? "mahjong-button--win" : type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`} disabled={busy || !connected} data-choice-id={choices.length === 1 ? choices[0].id : undefined} data-choice-type={type} aria-haspopup={choices.length > 1 ? "dialog" : undefined} onClick={() => { if (!connected || busy) return; publicCallMotion.cancel(); choices.length > 1 ? setPendingCallType(type) : onChoice(choices[0]); }}>{choiceNames[type]}{choices.length === 1 && choices[0].value ? <small>{choiceDescription(choices[0].value)}</small> : null}</button>)}
       {riichiMode ? <button type="button" className="mahjong-action-dock__cancel" onClick={() => setRiichiMode(false)}>返回普通切牌</button> : null}
       {game.settlement ? <div className="mahjong-settlement" role="status"><span>{settlementTitle(game.settlement)}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
     </div> : null}
 
     {game.settlement ? <SettlementPanel game={game} room={room}/> : null}
-    {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) onChoice(choice); }}/> : null}
+    {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
     {inspectedSeat !== null ? <PublicMeldDialog player={game.players.find(p => p.seat === inspectedSeat)} member={room.members.find(m => m.seat === inspectedSeat)} onClose={() => setInspectedSeat(null)}/> : null}
+    {publicCallMotion.flight ? <DiscardFlightLayer kind="call" flight={publicCallMotion.flight} onFinish={publicCallMotion.finishFlight}/> : null}
     {nukiMotion.flight ? <DiscardFlightLayer kind="nuki" flight={nukiMotion.flight} onFinish={nukiMotion.finishFlight}/> : null}
     {discardMotion.flight ? <DiscardFlightLayer flight={discardMotion.flight} onFinish={discardMotion.finishFlight}/> : null}
   </section>;
@@ -670,8 +675,8 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
       <span>{player.handCount}</span>
     </div>
     {offset !== 0 && player.melds.length ? <div className="mahjong-player__melds" role="group" aria-label={`${member?.displayName || "牌友"}的副露`}>
-      {player.melds.map((meld, index) => <MeldView key={`${index}-${meld}`} meld={meld}/>) }
-    </div> : null}</div> : player.melds.length ? <div className="mahjong-hand-public-melds" role="group" aria-label="你的公开副露">{player.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}
+      {player.melds.map((meld, index) => <MeldView key={`${index}-${meld}`} meld={meld} seat={player.seat} index={index}/>) }
+    </div> : null}</div> : player.melds.length ? <div className="mahjong-hand-public-melds" role="group" aria-label="你的公开副露">{player.melds.map((meld, index) => <MeldView meld={meld} seat={player.seat} index={index} key={`${index}-${meld}`}/>)}</div> : null}
     {(player.nuki ?? 0) > 0 ? <div className="mahjong-nuki-tray" role="group" aria-label={`${member?.displayName || "牌友"}已拔北 ${player.nuki} 张`} data-nuki-seat={player.seat} data-testid={`nuki-tiles-${player.seat}`} style={{"--nuki-count": Math.min(4, player.nuki ?? 0)} as CSSProperties}><small>拔北 × {player.nuki}</small><div className="mahjong-nuki-tray__footprint"><div className="mahjong-nuki-tray__tiles">{Array.from({length: Math.min(4, player.nuki ?? 0)}, (_, index) => <span key={index} data-nuki-index={index} style={{display: "contents"}}><TileFace value="z4"/></span>)}</div></div></div> : null}
   </div>;
 }
