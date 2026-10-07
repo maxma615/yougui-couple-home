@@ -1,3 +1,4 @@
+import { projectedSampleScript } from "./projected-samples";
 // Physical display fixtures isolate rack geometry; they do not simulate legal play.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -57,6 +58,7 @@ for (const engine of [chromium, webkit]) {
         const room = fixture(variant, m, drawn), noop = () => {};
         const html = renderToStaticMarkup(<GameRoom room={room} ownSeat={0} host busy={false} connected motionCanAnimate={false} onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
         await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
+        await page.addScriptTag({ content: projectedSampleScript });
         await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(i => i.complete && i.naturalWidth === 300 && i.naturalHeight === 400));
         const board = (await page.getByTestId("mahjong-board").boundingBox())!;
         const first = (await page.getByTestId("mahjong-hand").locator("[data-tile-face]").first().boundingBox())!;
@@ -73,11 +75,13 @@ for (const engine of [chromium, webkit]) {
         }
         const issues = await page.evaluate(() => {
           const issues: string[] = [], board = document.querySelector(".mahjong-table")!.getBoundingClientRect();
-          for (const tile of document.querySelectorAll<HTMLElement>(".mahjong-hand [data-tile-face],.mahjong-hand-public-melds [data-tile-face],.mahjong-hand-public-melds .mahjong-meld__back,.mahjong-table__own .mahjong-nuki-tray [data-tile-face]")) {
+          for (const tile of document.querySelectorAll<HTMLElement>(".mahjong-hand [data-tile-face],.mahjong-hand-public-melds [data-tile-face],.mahjong-hand-public-melds .mahjong-meld__back,.mahjong-table__own-public .mahjong-nuki-tray [data-tile-face]")) {
             if (tile.closest("[data-layer='called']")) continue; // Kakan intentionally overlaps its called tile.
             const b = tile.getBoundingClientRect();
             if (b.left < board.left || b.right > board.right || b.top < board.top || b.bottom > board.bottom) issues.push("tile outside table");
-            for (const [x, y] of [[.16, .16], [.84, .16], [.5, .5], [.16, .84], [.84, .84]]) if (!tile.contains(document.elementFromPoint(b.left + b.width * x, b.top + b.height * y))) issues.push(`covered ${tile.getAttribute("data-tile-face") || "back"}`);
+            const samples = (window as unknown as {mahjongPhysicalSamples: (e: HTMLElement) => {x: number; y: number}[]}).mahjongPhysicalSamples(tile);
+            if (new Set(samples.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`)).size < 3) issues.push("degenerate physical sampling");
+            for (const {x, y} of samples) if (!tile.contains(document.elementFromPoint(x, y))) issues.push(`covered ${tile.getAttribute("data-tile-face") || "back"}`);
           }
           return issues;
         });

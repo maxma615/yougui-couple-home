@@ -137,7 +137,7 @@ function roomFor(scene: Scene, viewer: number): RoomView {
 
 async function captureSignature(page: import("@playwright/test").Page, scene: Scene, viewer: number) {
   const selector = viewer === scene.actor
-    ? ".mahjong-table__own .mahjong-hand-public-melds .mahjong-meld--ankan"
+    ? ".mahjong-table__own-public .mahjong-hand-public-melds .mahjong-meld--ankan"
     : `[data-testid="player-${scene.actor}"] .mahjong-meld--ankan`;
   const meld = page.locator(selector);
   assert.equal(await meld.count(), 1, `${scene.id} viewer ${viewer}: the actual public ankan is rendered once`);
@@ -202,8 +202,8 @@ for (const engine of [chromium, webkit]) {
         await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
         const before = await captureSignature(page, scene, viewer);
         if (scene.red) {
-          assert.equal(await page.locator(`[data-testid="player-${scene.actor}"] .mahjong-meld--ankan img[src$='Pin5-Dora.svg']`).count(), viewer === scene.actor ? 0 : 1,
-            "the opponent view loads its single visible red-five stock face; an owner view uses the own-rack selector");
+          assert.equal(await page.locator(`[data-testid="player-${scene.actor}"] .mahjong-meld--ankan img[src$='Pin5-Dora.svg']`).count(), 1,
+            "every viewer sees the actor's single public red-five face on that actor's physical panel");
           assert.equal(await page.locator("img.mahjong-tile__art").evaluateAll(images => images.every(image => (image as HTMLImageElement).naturalWidth === 300 && (image as HTMLImageElement).naturalHeight === 400)), true);
         }
         // Re-render the same engine snapshot without a new decision. The public meld must remain identical.
@@ -213,7 +213,7 @@ for (const engine of [chromium, webkit]) {
         assert.deepEqual(after, before, `${engine.name()} ${scene.id} viewer ${viewer} ${size.width}: silent React re-render preserves concealed-kan composition`);
         if (scene.red) {
           const visibleRed = viewer === scene.actor
-            ? page.locator(`.mahjong-table__own .mahjong-hand-public-melds .mahjong-meld--ankan img[src$='Pin5-Dora.svg']`)
+            ? page.locator(`.mahjong-table__own-public .mahjong-hand-public-melds .mahjong-meld--ankan img[src$='Pin5-Dora.svg']`)
             : page.locator(`[data-testid="player-${scene.actor}"] .mahjong-meld--ankan img[src$='Pin5-Dora.svg']`);
           assert.equal(await visibleRed.count(), 1, "the actual red-five art remains loaded after re-render");
           if (viewer === 1 && size.width === 844) {

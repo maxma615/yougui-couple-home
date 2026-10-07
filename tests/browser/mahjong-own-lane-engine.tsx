@@ -1,3 +1,4 @@
+import { projectedSampleScript } from "./projected-samples";
 // Real-engine own-rack geometry through legal kan choices; this does not open a server or mutate a room.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -150,16 +151,16 @@ async function measure(page: import("@playwright/test").Page, scene: Scene) {
   const result = await page.evaluate(({ expectNuki }) => {
     const boardEl = document.querySelector(".mahjong-table");
     const handEl = document.querySelector<HTMLElement>('[data-testid="mahjong-hand"]');
-    const meldEl = document.querySelector<HTMLElement>(".mahjong-table__own .mahjong-hand-public-melds .mahjong-meld--ankan");
+    const meldEl = document.querySelector<HTMLElement>(".mahjong-table__own-public .mahjong-hand-public-melds .mahjong-meld--ankan");
     if (!boardEl || !handEl) throw new Error("real GameRoom table or own hand is not mounted");
     const board = boardEl.getBoundingClientRect();
     const handTiles = [...handEl.querySelectorAll<HTMLElement>("[data-tile-face]")];
     if (!handTiles.length) throw new Error("real own hand has no visible tile faces");
     const boxes = handTiles.map(tile => tile.getBoundingClientRect());
-    const nukiTray = document.querySelector<HTMLElement>('.mahjong-table__own [data-testid="nuki-tiles-0"]');
+    const nukiTray = document.querySelector<HTMLElement>('.mahjong-table__own-public [data-testid="nuki-tiles-0"]');
     const nukiTiles = nukiTray ? [...nukiTray.querySelectorAll<HTMLElement>("[data-tile-face]")] : [];
     const tileSlots = [
-      ...document.querySelectorAll<HTMLElement>(".mahjong-hand [data-tile-face],.mahjong-hand-public-melds [data-tile-face],.mahjong-hand-public-melds .mahjong-meld__tiles > .mahjong-meld__back,.mahjong-table__own .mahjong-nuki-tray [data-tile-face]"),
+      ...document.querySelectorAll<HTMLElement>(".mahjong-hand [data-tile-face],.mahjong-hand-public-melds [data-tile-face],.mahjong-hand-public-melds .mahjong-meld__tiles > .mahjong-meld__back,.mahjong-table__own-public .mahjong-nuki-tray [data-tile-face]"),
     ];
     const issues: string[] = [];
     for (const tile of tileSlots) {
@@ -167,8 +168,10 @@ async function measure(page: import("@playwright/test").Page, scene: Scene) {
       if (box.width <= 0 || box.height <= 0 || box.left < board.left - .5 || box.top < board.top - .5 || box.right > board.right + .5 || box.bottom > board.bottom + .5) {
         issues.push(`tile outside table: ${tile.getAttribute("data-tile-face") || tile.className}`);
       }
-      for (const [x, y] of [[.16, .16], [.5, .5], [.84, .16], [.16, .84], [.84, .84]]) {
-        const hit = document.elementFromPoint(box.left + box.width * x, box.top + box.height * y);
+      const samples = (window as unknown as {mahjongPhysicalSamples: (e: HTMLElement) => {x: number; y: number}[]}).mahjongPhysicalSamples(tile);
+      if (new Set(samples.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`)).size < 3) issues.push("degenerate physical sampling");
+      for (const {x, y} of samples) {
+        const hit = document.elementFromPoint(x, y);
         if (!hit || !tile.contains(hit)) issues.push(`5-point occlusion ${tile.getAttribute("data-tile-face") || "back"} at ${x},${y} by ${hit?.className || hit?.tagName || "none"}`);
       }
     }
@@ -213,6 +216,7 @@ for (const engine of [chromium, webkit]) {
     for (const scene of scenes) for (const size of sizes) {
       await page.setViewportSize(size);
       await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><div id="root"></div>`);
+      await page.addScriptTag({ content: projectedSampleScript });
       await page.addScriptTag({ content: `globalThis.__name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});globalThis.process={env:{NODE_ENV:"development"}};\n${bundle.outputFiles[0].text}` });
       const beforeRoom = roomFor(scene, scene.before);
       await page.evaluate(({ room }) => (window as any).ownLaneEngineApi.render(room, 0), { room: beforeRoom });

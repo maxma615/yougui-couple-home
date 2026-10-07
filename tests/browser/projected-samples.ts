@@ -13,7 +13,10 @@ export const projectedSampleScript = `window.mahjongPhysicalSamples = function(e
   }
   var marker = document.createElement('span');
   marker.setAttribute('aria-hidden', 'true');
-  marker.style.cssText = 'position:absolute!important;width:0!important;height:0!important;padding:0!important;margin:0!important;border:0!important;pointer-events:none!important;visibility:hidden!important;';
+  // A reduced-motion duration rule also gives otherwise unanimated markers a
+  // tiny transition on every property. Measurements within one JS task must
+  // move immediately rather than repeatedly returning the first sample point.
+  marker.style.cssText = 'position:absolute!important;width:0!important;height:0!important;padding:0!important;margin:0!important;border:0!important;pointer-events:none!important;visibility:hidden!important;transition:none!important;animation:none!important;';
   try {
     if (border.position === 'static') element.style.position = 'relative';
     element.appendChild(marker);

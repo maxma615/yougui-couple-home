@@ -26,6 +26,36 @@
   display: none;
 }
 
+/* Declared tiles lie on the near edge of the same physical table. Concealed
+   tiles remain in the independent touch lane and never shift after a call. */
+.mahjong-page .mahjong-game .mahjong-table__own-public {
+  display: contents;
+}
+
+.mahjong-page .mahjong-game .mahjong-table__own-public .mahjong-hand-public-melds {
+  position: absolute;
+  z-index: 4;
+  right: 9%;
+  bottom: 7%;
+  margin: 0;
+  padding: 0;
+}
+
+.mahjong-page .mahjong-game .mahjong-table__own-public .mahjong-nuki-tray {
+  left: 27%;
+  bottom: 23%;
+}
+
+/* The transparent full-width hand wrapper must not intercept the table to its
+   right. Only the concealed rack receives the existing touch interactions. */
+.mahjong-page .mahjong-game .mahjong-hand-block {
+  pointer-events: none;
+}
+
+.mahjong-page .mahjong-game .mahjong-hand {
+  pointer-events: auto;
+}
+
 /* The camera moves the far rack down. Keep brief server notices in the
    unoccupied upper HUD strip instead of covering those physical backs. */
 .mahjong-page:has(.mahjong-game:not(.is-finished)) .mahjong-notice {
@@ -42,6 +72,13 @@
 @supports (font: -apple-system-body) {
   .mahjong-page .mahjong-game .mahjong-table__surface {
     transform: scale(.94, .8829476);
+  }
+  .mahjong-page .mahjong-game .mahjong-table__own-public .mahjong-hand-public-melds {
+    right: 1.5%;
+    bottom: 1%;
+  }
+  .mahjong-page .mahjong-game:not(.is-finished) .mahjong-action-dock {
+    bottom: calc(14dvh + 16px);
   }
   .mahjong-page:has(.mahjong-game:not(.is-finished)) .mahjong-notice {
     top: max(55px, env(safe-area-inset-top));

@@ -558,6 +558,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
           const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
           return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
         })}
+        <div className="mahjong-table__own-public"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} includeIdentity={false}/></div>
         <div className="mahjong-table__center" aria-label="场况台">
           <strong>{roundTitle(game)}</strong>
           <span className="mahjong-table__wall" aria-label={`剩余 ${game.remainingTiles} 张`}>余 <b>{game.remainingTiles}</b></span>
@@ -571,7 +572,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerIdentity player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
       })}
       <div className="mahjong-table__dora" role="group" aria-label="宝牌指示牌" data-testid="mahjong-dora"><span>宝牌指示牌</span><div>{game.doraIndicators.map((tile, index) => <TileFace key={`${tile}-${index}`} value={tile}/>)}{Array.from({length: Math.max(0, 5 - game.doraIndicators.length)}, (_, index) => <i className="mahjong-indicator-back" aria-hidden="true" key={`back-${index}`}/>)}</div><small>宝牌 <b>{game.doraIndicators.map(tile => tileName(indicatorBonus(tile, room.variant))).join(" · ")}</b></small><div className="mahjong-table__counters" role="group" aria-label="场况计数"><span className="mahjong-table__counter" aria-label={`本场 ${game.honba}`}><small>本场</small><b>{game.honba}</b></span><span className="mahjong-table__counter" aria-label={`立直棒 ${game.riichiSticks}`}><i className="mahjong-table__stick" aria-hidden="true"/><small>立直棒</small><b>{game.riichiSticks}</b></span></div></div>
-      <div className="mahjong-table__own"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
+      <div className="mahjong-table__own"><PlayerIdentity player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
         <div className="mahjong-hand-block"><div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
           {hand.map((tile, index) => {
             const tileId = `hand:${index}:${tile}`;
@@ -580,7 +581,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
             return <HandActionTile key={tileId} tileId={tileId} value={tile} choices={choices} disabled={busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
           })}
           {game.drawnTile ? <span className="mahjong-drawn-wrap"><i>摸</i><HandActionTile key={game.decisionId} tileId={`drawn:${game.decisionId}:${game.drawnTile}`} value={game.drawnTile} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={busy || !connected || choiceSubmitted} drawn arriving={drawArrival.arriving} selected={Boolean(selectedHandTile?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` && selectedHandTile.choiceId === allowedChoices.find(choice => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))?.id)} drag={dragPreview?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` ? dragPreview : null} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/></span> : null}
-        </div>{ownPlayer?.melds.length ? <div className="mahjong-hand-public-melds" role="group" aria-label="你的公开副露">{ownPlayer.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}</div></div>
+        </div></div></div>
       </div>
     </div>
 
@@ -616,13 +617,13 @@ function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInsp
   if (!player) return null;
   return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
     {includeIdentity ? <PlayerIdentity player={player} member={member} ownSeat={ownSeat} active={active} offset={offset} capacity={capacity} onInspect={onInspect}/> : null}
-    <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
+    {offset !== 0 ? <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
       {Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => <i key={index}/>) }
       <span>{player.handCount}</span>
     </div>
     {offset !== 0 && player.melds.length ? <div className="mahjong-player__melds" role="group" aria-label={`${member?.displayName || "牌友"}的副露`}>
       {player.melds.map((meld, index) => <MeldView key={`${index}-${meld}`} meld={meld}/>) }
-    </div> : null}</div>
+    </div> : null}</div> : player.melds.length ? <div className="mahjong-hand-public-melds" role="group" aria-label="你的公开副露">{player.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}
     {(player.nuki ?? 0) > 0 ? <div className="mahjong-nuki-tray" role="group" aria-label={`${member?.displayName || "牌友"}已拔北 ${player.nuki} 张`} data-nuki-seat={player.seat} data-testid={`nuki-tiles-${player.seat}`}><small>拔北 × {player.nuki}</small><div className="mahjong-nuki-tray__tiles">{Array.from({length: Math.min(4, player.nuki ?? 0)}, (_, index) => <TileFace value="z4" key={index}/>)}</div></div> : null}
   </div>;
 }

@@ -84,14 +84,15 @@ for (const engine of [chromium, webkit]) {
     assert.equal(await page.locator('.mahjong-action-dock > button').count(),5);
     const actionOverlap=await page.evaluate(()=>{
       const issues:string[]=[];
-      const targets=document.querySelectorAll('.mahjong-river--0 .mahjong-river__tile,.mahjong-table__own .mahjong-nuki-tray,.mahjong-hand [data-tile-face],.mahjong-hand-public-melds [data-tile-face]');
+      const targets=document.querySelectorAll('.mahjong-river--0 .mahjong-river__tile,.mahjong-table__own-public .mahjong-nuki-tray,.mahjong-hand [data-tile-face],.mahjong-hand-public-melds [data-tile-face]');
       for(const button of document.querySelectorAll('.mahjong-action-dock > button')){
         const b=button.getBoundingClientRect(),hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);
         if(b.left<0||b.top<0||b.right>innerWidth||b.bottom>innerHeight||!hit||!button.contains(hit)) issues.push('response action outside viewport or not clickable');
-        for(const target of targets){const t=target.getBoundingClientRect();if(b.left<t.right&&b.right>t.left&&b.top<t.bottom&&b.bottom>t.top)issues.push(`response action covers ${target.className}`);}
+        for(const target of targets){const t=target.getBoundingClientRect();if(b.left<t.right&&b.right>t.left&&b.top<t.bottom&&b.bottom>t.top)issues.push(`response action ${button.textContent} covers ${target.className}: button=${JSON.stringify(b.toJSON())},tile=${JSON.stringify(t.toJSON())}`);}
       }
       return issues;
     });
+    if(actionOverlap.length)await page.screenshot({path:`.local/own-public-response-failure-${engine.name()}-${variant}-${width}.png`});
     assert.deepEqual(actionOverlap,[],`${engine.name()} ${variant} ${width}: five response actions cover own public information`);
     const detail = renderToStaticMarkup(<PublicMeldDialog player={game.players[1]} member={room.members[1]} onClose={noop}/>);
     await page.evaluate(html => {document.querySelector('.mahjong-page')!.insertAdjacentHTML('beforeend', html);document.querySelector<HTMLDialogElement>('.mahjong-public-melds')!.showModal();}, detail);

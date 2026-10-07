@@ -30,6 +30,22 @@ it("groups physical racks, rivers and readout into one projected surface while k
   expect(screen.getByTestId("mahjong-hand").closest(".mahjong-table__surface")).toBeNull();
   expect(screen.getByTestId("mahjong-dora").closest(".mahjong-table__surface")).toBeNull();
   expect(screen.getByTestId("nuki-tiles-0").querySelectorAll('[data-tile-face="z4"]')).toHaveLength(1);
+  expect(screen.getByTestId("nuki-tiles-0").closest(".mahjong-table__surface")).not.toBeNull();
+});
+
+it("puts the viewer's declared tiles on the physical table rather than in the touch rack", () => {
+  const game = northReplacementFixture();
+  const view = game.view(0);
+  // The mounted real-engine audit independently covers legal kan progression.
+  view.players[0].melds = ["p5555"];
+  const noop = () => {};
+  const room: RoomView = { id: "own-public", code: "ABCDEFGH", hostUserId: "0", variant: "sanma", mode: "east", status: "playing", version: 1, mySeat: 0, game: view, members: view.players.map(p => ({ userId: String(p.seat), seat: p.seat, kind: "human", displayName: `玩家${p.seat}`, ready: true, connected: true })) };
+  render(<GameRoom room={room} ownSeat={0} host busy={false} connected motionCanAnimate={false} onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
+  const meld = screen.getByRole("group", { name: "你的公开副露" });
+  expect(meld.closest(".mahjong-table__surface")).not.toBeNull();
+  expect(meld.closest(".mahjong-hand-line")).toBeNull();
+  expect(meld.querySelectorAll(".mahjong-meld__back")).toHaveLength(2);
+  expect(screen.getByTestId("mahjong-hand").closest(".mahjong-table__surface")).toBeNull();
 });
 
 it("leaves the public inspect action on the flat identity card and never sends a game decision", () => {

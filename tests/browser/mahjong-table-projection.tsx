@@ -238,14 +238,15 @@ async function projection(page: Page, spec: SceneSpec) {
     const ownTile=document.querySelector<HTMLElement>('.mahjong-table__own .mahjong-hand [data-tile-face]');
     const dora=document.querySelector<HTMLElement>(".mahjong-table__dora");
     const nukiCounter=document.querySelector<HTMLElement>('.mahjong-table__own .mahjong-player__nuki');
-    const nukiTray=document.querySelector<HTMLElement>('.mahjong-table__own .mahjong-nuki-tray');
+    const nukiTray=document.querySelector<HTMLElement>('.mahjong-table__own-public .mahjong-nuki-tray');
     const action=document.querySelector<HTMLElement>(".mahjong-action-dock");
     const flat={avatar:avatar&&metrics(avatar),ownHead:ownHead&&metrics(ownHead),ownTile:ownTile&&metrics(ownTile),dora:dora&&metrics(dora),
       nukiCounter:nukiCounter&&metrics(nukiCounter),nukiTray:nukiTray&&metrics(nukiTray),action:action&&metrics(action)};
     const flatOutside={avatar:!!avatar&&!surface.contains(avatar),ownHead:!!ownHead&&!surface.contains(ownHead),ownTile:!!ownTile&&!surface.contains(ownTile),
-      dora:!!dora&&!surface.contains(dora),nukiCounter:!!nukiCounter&&!surface.contains(nukiCounter),nukiTray:!!nukiTray&&!surface.contains(nukiTray),action:!!action&&!surface.contains(action)};
+      dora:!!dora&&!surface.contains(dora),nukiCounter:!!nukiCounter&&!surface.contains(nukiCounter),action:!!action&&!surface.contains(action)};
     if(!surface.contains(center)||!surface.contains(document.querySelector(".mahjong-table__grain"))||!surface.contains(document.querySelector(".mahjong-table__seams")))tileIssues.push("center/grain/seams do not share the projected surface");
     if(!surface.querySelector(".mahjong-river"))tileIssues.push("rivers are outside the shared projected surface");
+    if(nukiTray&&!surface.contains(nukiTray))tileIssues.push("own extracted North is outside the physical surface");
     if(nuki&&(!nukiCounter||!nukiTray||!nukiTray.querySelector('[data-tile-face="z4"]')))tileIssues.push("real North extraction is not shown in own count/tray");
     return { surface:{rect:surfaceMetrics.rect,points:surfaceMetrics.points,transform:surfaceStyle.transform,origin:surfaceStyle.transformOrigin,perspective:surfaceStyle.perspective,
         centerXOffset:surfaceMetrics.center.x-(board.left+board.width/2),centerYOffset:surfaceMetrics.center.y-(board.top+board.height/2)},
