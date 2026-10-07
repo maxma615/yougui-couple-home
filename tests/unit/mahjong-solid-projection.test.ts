@@ -69,4 +69,23 @@ describe("physical tile projection", () => {
       bottomRight: { x: 50, y: 76 }, bottomLeft: { x: 10, y: 76 } };
     expect(quadToMatrix3d(40, 56, quad, 0, 0, { depth: 22.4, topLeft: { x: 30, y: 15 }, topRight: { x: 30, y: 15 } })).toBeNull();
   });
+
+  it("rejects an almost collapsed probe instead of amplifying its rounding error", () => {
+    const quad = { topLeft: { x: 10, y: 20 }, topRight: { x: 50, y: 20 },
+      bottomRight: { x: 50, y: 76 }, bottomLeft: { x: 10, y: 76 } };
+    expect(quadToMatrix3d(40, 56, quad, 0, 0, {
+      depth: 22.4, topLeft: { x: 30, y: 15 }, topRight: { x: 30.0002, y: 15 },
+    })).toBeNull();
+  });
+
+  it("rejects a raised bottom corner behind the projection camera", () => {
+    const camera: Camera = { a: 1, b: 0, c: 0, d: 10,
+      e: 0, f: 1, j: -.2, k: 20, g: 0, h: -.024, i: -.01 };
+    const width = 40, height = 40, depth = 10;
+    const quad = { topLeft: project(camera, 0, 0, 0), topRight: project(camera, width, 0, 0),
+      bottomRight: project(camera, width, height, 0), bottomLeft: project(camera, 0, height, 0) };
+    expect(quadToMatrix3d(width, height, quad, 0, 0, {
+      depth, topLeft: project(camera, 0, 0, depth), topRight: project(camera, width, 0, depth),
+    })).toBeNull();
+  });
 });

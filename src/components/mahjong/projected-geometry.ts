@@ -45,7 +45,9 @@ export function quadToMatrix3d(width: number, height: number, quad: MotionQuad, 
     const dx = raisedRight.x - raisedLeft.x;
     const dy = raisedRight.y - raisedLeft.y;
     const distanceSquared = dx * dx + dy * dy;
-    if (distanceSquared < 1e-8) return null;
+    const faceWidthSquared = (topRight.x - topLeft.x) ** 2 + (topRight.y - topLeft.y) ** 2;
+    // A nearly collapsed measured edge cannot reliably determine the Z column.
+    if (distanceSquared < Math.max(1e-8, faceWidthSquared * 1e-4)) return null;
 
     // The four face corners determine the X/Y plane homography. Two corners
     // on a parallel measured plane determine the missing Z column. Retain
@@ -58,9 +60,15 @@ export function quadToMatrix3d(width: number, height: number, quad: MotionQuad, 
     zPerspective = -(dx * (rightX - leftX) + dy * (rightY - leftY)) / distanceSquared;
     zX = leftX + raisedLeft.x * zPerspective;
     zY = leftY + raisedLeft.y * zPerspective;
-    const leftW = 1 + zPerspective * depth;
     const rightW = 1 + g + zPerspective * depth;
-    if (leftW <= 1e-8 || rightW <= 1e-8) return null;
+    // Validate the whole tile volume, including its lower face, before allowing
+    // a projective denominator to cross the camera plane.
+    for (const z of [-depth, 0, depth]) {
+      for (const planeW of [1, 1 + g, 1 + h, 1 + g + h]) {
+        const w = planeW + zPerspective * z;
+        if (!Number.isFinite(w) || w <= 1e-8) return null;
+      }
+    }
     const residual = Math.hypot(
       (a + topLeft.x + zX * depth) / rightW - raisedRight.x,
       (c + topLeft.y + zY * depth) / rightW - raisedRight.y,
