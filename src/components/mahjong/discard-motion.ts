@@ -11,12 +11,17 @@ export type MotionQuad = Readonly<{
   bottomRight: MotionPoint;
   bottomLeft: MotionPoint;
 }>;
+export type MotionNormal = Readonly<{
+  depth: number;
+  topLeft: MotionPoint;
+  topRight: MotionPoint;
+}>;
 export type MotionTilePaint = Readonly<{
   background: string; border: string; borderRadius: string; padding: string;
   boxShadow: string; outline: string; outlineOffset: string; filter: string;
 }>;
 
-export type MotionSourceGeometry = Readonly<{ width: number; height: number; angle: number; scale: number; quad?: MotionQuad }>;
+export type MotionSourceGeometry = Readonly<{ width: number; height: number; angle: number; scale: number; quad?: MotionQuad; depth?: number; normal?: MotionNormal }>;
 
 function validQuad(quad: MotionQuad) {
   const points = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
@@ -26,6 +31,11 @@ function validQuad(quad: MotionQuad) {
     return sum + point.x * next.y - next.x * point.y;
   }, 0) / 2;
   return Number.isFinite(area) && Math.abs(area) > 1;
+}
+
+function validNormal(normal: MotionNormal) {
+  return Number.isFinite(normal.depth) && normal.depth > 0
+    && [normal.topLeft.x, normal.topLeft.y, normal.topRight.x, normal.topRight.y].every(Number.isFinite);
 }
 
 export type DiscardMotionIntent = Readonly<{
@@ -204,7 +214,8 @@ export class DiscardMotionTracker {
         && intent.sourceGeometry.height > 0
         && Number.isFinite(intent.sourceGeometry.angle)
         && intent.sourceGeometry.scale > 0
-        && (!intent.sourceGeometry.quad || validQuad(intent.sourceGeometry.quad));
+        && (!intent.sourceGeometry.quad || validQuad(intent.sourceGeometry.quad))
+        && (!intent.sourceGeometry.normal || validNormal(intent.sourceGeometry.normal));
       return {
         newEvents,
         flight: validIntent ? {

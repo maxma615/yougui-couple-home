@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import type { RoomView } from "@/modules/mahjong/types";
 import { TileFace } from "./mahjong-tile";
-import { MahjongSolidFlightTile } from "./mahjong-solid-flight-tile";
+import { MahjongFaceUpFlightTile, MahjongSolidFlightTile } from "./mahjong-solid-flight-tile";
 import { quadToMatrix3d } from "./projected-geometry";
 import {
   DiscardMotionTracker,
@@ -12,6 +12,7 @@ import {
   type DiscardMotionIntent,
   type MotionQuad,
   type MotionRect,
+  type MotionNormal,
   type MotionSourceGeometry,
   type MotionTilePaint,
 } from "./discard-motion";
@@ -27,6 +28,7 @@ export type FlightGeometry = Readonly<{
   scale: number;
   quad?: MotionQuad;
   depth?: number;
+  normal?: MotionNormal;
 }>;
 
 export type FlightView = Readonly<{
@@ -225,6 +227,8 @@ export function measureDiscardElement(element: HTMLElement) {
       angle: geometry.angle,
       scale: geometry.scale,
       quad: geometry.quad,
+      ...(geometry.depth ? { depth: geometry.depth } : {}),
+      ...(geometry.normal ? { normal: geometry.normal } : {}),
     },
   };
 }
@@ -234,8 +238,8 @@ export function measureDiscardElement(element: HTMLElement) {
 // separate. This snapshot never enters the server Choice payload.
 function readTilePaint(element: HTMLElement, wrapper?: HTMLElement): MotionTilePaint {
   const style = getComputedStyle(element);
-  // Tsumogiri darkens the river wrapper as a whole. The portal has no such
-  // ancestor, so carry that actual composited filter onto its face once.
+  // Tsumogiri tint lives on the cap and side paint planes so their shared
+  // preserve-3d parent stays unflattened. Retain any other source wrapper paint.
   const wrapperFilter = wrapper ? getComputedStyle(wrapper).filter : "none";
   const filter = [style.filter, wrapperFilter].filter(value => value && value !== "none").join(" ") || "none";
   return {
@@ -255,8 +259,9 @@ function elementToFlight(element: HTMLElement, rect: DOMRect): FlightGeometry {
   const style = getComputedStyle(element);
   const width = borderBoxSize(element, style, "width") || element.offsetWidth || rect.width;
   const height = borderBoxSize(element, style, "height") || element.offsetHeight || rect.height;
-  const body = element.closest<HTMLElement>("[data-standing-body]");
-  const depth = body ? numeric(getComputedStyle(body).height) : undefined;
+  const depth = physicalDepth(element);
+  const quad = measureElementQuad(element, style);
+  const normal = quad && depth ? measureElementNormal(element, style, depth, quad) : undefined;
   const { angle, scale } = accumulatedTransform(element);
   return {
     left: rect.left + rect.width / 2,
@@ -265,9 +270,17 @@ function elementToFlight(element: HTMLElement, rect: DOMRect): FlightGeometry {
     height,
     angle,
     scale,
-    quad: measureElementQuad(element, style),
+    quad,
     ...(depth ? { depth } : {}),
+    ...(normal ? { normal } : {}),
   };
+}
+
+function physicalDepth(element: HTMLElement) {
+  const standing = element.closest<HTMLElement>("[data-standing-body]");
+  if (standing) return numeric(getComputedStyle(standing).height);
+  const volume = element.closest<HTMLElement>("[data-river-volume], [data-meld-volume]");
+  return volume ? numeric(getComputedStyle(volume).height) * .4 : 0;
 }
 
 function borderBoxSize(element: HTMLElement, style: CSSStyleDeclaration, axis: "width" | "height") {
@@ -334,6 +347,80 @@ function measureElementQuad(element: HTMLElement, style: CSSStyleDeclaration): M
   }
 }
 
+function measureElementNormal(element: HTMLElement, style: CSSStyleDeclaration, depth: number, plane: MotionQuad): MotionNormal | undefined {
+  if (!(depth > 0) || !Number.isFinite(depth)) return undefined;
+  const borderLeft = numeric(style.borderLeftWidth);
+  const borderTop = numeric(style.borderTopWidth);
+  const saved = new Map<HTMLElement, string | null>();
+  const marker = (corner: "top-left" | "top-right", z: number) => {
+    const marker = document.createElement("span");
+    marker.dataset.discardMotionNormal = `${corner}-${z === 0 ? "plane" : "raised"}`;
+    marker.setAttribute("aria-hidden", "true");
+    marker.style.cssText = `position:absolute;display:block;width:0;height:0;min-width:0;min-height:0;padding:0;margin:0;border:0;overflow:hidden;line-height:0;pointer-events:none!important;visibility:hidden;transition:none!important;animation:none!important;transform:${z === 0 ? "none" : `translateZ(${z}px)`}!important;`;
+    if (corner === "top-left") marker.style.left = `${-borderLeft}px`;
+    else marker.style.right = `${-numeric(style.borderRightWidth)}px`;
+    marker.style.top = `${-borderTop}px`;
+    return marker;
+  };
+  const planeMarkers = (["top-left", "top-right"] as const).map(corner => marker(corner, 0));
+  const raisedMarkers = (["top-left", "top-right"] as const).map(corner => marker(corner, depth));
+  const markers = [...planeMarkers, ...raisedMarkers];
+
+  try {
+    // A flat ancestor silently projects translateZ back onto the face plane.
+    // Temporarily preserve the actual 3D chain through the shared table camera,
+    // then restore every pre-existing inline style byte-for-byte.
+    for (let current: HTMLElement | null = element; current; current = current.parentElement) {
+      saved.set(current, current.getAttribute("style"));
+      current.style.setProperty("transform-style", "preserve-3d", "important");
+      current.style.setProperty("-webkit-transform-style", "preserve-3d", "important");
+      current.style.setProperty("overflow", "visible", "important");
+      // A paint filter on the tile cap (for example the tsumogiri tint) is a
+      // grouping property: it flattens a child's translateZ even while
+      // transform-style says preserve-3d. Remove it only during this
+      // synchronous probe so the normal reflects the shared table camera.
+      current.style.setProperty("filter", "none", "important");
+      current.style.setProperty("-webkit-filter", "none", "important");
+      current.style.setProperty("opacity", "1", "important");
+      current.style.setProperty("clip-path", "none", "important");
+      current.style.setProperty("-webkit-clip-path", "none", "important");
+      current.style.setProperty("mask", "none", "important");
+      current.style.setProperty("-webkit-mask", "none", "important");
+      current.style.setProperty("mix-blend-mode", "normal", "important");
+      current.style.setProperty("isolation", "auto", "important");
+      current.style.setProperty("contain", "none", "important");
+      current.style.setProperty("backdrop-filter", "none", "important");
+      current.style.setProperty("-webkit-backdrop-filter", "none", "important");
+      if (current.classList.contains("mahjong-table__surface") || current === document.documentElement) break;
+    }
+    if (style.position === "static") element.style.setProperty("position", "relative", "important");
+    markers.forEach(marker => element.append(marker));
+    const points = raisedMarkers.map(marker => {
+      const rect = marker.getBoundingClientRect();
+      return { x: rect.left, y: rect.top };
+    });
+    const planePoints = planeMarkers.map(marker => {
+      const rect = marker.getBoundingClientRect();
+      return { x: rect.left, y: rect.top };
+    });
+    if ([...points, ...planePoints].some(point => !Number.isFinite(point.x) || !Number.isFinite(point.y))) return undefined;
+    // Preserve-3D and clearing grouping properties must not alter the z=0
+    // face quad captured immediately beforehand. Otherwise the raised probe
+    // would encode a different plane instead of the element's true normal.
+    if (Math.hypot(planePoints[0].x - plane.topLeft.x, planePoints[0].y - plane.topLeft.y) > .5
+      || Math.hypot(planePoints[1].x - plane.topRight.x, planePoints[1].y - plane.topRight.y) > .5) return undefined;
+    return { depth, topLeft: points[0], topRight: points[1] };
+  } catch {
+    return undefined;
+  } finally {
+    markers.forEach(marker => marker.remove());
+    for (const [node, styleText] of saved) {
+      if (styleText === null) node.removeAttribute("style");
+      else node.setAttribute("style", styleText);
+    }
+  }
+}
+
 function usableQuad(quad: MotionQuad) {
   const points = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
   const area = points.reduce((sum, point, index) => {
@@ -370,6 +457,29 @@ function parseTransform(transform: string) {
   return { a: 1, b: 0, c: 0, d: 1 };
 }
 
+function animateVolumeDepth(node: HTMLElement, fromDepth: number, toDepth: number) {
+  const volume = node.querySelector<HTMLElement>("[data-flight-volume]");
+  if (!volume || !Number.isFinite(fromDepth) || !Number.isFinite(toDepth) || fromDepth < 0 || toDepth < 0) return [];
+  const timing: KeyframeAnimationOptions = { duration: 230, easing: "cubic-bezier(.18,.74,.28,1)", fill: "forwards" };
+  const animations: Animation[] = [];
+  volume.querySelectorAll<HTMLElement>("[data-flight-side]").forEach(side => {
+    const property = side.dataset.flightSide === "top" || side.dataset.flightSide === "bottom" ? "height" : "width";
+    animations.push(side.animate([
+      { [property]: `${fromDepth}px` },
+      { [property]: `${toDepth}px` },
+    ], timing));
+  });
+  volume.querySelectorAll<HTMLElement>("[data-flight-base], [data-flight-contact]").forEach(surface => {
+    const contact = surface.hasAttribute("data-flight-contact");
+    const offset = contact ? .15 : 0;
+    animations.push(surface.animate([
+      { transform: `translateZ(-${fromDepth + offset}px)` },
+      { transform: `translateZ(-${toDepth + offset}px)` },
+    ], timing));
+  });
+  return animations;
+}
+
 export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { flight: FlightView; onFinish: (eventId: string) => void; kind?: "discard" | "nuki" | "call" }) {
   const element = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -378,12 +488,16 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
     let movement: Animation | null = null;
     let flip: Animation | null = null;
     let paint: Animation | null = null;
+    let depthAnimations: Animation[] = [];
     try {
       movement = node.animate([
         keyframe(flight.from),
         keyframe(flight.to),
       ], { duration: 230, easing: "cubic-bezier(.18,.74,.28,1)", fill: "forwards" });
       movement.onfinish = () => onFinish(flight.event.id);
+      const sourceDepth = flight.from.depth ?? (flight.source === "opponent" ? flight.from.height * .4 : 0);
+      const targetDepth = flight.to.depth ?? flight.to.height * .4;
+      if (kind !== "nuki") depthAnimations = animateVolumeDepth(node, sourceDepth, targetDepth);
       if (flight.source !== "opponent" && flight.sourcePaint && flight.targetPaint) {
         const face = node.querySelector<HTMLElement>(".mahjong-discard-flight__face");
         if (face) paint = face.animate([flight.sourcePaint, flight.targetPaint], {
@@ -392,7 +506,12 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
       }
       if (flight.source === "opponent") {
         const card = node.querySelector<HTMLElement>(".mahjong-discard-flight__card");
-        const depth = flight.from.depth ?? flight.from.height * 0.4;
+        const front = node.querySelector<HTMLElement>(".mahjong-discard-flight__front");
+        const depth = targetDepth > 0 ? targetDepth : sourceDepth;
+        if (front) depthAnimations.push(front.animate([
+          { transform: `translateZ(-${sourceDepth}px) rotateY(180deg)` },
+          { transform: `translateZ(-${depth}px) rotateY(180deg)` },
+        ], { duration: 230, easing: "cubic-bezier(.18,.74,.28,1)", fill: "forwards" }));
         if (card) flip = card.animate([
           { transform: "translateZ(0px) rotateY(0deg)" },
           { transform: `translateZ(-${depth}px) rotateY(180deg)` },
@@ -402,18 +521,25 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
       movement?.cancel();
       flip?.cancel();
       paint?.cancel();
+      depthAnimations.forEach(animation => animation.cancel());
       onFinish(flight.event.id);
     }
     return () => {
       movement?.cancel();
       flip?.cancel();
       paint?.cancel();
+      depthAnimations.forEach(animation => animation.cancel());
     };
-  }, [flight, onFinish]);
+  }, [flight, onFinish, kind]);
 
   const projected = Boolean(flight.from.quad && quadToMatrix3d(
-    flight.from.width, flight.from.height, flight.from.quad, flight.from.left, flight.from.top,
+    flight.from.width, flight.from.height, flight.from.quad, flight.from.left, flight.from.top, flight.from.normal,
   ));
+  const targetDepth = flight.to.depth ?? flight.to.height * .4;
+  const hasMeasuredNormal = (geometry: FlightGeometry) => Boolean(geometry.quad && geometry.normal && quadToMatrix3d(
+    geometry.width, geometry.height, geometry.quad, geometry.left, geometry.top, geometry.normal,
+  ));
+  const measuredNormal = hasMeasuredNormal(flight.from) || hasMeasuredNormal(flight.to);
   const style = {
     left: `${flight.from.left}px`,
     top: `${flight.from.top}px`,
@@ -421,7 +547,7 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
     height: `${flight.from.height}px`,
     transform: flightTransform(flight.from),
     transformOrigin: projected ? "0 0" : "center",
-    "--flight-depth": `${flight.from.depth ?? flight.from.height * 0.4}px`,
+    "--flight-depth": `${targetDepth}px`,
   } as CSSProperties;
   return typeof document === "undefined" ? null : createPortal(
     <div
@@ -436,14 +562,18 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard" }: { fli
       style={style}
     >
       {flight.source === "opponent" ? (
-        <span className="mahjong-discard-flight__stage">
+        <span className="mahjong-discard-flight__stage" style={{ perspective: measuredNormal ? "none" : undefined }}>
           <span className="mahjong-discard-flight__card">
             <MahjongSolidFlightTile value={flight.event.tile}/>
           </span>
         </span>
-      ) : (
+      ) : kind === "nuki" ? (
         <span className="mahjong-discard-flight__card">
           <TileFace value={flight.event.tile} className={`mahjong-discard-flight__face${flight.event.tile.includes("_") ? " is-tsumogiri" : ""}${flight.event.tile.includes("*") ? " is-riichi" : ""}`}/>
+        </span>
+      ) : (
+        <span className="mahjong-discard-flight__card" style={{ transformStyle: "preserve-3d", WebkitTransformStyle: "preserve-3d" }}>
+          <MahjongFaceUpFlightTile value={flight.event.tile}/>
         </span>
       )}
     </div>,
@@ -457,7 +587,7 @@ function transform(geometry: FlightGeometry) {
 
 function flightTransform(geometry: FlightGeometry) {
   if (geometry.quad) {
-    const matrix = quadToMatrix3d(geometry.width, geometry.height, geometry.quad, geometry.left, geometry.top);
+    const matrix = quadToMatrix3d(geometry.width, geometry.height, geometry.quad, geometry.left, geometry.top, geometry.normal);
     if (matrix) return matrix;
   }
   return transform(geometry);
@@ -470,7 +600,7 @@ function keyframe(geometry: FlightGeometry): Keyframe {
     width: `${geometry.width}px`,
     height: `${geometry.height}px`,
     transform: flightTransform(geometry),
-    transformOrigin: geometry.quad && quadToMatrix3d(geometry.width, geometry.height, geometry.quad, geometry.left, geometry.top)
+    transformOrigin: geometry.quad && quadToMatrix3d(geometry.width, geometry.height, geometry.quad, geometry.left, geometry.top, geometry.normal)
       ? "0 0"
       : "center",
   };

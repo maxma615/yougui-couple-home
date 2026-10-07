@@ -22,3 +22,20 @@ export function MahjongSolidFlightTile({ value }: { value: string }) {
     </span>
   );
 }
+
+/** Face-up body used while a hand discard or called river tile travels. Its
+ * cap stays on the measured plane while its real walls grow to target depth. */
+export function MahjongFaceUpFlightTile({ value }: { value: string }) {
+  return <span className="mahjong-discard-flight__face-up" data-flight-volume="true" aria-hidden="true">
+    <span className="mahjong-discard-flight__face-up-base" data-flight-base="true" data-flight-face="base" aria-hidden="true"/>
+    <span className="mahjong-discard-flight__face-up-cap" data-flight-face="front">
+      <TileFace value={value} className={`mahjong-discard-flight__face${value.includes("_") ? " is-tsumogiri" : ""}${value.includes("*") ? " is-riichi" : ""}`}/>
+    </span>
+    <span className="mahjong-discard-flight__face-up-contact" data-flight-contact="true" aria-hidden="true"/>
+    {sideFaces.map(face => <span
+      key={face}
+      className={`mahjong-discard-flight__face-up-side mahjong-discard-flight__face-up-side--${face}`}
+      data-flight-face={face} data-flight-side={face} aria-hidden="true"
+    />)}
+  </span>;
+}
