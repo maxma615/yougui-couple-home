@@ -4,6 +4,7 @@ import type {RoomView} from '@/modules/mahjong/types';
 import {TableAudioPlayer} from './table-audio';
 import {tableSoundTransition,type PendingKakanSound,type TableSoundEvent} from './table-sounds';
 import {acceptedDeclarationSounds} from './declaration-sounds';
+import {acceptedRankingSounds} from './ranking-sounds';
 import {acceptedSettlementSounds,settlementSoundPhase,type SettlementSoundEvent} from './settlement-sounds';
 
 type Pending={cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number;declarationGroup?:string;declarationOffset?:number;notBefore?:number;settlement?:SettlementSoundEvent;settlementAt?:number};
@@ -133,7 +134,7 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   if(!connected||document.visibilityState==='hidden'){clear();player.current?.pause();return;}
   if(!canAnimate){clear();player.current?.cancel();return;}
   if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room)){pendingKan.current=null;return;}
-  const resultCues=acceptedSettlementSounds(old.room,room);
+  const resultCues=[...acceptedSettlementSounds(old.room,room),...acceptedRankingSounds(old.room,room)];
   for(const cue of resultCues){
    if(cue.kind==='score-roll'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)continue;
    pending.current.set(cue.id,{cue,epoch:epoch.current,settlement:cue,settlementAt:performance.now()-cue.elapsedMs});

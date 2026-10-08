@@ -14,7 +14,7 @@ function wav(samples:number[]){const data=Buffer.alloc(44+samples.length*2);data
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true});
  try{const page=await browser.newPage();await page.setContent('<button>开启声音</button>');await page.addScriptTag({content:bundle.outputFiles[0].text});
-  for(const kind of ['draw','discard','call','nuki','riichi','ron','tsumo','yaku','hand-value','score-roll']){
+  for(const kind of ['draw','discard','call','nuki','riichi','ron','tsumo','yaku','hand-value','score-roll','rank-first','rank-row']){
    const samples=await page.evaluate(k=>(window as any).wave(k),kind) as number[];
    assert.equal(samples.length,kind==='score-roll'?57600:28800);assert(samples.every(Number.isFinite));
    const peak=Math.max(...samples.map(Math.abs)),rms=Math.sqrt(samples.reduce((a,b)=>a+b*b,0)/samples.length),mean=samples.reduce((a,b)=>a+b,0)/samples.length;

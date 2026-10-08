@@ -1,11 +1,23 @@
 import type {TableSoundEvent} from './table-sounds';
 
 type SoundKind=TableSoundEvent['kind'];
-const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38,yaku:.09,'hand-value':.24,'score-roll':.99};
+const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38,yaku:.09,'hand-value':.24,'score-roll':.99,'rank-first':.26,'rank-row':.12};
 
 /** Original short resin/cloth transients, generated locally without samples. */
 export function makeTileSoundBuffer(context:BaseAudioContext,kind:SoundKind):AudioBuffer{
  const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*durations[kind]),context.sampleRate);
+ if(kind==='rank-first'||kind==='rank-row'){
+  const samples=buffer.getChannelData(0),notes=kind==='rank-first'?[880,1108.73,1318.51]:[659.25];
+  for(let i=0;i<samples.length;i++){
+   const t=i/context.sampleRate;let value=0;
+   for(let n=0;n<notes.length;n++){
+    const age=t-n*.025;if(age<0)continue;
+    value+=Math.min(1,age/.003)*Math.exp(-age/.038)*(.2*Math.sin(2*Math.PI*notes[n]*age)+.035*Math.sin(4*Math.PI*notes[n]*age));
+   }
+   samples[i]=value*Math.min(1,(samples.length-i)/context.sampleRate/.008);
+  }
+  return buffer;
+ }
  if(kind==='yaku'||kind==='hand-value'||kind==='score-roll'){
   const samples=buffer.getChannelData(0);
   for(let i=0;i<samples.length;i++){

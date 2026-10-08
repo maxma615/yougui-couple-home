@@ -3,7 +3,7 @@ import {acceptedNukiEvent} from './nuki-motion';
 import {acceptedPendingKakanEvent,acceptedPublicCallEvent,type PublicCallEvent} from './public-call-motion';
 import {createDiscardEventId} from './discard-motion';
 
-export type TableSoundEvent = {id:string;kind:'discard'|'draw'|'call'|'nuki'|'riichi'|'ron'|'tsumo'|'yaku'|'hand-value'|'score-roll';seat:number;replacement?:boolean};
+export type TableSoundEvent = {id:string;kind:'discard'|'draw'|'call'|'nuki'|'riichi'|'ron'|'tsumo'|'yaku'|'hand-value'|'score-roll'|'rank-first'|'rank-row';seat:number;replacement?:boolean};
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 
 /** Public event identities only: no hidden tile is needed to make a sound. */

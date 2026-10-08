@@ -2,7 +2,7 @@ import type {RoomView} from '@/modules/mahjong/types';
 import {detailValueAt,SCORE_START_MS,SCORE_STEP_MS,SCORE_STEPS} from './settlement-presentation';
 import type {TableSoundEvent} from './table-sounds';
 export type SettlementSoundEvent=TableSoundEvent & {atMs:number;elapsedMs:number;endMs:number;phaseKey:string;selector:string};
-export const settlementSoundPhase=(r:RoomView)=>{const f=r.game?.settlementFlow;return f?JSON.stringify([f.id,f.stage,f.detailIndex]):'';};
+export const settlementSoundPhase=(r:RoomView)=>{const ranking=r.game?.rankingFlow;if(r.game?.ranking&&ranking)return JSON.stringify(['ranking',ranking.id]);const f=r.game?.settlementFlow;return f?JSON.stringify([f.id,f.stage,f.detailIndex]):'';};
 /** Live phase entries only. A first snapshot, a missed version or a late
  * snapshot cannot reconstruct sounds already heard by another device. */
 export function acceptedSettlementSounds(before:RoomView|null,after:RoomView):SettlementSoundEvent[]{

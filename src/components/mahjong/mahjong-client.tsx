@@ -7,7 +7,7 @@ import { MahjongCallOption } from "./mahjong-call-option";
 
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, Expand, LoaderCircle, Radio, RefreshCw, Sparkles, Swords, Smartphone, Volume2, VolumeX, Wifi, WifiOff, X } from "lucide-react";
 
 import { apiRequest, errorMessage } from "@/components/api-client";
@@ -425,9 +425,11 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const drawPresentation = useSettlementPresentation({flow: game?.settlementFlow?.stage === "draw" ? game.settlementFlow : undefined, settlement: game?.settlement ?? null, connected, busy, onChoice, leadInMs: drawLead});
   const revealedHands = game?.settlement?.drawInfo && (game.settlementFlow?.stage !== "draw" || drawPresentation.elapsed >= drawRevealAt(game.settlement)) ? game.settlement.drawInfo.revealedHands : [];
   const handReflow = useHandReflow({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
-  useEffect(() => {
+  useLayoutEffect(() => {
     const table = tableRef.current;
-    if (!table || typeof ResizeObserver === "undefined") return;
+    // Hiding the completed table is a result transition, not a stale tile
+    // geometry change. Disconnect before that resize can cancel ranking cues.
+    if (room.status === "finished" || !table || typeof ResizeObserver === "undefined") return;
     let size = table.getBoundingClientRect();
     const observer = new ResizeObserver(() => {
       const next = table.getBoundingClientRect();
@@ -436,7 +438,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     });
     observer.observe(table);
     return () => observer.disconnect();
-  }, [drawArrival.cancel, audio.invalidate]);
+  }, [drawArrival.cancel, audio.invalidate, room.status]);
   const selectedHandTileRef = useRef<{ tileId: string; choiceId: string } | null>(null);
   const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; rackTop: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
   const submittedChoiceRef = useRef(false);

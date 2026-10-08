@@ -819,3 +819,10 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
   .mahjong-result-indicators { gap: 8px; }
   .mahjong-result-indicators .mahjong-indicator-back { width: clamp(19px, 5.5vw, 24px); height: 37px; }
 }
+
+/* Reserve the 44px sound/screen toolbar above the result card, including
+   short landscape viewports. The result body keeps its own scroll area. */
+.mahjong-game:not(.is-finished) > .mahjong-settlement-panel {
+  top: max(43%, calc(max(12px, env(safe-area-inset-top)) + 44px + 8px + 36dvh));
+  max-height: min(72dvh, calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+}
