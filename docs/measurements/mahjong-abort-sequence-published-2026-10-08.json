@@ -1,0 +1,119 @@
+{
+  "sourceRevision": "022e07aea8169075a91739c2be300bdd2ed144a6",
+  "buildId": "iDm25KsJSVepu3TrqHN-X",
+  "imageId": "sha256:c6a8d4a9ce75be9feb2cf9faf37370da7c9da213da098657c20ce2483d3be196",
+  "sourceFiles": 560,
+  "nextFiles": 449,
+  "manifestSha256": "a85e426c793bf612d11326561ed735110643e95194af01d3b683cce79f1a7afb",
+  "archiveSha256": "34037038727593519e09002e29cbff5946393fdc1144d629922a7a18b4de3314",
+  "testFiles": 70,
+  "localTests": 646,
+  "linuxTests": 62,
+  "nativeAbortBrowserScenes": 38,
+  "drawRegressionBrowserScenes": 24,
+  "continuousDiscardScenes": 4,
+  "animationClockSamples": 8,
+  "exactReviewRefreshSamples": 6,
+  "offlineReviewSamples": 4,
+  "publicAssets": 130,
+  "overallGoalAchieved": false,
+  "reviewRulingSha256": "1f5ce2e65177f28f68612eea7f594bafa97aea36d8a376541dd0ec868e21f379",
+  "proofs": {
+    "build-status": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r02-build-status.json",
+      "sha256": "3fe9ee2d681ccd0e043efce4d9b91d46a224656dce67bc936da60cb555b804fc",
+      "commandSha256": "3a6401a11e4614bd10c53d35baf50b33078346a079a8341227b773fcfa562512"
+    },
+    "candidate": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r01-candidate.json",
+      "sha256": "fd7533282ec37a5e306591335c25e7e1bfc256f33c301fea8bcc3346400872b4",
+      "commandSha256": "1a9a5bfa33364aec087355ec71979d4f465f189300c42702398d9e02c3f4d69f"
+    },
+    "linux-status": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r03-linux-status.json",
+      "sha256": "c072200b0a836ea4c5cfb44a8e53425fa733acc7d258673ed2378f83dd1fb48b",
+      "commandSha256": "c3dd8050b108812545f15d80a0ccb032bac31377683f5e95c96c256b64a33baa"
+    },
+    "staging": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r01-staging.json",
+      "sha256": "7d9986ee1b5322c3f17f1da5bc89e84b29720274f98a3458ca74f5d61cc1b82d",
+      "commandSha256": "bfd654edc8695fa0b03eb20485c8f9237db32c9a104ba2ef9babca974e374d9c"
+    },
+    "readiness": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r01-readiness.json",
+      "sha256": "dc9429e89058239c2763b6939572672f4150b3a6a27b11caed9651137f74a9d3",
+      "commandSha256": "4db447be4fbb0348ced7f0563b4b12a45e93f6214ed2ed54d69bcfa5a5d499a2"
+    },
+    "publish": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r01-publish.json",
+      "sha256": "765fbaa9ed16ae1d8477ed3a67a5fc516927907040c2b03a8c2918bbfbe14a4e",
+      "commandSha256": "7195474456559a060ca3040e3929a29dbfc948cd509796630dfc76bb07e52863"
+    },
+    "publish-status": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r02-publish-status.json",
+      "sha256": "e348eb2e1c1d14edc8311c9ca03502e4090c578baa43d5abe2558ce5987c66c4",
+      "commandSha256": "b836570f69006053e65d6f62c01819cf021bff23e38246daa44b0b50806fd714"
+    },
+    "live-check": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r01-live-check.json",
+      "sha256": "03c85ee1bece93e44e0d86c5d194f16b5799808e5718f67db4a9781925c278ac",
+      "commandSha256": "91c980794858669a2e96107d95da8f346da0c3b6b182de6325adf411cdf49374"
+    },
+    "final-health": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r01-final-health.json",
+      "sha256": "acff1838d5f5b2d61d9528a61593ad5871b028fc315cedf58af7d8faf5cf9c75",
+      "commandSha256": "78f336956b245c4ce0010a15b8ab4afdf37489a17227b140a1232bbda01df4c5"
+    },
+    "published-preflight": {
+      "capture": ".local/ecs-deploy/abort-sequence-remote-captures/abort-sequence-022e07a-r01-published-preflight.json",
+      "sha256": "462caaac789fa9b79ef6f75bdf56d25cfa487d2002d0a0ae63f3013d8f16e53d",
+      "commandSha256": "5f7f7d2d70b556e084f5d845954ed25d639d077c047450f97ac9a685a673ec6b"
+    }
+  },
+  "live": {
+    "schemaVersion": 1,
+    "release": "022e07a",
+    "sourceRevision": "022e07aea8169075a91739c2be300bdd2ed144a6",
+    "buildId": "iDm25KsJSVepu3TrqHN-X",
+    "imageId": "sha256:c6a8d4a9ce75be9feb2cf9faf37370da7c9da213da098657c20ce2483d3be196",
+    "sourceFiles": 560,
+    "nextFiles": 449,
+    "manifestSha256": "a85e426c793bf612d11326561ed735110643e95194af01d3b683cce79f1a7afb",
+    "allHashesMatch": true,
+    "allTableDigestsUnchanged": true,
+    "tableCount": 12,
+    "beforeTableDigestsSha256": "62822111fb43742ac11d3a6ce9174bff9a9d644af57378749c0a8eccffce90ef",
+    "afterTableDigestsSha256": "62822111fb43742ac11d3a6ce9174bff9a9d644af57378749c0a8eccffce90ef",
+    "tableFingerprintHelperSha256": "6ec11f779d989371f319c9cf132f941a0710a682695d596c57c1fa0d9750de2a",
+    "baseCompatibilityProofSha256": "fd7533282ec37a5e306591335c25e7e1bfc256f33c301fea8bcc3346400872b4",
+    "baseCompatibilityCommandSha256": "1a9a5bfa33364aec087355ec71979d4f465f189300c42702398d9e02c3f4d69f",
+    "scoringPinSha256": "7e087c193bb0e8e26c3324eee2da345356065fc07652fb689a92b5e1a1023145",
+    "scoringProofSha256": "c072200b0a836ea4c5cfb44a8e53425fa733acc7d258673ed2378f83dd1fb48b",
+    "scoringCommandSha256": "de2371a0becb6439745af6262f7223c2620b907075cb708bd94d78d5e8f21f25",
+    "scoringTestCount": 62,
+    "scoringPassed": 62,
+    "cleanupCidAndImageUnchanged": true,
+    "backupMarkerPath": "/srv/yougui/config/backups-disabled",
+    "backupMarkerSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "backupTimerEnabled": "masked",
+    "backupTimerActive": "inactive",
+    "backupServiceActive": "inactive",
+    "backupPolicyDisabled": true,
+    "backupPathsExist": {
+      "/srv/yougui/backups": false,
+      "/srv/yougui/album-backups": false,
+      "/srv/yougui/.backup-transfer": false
+    },
+    "appResources": {
+      "nanoCpus": 1000000000,
+      "memoryBytes": 805306368
+    },
+    "availableDiskBytes": 22307180544
+  },
+  "publicProofSha256": "e37883b61c4a486e9aaf9d9ad018c0b52f41dbcbdf56baad4f419da33193db36",
+  "remaining": [
+    "actual Android acceptance",
+    "unreproduced user table-skew report",
+    "full voice/sound and remaining visual/rule/protocol fidelity"
+  ]
+}

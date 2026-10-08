@@ -32,7 +32,9 @@
 
 ### Task 3: 联机、独立终审、固定候选发布
 **Files:** extend tests/integration/mahjong-draw-runtime.test.ts; docs/mahjong-abort-sequence-acceptance.md and measurements artifact; immutable new audit/ops namespace.
-- [ ] 真实认证Socket/电脑/独立ACK/重连/权限/最后屏障回归，检查不能提前进下一手。
-- [ ] 完整tests/type/build/secrets通过，一次独立整分支终审，必要问题一次RED→GREEN修复。
-- [ ] 当前5178263父镜像/helper/禁备份/清理器/12表/无真人牌桌保护；新固定镜像Linux验收通过后发布。
-- [ ] 公网摘要、数据和资源限制验证；安全同步自有文件与文档；保持整体目标active。
+- [x] 真实认证Socket/电脑/独立ACK/重连/权限/最后屏障回归，检查不能提前进下一手。
+- [x] 完整tests/type/build/secrets通过，一次独立整分支终审，必要问题一次RED→GREEN修复。
+- [x] 当前5178263父镜像/helper/禁备份/清理器/12表/无真人牌桌保护；新固定镜像Linux验收通过后发布。
+- [x] 公网摘要、数据和资源限制验证；安全同步自有文件与文档；保持整体目标active。
+
+发布源022e07a，证据：docs/mahjong-abort-sequence-acceptance.md。根单次审查修复、646本地／62Linux、130公网资源通过；整体目标active，真实Android与其余完整体验未宣称完成。
