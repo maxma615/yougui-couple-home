@@ -40,3 +40,15 @@ it('reads the explicit preference, tolerates storage failure and ignores a hidde
  const visibility=vi.spyOn(document,'visibilityState','get').mockReturnValue('hidden');tap(t);now+=100;tap(t);expect(t.onDoubleTap).not.toHaveBeenCalled();visibility.mockReturnValue('visible');
  vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw Error('disabled');});act(()=>t.result.current.toggle());expect(t.result.current.enabled).toBe(false);
 });
+
+it('requires explicit authoritative recovery before allowing another pair for the same decision',()=>{
+ const onDoubleTap=vi.fn(()=>true),initial={scope:'decision-1',disabled:false,onDoubleTap,recoveryEpoch:0};
+ const t=renderHook(p=>useBlankTableDoubleTap(p),{initialProps:initial});
+ act(()=>t.result.current.toggle());
+ const pair=()=>{for(let i=0;i<2;i++){act(()=>t.result.current.down(event()));act(()=>t.result.current.up(event()));now+=100;}};
+ pair();expect(onDoubleTap).toHaveBeenCalledOnce();
+ t.rerender({...initial,disabled:true});t.rerender(initial);pair();expect(onDoubleTap).toHaveBeenCalledOnce();
+ // A successful server baseline explicitly rearms, but never replays an old pair.
+ t.rerender({...initial,recoveryEpoch:1});expect(onDoubleTap).toHaveBeenCalledOnce();
+ pair();expect(onDoubleTap).toHaveBeenCalledTimes(2);pair();expect(onDoubleTap).toHaveBeenCalledTimes(2);
+});

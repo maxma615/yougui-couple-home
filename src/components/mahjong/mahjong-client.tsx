@@ -92,6 +92,7 @@ function MahjongRoot() {
   const [mode, setMode] = useState<GameMode>("east");
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [choiceRecoveryEpoch, setChoiceRecoveryEpoch] = useState(0);
   const [notice, setNotice] = useState("");
   const [connected, setConnected] = useState(false);
   const [motionCanAnimate, setMotionCanAnimate] = useState(false);
@@ -143,7 +144,10 @@ function MahjongRoot() {
     try {
       const next = await apiRequest<MahjongResponse>("/api/mahjong", { method: "GET" });
       if (!isCurrent()) return;
-      if (applyResponse(next, revision) && !quiet) setNotice("");
+      if (applyResponse(next, revision)) {
+        if (!quiet) setNotice("");
+        return next;
+      }
     } catch (error) {
       if (!isCurrent()) return;
       if (!quiet) setNotice(errorMessage(error));
@@ -229,6 +233,8 @@ function MahjongRoot() {
     pendingMutation.current = revision;
     latestMotionIntent.current = motionIntent;
     let reconcile = false;
+    let failedChoice = false;
+    const submittedGame = room?.game;
     setBusy(true);
     setNotice("");
     try {
@@ -240,14 +246,27 @@ function MahjongRoot() {
       reconcile = !applyResponse(next, revision, { canAnimate: true, intent: motionIntent });
     } catch (error) {
       if (responseRevision.current === revision) setNotice(errorMessage(error));
+      failedChoice = command.action === "respond";
       reconcile = true;
     } finally {
       pendingMutation.current = null;
       setBusy(false);
       // Re-read after completion rather than guessing whether a delayed POST is newer than a socket.
-      if (reconcile) await refresh(true);
+      if (reconcile) {
+        const recovered = await refresh(true);
+        // A failed POST alone cannot rearm input: require an accepted, still-current baseline.
+        if (failedChoice && command.action === "respond" && recovered?.room && responseRef.current === recovered
+          && recovered.room?.id === roomId
+          && recovered.room.game?.gameInstanceId === submittedGame?.gameInstanceId
+          && recovered.room.game?.handId === submittedGame?.handId
+          && recovered.room.mySeat === room?.mySeat
+          && recovered.room.game?.decisionId === command.decisionId
+          && recovered.room.game?.choices.some(choice => choice.id === command.choiceId)) {
+          setChoiceRecoveryEpoch(epoch => epoch + 1);
+        }
+      }
     }
-  }, [room?.id, refresh, applyResponse]);
+  }, [room, refresh, applyResponse]);
 
   const closeRoom = () => {
     setConfirmFinish(false);
@@ -306,6 +325,7 @@ function MahjongRoot() {
         connected={connected}
         motionCanAnimate={motionCanAnimate}
         motionIntent={motionIntent}
+        choiceRecoveryEpoch={choiceRecoveryEpoch}
         onChoice={(choice, intent) => room.game && void send({ action: "respond", decisionId: room.game.decisionId, choiceId: choice.id }, intent ?? null)}
         onFinish={() => setConfirmFinish(true)}
         onRematch={() => void send({ action: "rematch" })}
@@ -404,9 +424,9 @@ function SeatCard({ member, seat, isMe, waiting = false, player, active = false,
   </article>;
 }
 
-export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimate = connected, motionIntent = null, onChoice, onFinish, onRematch, onLeave }: {
+export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimate = connected, motionIntent = null, choiceRecoveryEpoch = 0, onChoice, onFinish, onRematch, onLeave }: {
   room: RoomView; busy: boolean; host: boolean; ownSeat: number; connected: boolean;
-  motionCanAnimate?: boolean; motionIntent?: DiscardMotionIntent | null;
+  motionCanAnimate?: boolean; motionIntent?: DiscardMotionIntent | null; choiceRecoveryEpoch?: number;
   onChoice: (choice: Choice, intent?: DiscardMotionIntent | null) => void; onFinish: () => void; onRematch: () => void; onLeave: () => void;
 }) {
   const game = room.game;
@@ -441,7 +461,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     }
     onChoice(choice);
   }});
-  const tableShortcut = useBlankTableDoubleTap({scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
+  const tableShortcut = useBlankTableDoubleTap({recoveryEpoch:choiceRecoveryEpoch,scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
     if (!game || submittedChoiceRef.current) return false;
     const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType));
     if (!action) return false;

@@ -28,3 +28,15 @@
 冻结镜像sha256:ebaf4559fda36ac188423f84f8d3077fb1449663122290fb6fb215546101bcac的663份源码、449份构建文件摘要一致，继承原依赖层。隔离Linux容器0.5CPU/384MiB、原生单worker配置下539项/35文件全部通过；实际exit0，未将运行状态或观察超时算通过。发布屏障内确认无活动真人牌局后切换，健康检查通过并恢复入口。13个远端阶段实际终态通过；默认可信TLS公网健康200与133份资源摘要匹配，12张表发布前后摘要一致（9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41）。应用1CPU/768MiB、清理器实例及镜像不变，禁备份标记与masked/inactive状态保持，未建立备份或下载真实用户资料。完整终态核对保存在.local/ecs-deploy/blank-published-closeout-r01.json。
 
 浏览器测试通过桥接回调把UI选择交给原生引擎，HTTP/生产账号/TLS/WSS不包含在本步144场景中。真实Android、生产网络失败/重连的完整手势验收和完整当前厂商体验继续待验证；原完整目标active，未缩小为本次快捷操作。
+
+
+## 失败请求后的明确重试（2026-10-09，本地候选）
+
+网络失败曾让双击快捷操作在同一决定永久保持consumed：手动点牌恢复后，重新双击仍无回调。控制器与正式Root分别取得真实RED（blank-recovery-red-r01.log、blank-recovery-root-red-r01.log）。新增显式恢复代次，仅在respond失败后、成功GET被原有响应排序接受、该对象仍是当前状态、房间/游戏/手局/席位/决定相同且原Choice仍有效时递增。恢复清空旧手势与consumed，必须重新双击；忙碌解除本身、GET失败、过时GET、已移除选项不解锁，也不自动补发。新游戏仍沿原scope正常初始化，不把新游戏当旧决定重试。
+
+正式Root组件覆盖失败POST后成功GET、GET也失败、选项消失、新游戏以及GET晚于更新Socket五种分支；控制器证明单纯busy解除不解锁、明确恢复不重放旧输入。本轮测试使用模拟HTTP/Socket与原生物理引擎初始化视图，不能代替实际HTTP网络、生产账号WSS或真实Android。当前线上仍2bcc076；新增恢复逻辑需后续真实网络及Linux发布验证，完整对齐目标保持active。
+
+
+最终代码完整978项/92文件、类型检查、生产构建及374文件凭据扫描实际exit0，证据blank-recovery-full-r02.log、blank-recovery-type-r02.log、blank-recovery-build-r01.log、blank-recovery-secrets-r01.log。中间类型检查发现nullable room，补充显式非空检查后重跑通过；中间测试误把新游戏初始化当旧决定去重，修正测试预期（新游戏本就应允许明确操作），没有改产品scope。
+
+原144原生浏览器回归在最终产品源码下全部通过（blank-recovery-browser-r01.log / .local/audit/blank-table-browser-1791495936490/proof.json），Chromium/WebKit、三四麻、两横屏、mouse/touchscreen输入保持合法精确弃牌与默认关闭，结束后再次核对所有源摘要。此144仍是GameRoom桥接引擎，不含本次Root失败HTTP实际传输；失败恢复的Root覆盖由组件测试证明。最终63项定向检查通过，根非独立复核blank-recovery-final-review-r01.json。

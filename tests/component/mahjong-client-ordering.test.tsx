@@ -154,3 +154,38 @@ it('ignores queued room frames after disconnect until the same transport reconne
  expect(screen.queryByRole('status',{name:'连接状态'})).toBeNull();
  expect(document.querySelector<HTMLButtonElement>('.mahjong-hand [data-choice-type="discard"]')!.disabled).toBe(false);
 });
+
+function blankPair() {
+ const surface=document.querySelector('.mahjong-table__surface')!;
+ for(let i=0;i<2;i++) {
+  fireEvent(surface,new MouseEvent('pointerdown',{bubbles:true,button:0,clientX:100,clientY:100}));
+  fireEvent(surface,new MouseEvent('pointerup',{bubbles:true,button:0,clientX:100,clientY:100}));
+ }
+}
+for(const recovery of ['accepted','failed-get','missing-choice','new-instance','stale-get'] as const)it('rearms a failed shortcut only with an accepted current baseline: '+recovery,async()=>{
+ localStorage.setItem('yougui.mahjong.doubleClick','1');
+ try {
+  const current=playing();await start(current);await socketState(current);
+  let posts=0,gets=0;
+  const recovered=structuredClone(current);
+  if(recovery==='missing-choice')recovered.room!.game!.choices=[];
+  if(recovery==='new-instance')recovered.room!.game!.gameInstanceId='replacement-game';
+  const held=deferred();
+  mocks.api.mockImplementation((_path:string,options:RequestInit)=>{
+   if(options.method==='POST'){posts++;return Promise.reject(new Error('offline POST'));}
+   gets++;
+   if(recovery==='failed-get')return Promise.reject(new Error('offline GET'));
+   if(recovery==='stale-get')return held.promise;
+   return Promise.resolve(recovered);
+  });
+  await act(async()=>blankPair());expect(posts).toBe(1);expect(gets).toBe(1);
+  if(recovery==='stale-get'){
+   await socketState({...current,room:{...current.room!,version:current.room!.version+1}});
+   await deliver(held,current);
+  }
+  // Recovery must not replay the first gesture or automatically submit.
+  expect(posts).toBe(1);
+  await act(async()=>blankPair());
+  expect(posts).toBe(recovery==='accepted'||recovery==='new-instance'?2:1);
+ } finally {localStorage.clear();}
+});

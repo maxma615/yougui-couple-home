@@ -2,13 +2,13 @@
 import {useCallback,useEffect,useRef,useState,type PointerEvent} from 'react';
 export const blankTablePreference='yougui.mahjong.doubleClick';
 const surface=(target:EventTarget|null)=>target instanceof Element&&target.matches('.mahjong-table,.mahjong-table__surface');
-export function useBlankTableDoubleTap({scope,disabled,onDoubleTap}:{scope:string;disabled:boolean;onDoubleTap:()=>boolean}){
+export function useBlankTableDoubleTap({scope,disabled,onDoubleTap,recoveryEpoch=0}:{scope:string;disabled:boolean;onDoubleTap:()=>boolean;recoveryEpoch?:number}){
  const [enabled,setEnabled]=useState(false);
  const press=useRef<{id:number;x:number;y:number;scope:string}|null>(null),last=useRef<{at:number;scope:string}|null>(null),consumed=useRef<string|null>(null);
  const latest=useRef({scope,disabled,onDoubleTap});latest.current={scope,disabled,onDoubleTap};
  const reset=useCallback(()=>{press.current=null;last.current=null;},[]);
  useEffect(()=>{try{setEnabled(localStorage.getItem(blankTablePreference)==='1');}catch{/* Optional preference storage. */}},[]);
- useEffect(()=>{reset();consumed.current=null;},[scope,enabled,reset]);
+ useEffect(()=>{reset();consumed.current=null;},[scope,enabled,recoveryEpoch,reset]);
  useEffect(()=>{if(disabled)reset();},[disabled,reset]);
  useEffect(()=>{
   window.addEventListener('blur',reset);window.addEventListener('pagehide',reset);
