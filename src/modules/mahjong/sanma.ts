@@ -483,6 +483,7 @@ export class SanmaGame {
       remainingTiles: this.wall.remaining,
       doraIndicators: this.wall.dora,
       turnSeat: this.turn,
+      ronBlocked: this.players[seat].temporaryFuriten || this.players[seat].riichiFuriten,
       hand: concealedTiles(hand.toString()),
       drawnTile: hand._zimo?.length === 2 ? hand._zimo : null,
       players: this.players.map((p, s) => ({

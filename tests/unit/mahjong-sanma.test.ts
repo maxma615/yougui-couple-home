@@ -253,6 +253,8 @@ describe("Sanma special rules with physical fixtures",()=>{
     expect(settlement.yaku.map(y=>y.name)).not.toContain("槍槓");
     expect(settlement.yaku.map(y=>y.name)).not.toContain("嶺上開花");
     const passed=new SanmaGame("east",names,options);act(passed,0,"nuki");passAll(passed);
+    expect(passed.view(1).ronBlocked).toBe(true);expect(passed.view(0).ronBlocked).toBe(false);
+    expect(passed.view(0).players.every(player=>!("ronBlocked" in player))).toBe(true);
     act(passed,0,"nuki");
     expect(passed.view(1).choices.some(c=>c.type==="ron")).toBe(false);
     expect(passed.view(0).players[0].nuki).toBe(2);
