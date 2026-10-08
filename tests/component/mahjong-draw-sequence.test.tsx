@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import {afterEach, beforeEach, expect, it, vi} from "vitest";
-import {act, cleanup, fireEvent, render, screen, within} from "@testing-library/react";
+import {act, cleanup, fireEvent, render, renderHook, screen, within} from "@testing-library/react";
 import {MahjongSettlementPanel} from "@/components/mahjong/mahjong-settlement-panel";
 import {GameRoom} from "@/components/mahjong/mahjong-client";
 import {SettlementSequenceGame} from "@/modules/mahjong/settlement-sequence";
 import type {GameVariant, RoomView} from "@/modules/mahjong/types";
 import {drawEngine, playToDraw} from "../fixtures/mahjong-draw-game";
 import {physicalEngine} from "../fixtures/mahjong-settlement-game";
+import {useDrawResultLead} from "@/components/mahjong/use-draw-result-lead";
 
 beforeEach(() => vi.useFakeTimers({toFake:["setTimeout","clearTimeout","Date","performance"]}));
 afterEach(() => {cleanup();vi.useRealTimers();});
@@ -110,5 +111,21 @@ it("measures the remaining running discard before revealing a public rack",()=>{
     tick(120);expect(document.querySelector('[data-draw-reveal-seat="0"]')).not.toBeNull();
     tick(880);expect(screen.queryByRole('region',{name:'听牌结果'})).toBeNull();
     tick(120);expect(screen.getByRole('region',{name:'听牌结果'})).toBeTruthy();
+  } finally {flight.remove();}
+});
+it("waits for the final discard when it replaces an overlapping prior flight",()=>{
+  const flight=document.createElement('div');flight.className='mahjong-discard-flight';
+  let currentTime=130;
+  Object.defineProperty(flight,'getAnimations',{value:()=>[{playState:'running',currentTime,effect:{getComputedTiming:()=>({endTime:230})}}]});
+  document.body.append(flight);
+  try {
+    const {props}=setup('yonma','exhaustive');
+    const {result,rerender}=renderHook(({version})=>useDrawResultLead(props.game,version),{initialProps:{version:1}});
+    expect(result.current).toBe(100);
+    tick(20);currentTime=0;rerender({version:2});
+    expect(result.current).toBe(250);
+    // Completing the flight cannot bring the already established deadline forward.
+    tick(100);currentTime=230;rerender({version:3});
+    expect(result.current).toBe(250);
   } finally {flight.remove();}
 });
