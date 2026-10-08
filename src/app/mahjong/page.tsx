@@ -14,6 +14,7 @@ import "./mahjong-standing-tile.css";
 import "./mahjong-abort-announcements.css";
 import "./mahjong-calligraphy.css";
 import "./mahjong-action-placement.css";
+import "./mahjong-yakuman-opportunity.css";
 
 export const metadata: Metadata = {
   title: "麻将室 · 有归",

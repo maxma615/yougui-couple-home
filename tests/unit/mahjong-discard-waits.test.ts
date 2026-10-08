@@ -48,3 +48,27 @@ it('omits the peek for multiple tenpai cuts or none, and follows authorized riic
  const g=view('p123456789s123z12');g.choices=[{id:'east',type:'discard',value:'z1'},{id:'south',type:'discard',value:'z2'},{id:'r',type:'riichi',value:'z2'}];expect(singleDiscardWaits(g,0,'yonma')).toEqual([]);expect(singleDiscardWaits(g,0,'yonma','riichi')[0]).toMatchObject({tile:'z1',ronYaku:true});
  g.choices=[{id:'pass',type:'pass'}];expect(singleDiscardWaits(g,0,'yonma')).toEqual([]);g.choices=[{id:'absent',type:'discard',value:'z7'}];expect(singleDiscardWaits(g,0,'yonma')).toEqual([]);
 });
+
+it('scores structural yakuman waits in both win routes without inventing future context',()=>{
+ const g=view('m19p19s19z1234567');g.drawnTile=null;g.choices=[];
+ const waits=currentWaits(g,0,'sanma');expect(waits).toHaveLength(13);expect(waits.every(w=>w.ronYakuman&&w.tsumoYakuman)).toBe(true);
+});
+it('recognizes a tsumo-only yakuman opportunity without calling it guaranteed',()=>{
+ const g=view('p111222333s11z55');g.drawnTile=null;g.choices=[];
+ const waits=currentWaits(g,0,'yonma');expect(waits.map(w=>w.tile)).toEqual(['s1','z5']);expect(waits.every(w=>!w.ronYakuman&&w.tsumoYakuman)).toBe(true);
+});
+it('includes visible dora and sanma nuki in counted yakuman but never establishes a yaku from bonuses',()=>{
+ const g=view('p111222333s11z55');g.drawnTile=null;g.choices=[];g.players[0].nuki=4;g.doraIndicators=['p9','p9'];
+ expect(currentWaits(g,0,'sanma').every(w=>w.ronYakuman&&w.tsumoYakuman)).toBe(true);
+ const open=view('p123s456789z1');open.drawnTile=null;open.players[0].melds=['m111-'];open.players[0].nuki=4;open.doraIndicators=['m9','m9','m9','m9'];
+ expect(currentWaits(open,0,'sanma')[0]).toMatchObject({ronYaku:false,tsumoYaku:false,ronYakuman:false,tsumoYakuman:false});
+});
+it('uses a still-unseen red winning five for opportunity, never for certainty',()=>{
+ const g=view('p2223335');g.drawnTile=null;g.choices=[];g.players[0].melds=['p111-','p999-'];g.doraIndicators=['p1','p4'];
+ const before=structuredClone(g);expect(currentWaits(g,0,'yonma').find(w=>w.tile==='p5')).toMatchObject({tile:'p5',ronYakuman:false,tsumoYakuman:false,ronYakumanPossible:true,tsumoYakumanPossible:true});expect(g).toEqual(before);
+ g.players[1].discards=['p0'];expect(currentWaits(g,0,'yonma').find(w=>w.tile==='p5')).toMatchObject({ronYakumanPossible:false,tsumoYakumanPossible:false});
+});
+it('honors sanma one-man dora succession and extracted north indicator bonuses',()=>{
+ const g=view('p111222333m99z55');g.drawnTile=null;g.choices=[];g.players[0].nuki=4;g.doraIndicators=['m1','z3'];
+ expect(currentWaits(g,0,'sanma').every(w=>w.ronYakuman&&w.tsumoYakuman)).toBe(true);
+});

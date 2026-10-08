@@ -1,7 +1,7 @@
 import Majiang from '@kobalab/majiang-core';
-import {sanmaRule} from '@/modules/mahjong/sanma-scoring';
+import {sanmaRule,scoreSanma} from '@/modules/mahjong/sanma-scoring';
 import type {GameVariant,GameView} from '@/modules/mahjong/types';
-export type DiscardWait = {tile:string;remaining:number;ronYaku:boolean;tsumoYaku:boolean;furiten:boolean};
+export type DiscardWait = {tile:string;remaining:number;ronYaku:boolean;tsumoYaku:boolean;furiten:boolean;ronYakuman:boolean;tsumoYakuman:boolean;ronYakumanPossible:boolean;tsumoYakumanPossible:boolean};
 const normal=(tile:string)=>tile.slice(0,2).replace('0','5');
 /** Shape waits after an offered discard. Counts use only this player's hand
  * and publicly exposed tiles; they are not a prediction of the live wall. */
@@ -41,7 +41,8 @@ function analyzeWaits(game:GameView,seat:number,variant:GameVariant,physical:str
   const hand=Majiang.Shoupai.fromString(physical.join('')+(own.melds.length?','+own.melds.join(','):''));
   if(Majiang.Util.xiangting(hand)!==0)return [];
   const visible=new Map<string,number>();
-  const add=(tile:string)=>{const key=normal(tile);visible.set(key,(visible.get(key)??0)+1)};
+  const visibleRed=new Set<string>();
+  const add=(tile:string)=>{const key=normal(tile);visible.set(key,(visible.get(key)??0)+1);if(tile[1]==='0')visibleRed.add(tile[0]);};
   game.hand.forEach(add);game.doraIndicators.forEach(add);
   for(const player of game.players){
    player.discards.filter(t=>!/[+=-]$/.test(t)).forEach(add);
@@ -54,8 +55,25 @@ function analyzeWaits(game:GameView,seat:number,variant:GameVariant,physical:str
   const river=[...own.discards,...(discard?[discard]:[])].map(normal);
   const furiten=Boolean(game.ronBlocked&&(!discard||own.riichi))||waiting.some(tile=>river.includes(normal(tile)));
   const param=Majiang.Util.hule_param({rule:variant==='sanma'?sanmaRule:Majiang.rule(),zhuangfeng:game.roundWind,menfeng:own.wind,lizhi:(own.riichi||declareRiichi)?1:0});
-  return waiting.map(tile=>({tile,remaining:Math.max(0,4-(visible.get(normal(tile))??0)),
+  const scoreOptions={rule:variant==='sanma'?sanmaRule:Majiang.rule(),zhuangfeng:game.roundWind,menfeng:own.wind,lizhi:(own.riichi||declareRiichi)?1:0,baopai:game.doraIndicators};
+  const yakuman=(tile:string,tsumo:boolean)=>{
+   const shape=tsumo?hand.clone().zimo(tile):hand.clone(),ron=tsumo?null:tile+'+';
+   if(variant==='sanma'){
+    const score=scoreSanma(shape,ron,{...scoreOptions,nuki:own.nuki??0});
+    return Boolean(score&&(score.yakuman>0||(score.han??0)>=13));
+   }
+   const score=Majiang.Util.hule(shape,ron,Majiang.Util.hule_param(scoreOptions));
+   return Boolean(score?.hupai?.length&&((score.damanguan??0)>0||(score.fanshu??0)>=13));
+  };
+  return waiting.map(tile=>{
+   const ronYakuman=yakuman(tile,false),tsumoYakuman=yakuman(tile,true);
+   const redPossible=/^[mps]5$/.test(tile)&&!visibleRed.has(tile[0])&&(variant!=='sanma'||tile[0]!=='m');
+   return {tile,remaining:Math.max(0,4-(visible.get(normal(tile))??0)),
    ronYaku:Boolean(Majiang.Util.hule(hand.clone(),tile+'+',param)?.hupai?.length),
-   tsumoYaku:Boolean(Majiang.Util.hule(hand.clone().zimo(tile),null,param)?.hupai?.length),furiten}));
+   tsumoYaku:Boolean(Majiang.Util.hule(hand.clone().zimo(tile),null,param)?.hupai?.length),furiten,
+   ronYakuman,tsumoYakuman,
+   ronYakumanPossible:ronYakuman||(redPossible&&yakuman(tile[0]+'0',false)),
+   tsumoYakumanPossible:tsumoYakuman||(redPossible&&yakuman(tile[0]+'0',true))};
+  });
  }catch{return []}
 }
