@@ -318,7 +318,7 @@ async function inspect(page: Page, fixture: Fixture) {
    assert.ok(metrics.box.width>0&&metrics.box.height>0&&metrics.size>=14&&metrics.scroll<=metrics.width+1,'readable payment cell');
    payments.push({seat,delta,currentScore:player.score,...metrics});
   }
-  assert.deepEqual(await panel.locator('.mahjong-ura-indicators [data-tile-face]').evaluateAll(els=>els.map(el=>(el as HTMLElement).dataset.tileFace)),fixture.settlement.uraIndicators);
+  assert.deepEqual(await panel.getByRole('group',{name:'里宝牌指示牌',exact:true}).locator('[data-tile-face]').evaluateAll(els=>els.map(el=>(el as HTMLElement).dataset.tileFace)),fixture.settlement.uraIndicators);
   assert.ok((await panel.textContent())!.includes('仅显示当前和牌者的本次结算'));assert.ok(!(await panel.textContent())!.includes('总计'));
   if(fixture.variant==='sanma'&&fixture.settlement.winMethod==='tsumo')assert.ok((await panel.textContent())!.includes('三麻采用自摸损'));
   // Reveal the actual tile row within the vertically scrollable panel before

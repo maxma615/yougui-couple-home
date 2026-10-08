@@ -130,3 +130,23 @@ it("starts a new winner at the top while preserving scroll on same-page updates"
  const next=structuredClone(update);next.decisionId="flow:detail:1";next.settlementFlow!.detailIndex=1;next.settlementFlow!.elapsedMs=0;next.settlement!.winnerSeat=2;
  rerenderProps({game:next});expect(document.querySelector<HTMLElement>('.mahjong-settlement-panel__content')!.scrollTop).toBe(0);
 });
+
+it.each([3,4] as const)("shows five-slot public and private indicator rows for each winner at %i seats",count=>{
+ const r=result("detail",count);r.game!.doraIndicators=["z6","p0","s9"];
+ const {props,rerenderProps}=show(r);
+ const detail=screen.getByRole("region",{name:"和牌详情"});
+ const dora=within(detail).getByRole("group",{name:"宝牌指示牌"});
+ expect([...dora.querySelectorAll('[data-tile-face]')].map(el=>el.getAttribute('data-tile-face'))).toEqual(["z6","p0","s9"]);
+ expect(dora.querySelectorAll('.mahjong-indicator-back')).toHaveLength(2);
+ const ura=within(detail).getByRole("group",{name:"里宝牌指示牌"});
+ expect([...ura.querySelectorAll('[data-tile-face]')].map(el=>el.getAttribute('data-tile-face'))).toEqual(["p1"]);
+ expect(ura.querySelectorAll('.mahjong-indicator-back')).toHaveLength(4);
+ const next=structuredClone(props.game);next.decisionId="result:next";next.settlementFlow!.detailIndex=1;next.settlement!.winnerSeat=2;next.settlement!.uraIndicators=[];
+ rerenderProps({game:next});
+ const concealed=screen.getByRole("group",{name:"里宝牌指示牌"});
+ expect(concealed.querySelectorAll('[data-tile-face]')).toHaveLength(0);
+ expect(concealed.querySelectorAll('.mahjong-indicator-back')).toHaveLength(5);
+ rerenderProps({game:result("scores",count).game!});
+ expect(screen.queryByRole("group",{name:"宝牌指示牌"})).toBeNull();
+ expect(screen.queryByRole("group",{name:"里宝牌指示牌"})).toBeNull();
+});

@@ -801,3 +801,12 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 .mahjong-game.is-finished .mahjong-screen-button { min-width: 44px; min-height: 44px; }
 
 .mahjong-game .mahjong-audio-toggle { min-width: 44px; min-height: 44px; padding: 8px; }
+
+/* Winning result: public indicators and this winner's disclosed ura share five slots. */
+.mahjong-result-indicators { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mahjong-result-indicators .mahjong-ura-indicators { grid-column: auto; flex-direction: column; align-items: flex-start; gap: 6px; }
+.mahjong-result-indicators .mahjong-indicator-back { width: clamp(22px, 3.1vw, 34px); height: 43px; flex: 0 0 auto; }
+@media (max-width: 640px) {
+  .mahjong-result-indicators { gap: 8px; }
+  .mahjong-result-indicators .mahjong-indicator-back { width: clamp(19px, 5.5vw, 24px); height: 37px; }
+}

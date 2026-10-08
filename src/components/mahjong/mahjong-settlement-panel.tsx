@@ -53,7 +53,11 @@ export function MahjongSettlementPanel({ game, room, connected, busy, onChoice, 
       })}</div> : null}
       {!flow ? <p className="mahjong-settlement-panel__explanation">全部席位确认后，本次收支才计入分数。{settlement.kind === "win" ? `牌型点数单独显示；实际收支包含本场 ${game.honba}、立直棒 ${game.riichiSticks}。` : "流局收支按各席结算。"}{room.variant === "sanma" && settlement.winMethod === "tsumo" ? "三麻采用自摸损，缺少第四家的付款。" : ""}</p> : null}
       {!scoresStage && (winning.closed.length || winning.melds.length) ? <div className="mahjong-winning-hand"><div><small>{winner?.displayName || "和牌"}的手牌</small>{winning.winningTile ? <small>和牌：{tileName(winning.winningTile)}</small> : null}</div><div className="mahjong-winning-hand__row"><div className="mahjong-winning-hand__closed" role="group" aria-label="闭手">{winning.closed.map((tile, index) => <TileFace value={tile} key={`${index}-${tile}`} />)}</div>{winning.winningTile ? <span className="mahjong-winning-hand__tile" data-testid="mahjong-winning-tile"><TileFace value={winning.winningTile}/></span> : null}{winning.melds.length ? <div className="mahjong-winning-hand__melds">{winning.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}</div></div> : null}
-      {!scoresStage && settlement.kind === "win" && settlement.uraIndicators.length ? <div className="mahjong-ura-indicators"><small>里宝牌指示</small><div>{settlement.uraIndicators.map((tile, index) => <TileFace value={tile} key={`${tile}-${index}`} />)}</div></div> : null}
+      {!scoresStage && settlement.kind === "win" ? <div className="mahjong-result-indicators">
+        {[{label:"宝牌指示牌",tiles:game.doraIndicators},{label:"里宝牌指示牌",tiles:settlement.uraIndicators}].map(({label,tiles}) => <div className="mahjong-ura-indicators" role="group" aria-label={label} key={label}>
+          <small>{label}</small><div>{tiles.map((tile,index) => <TileFace value={tile} key={`${index}-${tile}`}/>)}{Array.from({length:Math.max(0,5-tiles.length)},(_,index) => <i className="mahjong-indicator-back" aria-hidden="true" key={`back-${index}`}/>)}</div>
+        </div>)}
+      </div> : null}
       {nagashiDetail ? <ul><li data-testid="nagashi-yaku" className={presentation.elapsed >= NAGASHI_YAKU_MS ? "is-revealed" : "is-pending"}><span>流满贯</span></li></ul> : null}
       {!scoresStage && settlement.yaku.length ? <ul>{settlement.yaku.map((yaku, index) => {
         const units = String(yaku.han).match(/\*+/)?.[0].length || 0;

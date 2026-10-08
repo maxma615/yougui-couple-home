@@ -25,7 +25,7 @@ it.each(["sanma","yonma"] as const)("explains hand value and fixed-seat actual t
  expect(rows[1].textContent).toContain(variant==="sanma"?"获得 +3,000":"获得 +3,200");expect(rows[2].textContent).toContain("不变 0");
  expect(panel.textContent).toContain("本场 2");expect(panel.textContent).toContain("立直棒 1");
  expect(panel.querySelectorAll('.mahjong-winning-hand [data-tile-face]')).toHaveLength(14);
- expect(panel.querySelectorAll('.mahjong-ura-indicators [data-tile-face]')).toHaveLength(1);
+ expect(within(panel).getByRole('group',{name:'里宝牌指示牌'}).querySelectorAll('[data-tile-face]')).toHaveLength(1);
 });
 it("limits subsequent multi-ron to its current winner and current delta",()=>{
  const r=room("sanma");const {rerender,panel}=show(r);

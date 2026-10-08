@@ -10,8 +10,7 @@ import { physicalEngine } from "../fixtures/mahjong-settlement-game";
 import type { Choice, MahjongCommand, GameVariant } from "../../src/modules/mahjong/types";
 const out = `.local/audit/settlement-sequence-browser-${Date.now()}`;
 mkdirSync(out,{recursive:true});
-const cssFiles=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css","mahjong-camera.css","mahjong-call-announcement.css","mahjong-standing-tile.css"];
-const css=cssFiles.map(file=>readFileSync(`src/app/mahjong/${file}`,"utf8")).join("\n");
+const css=[...readFileSync("src/app/mahjong/page.tsx","utf8").matchAll(/import "\.\/([^"]+\.css)";/g)].map(m=>readFileSync(`src/app/mahjong/${m[1]}`,"utf8")).join("\n");
 const harness=`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';
 const root=createRoot(document.getElementById('root'));let current, busy=false;
 function paint(){flushSync(()=>root.render(<main className="mahjong-page"><div className="mahjong-shell"><GameRoom room={current} ownSeat={0} host connected busy={busy} motionCanAnimate={false} onChoice={async choice=>{busy=true;paint();try{current=await window.realResultChoice({decisionId:current.game.decisionId,choiceId:choice.id});}finally{busy=false;paint();}}} onFinish={()=>{}} onLeave={()=>{}} onRematch={()=>{}}/></div></main>));}
@@ -53,6 +52,18 @@ for(const engine of [chromium,webkit]) {
   await page.evaluate(r=>(window as any).resultProbe.render(r),view());
   const detail=page.getByRole('region',{name:'和牌详情'});
   await detail.waitFor();
+  const publicIndicators=detail.getByRole('group',{name:'宝牌指示牌',exact:true});
+  const privateIndicators=detail.getByRole('group',{name:'里宝牌指示牌',exact:true});
+  assert.deepEqual(await publicIndicators.locator('[data-tile-face]').evaluateAll(els=>els.map(el=>el.getAttribute('data-tile-face'))),view().game!.doraIndicators);
+  assert.deepEqual(await privateIndicators.locator('[data-tile-face]').evaluateAll(els=>els.map(el=>el.getAttribute('data-tile-face'))),view().game!.settlement!.uraIndicators);
+  for(const row of [publicIndicators,privateIndicators]) {
+    assert.equal(await row.locator('[data-tile-face],.mahjong-indicator-back').count(),5);
+    assert.equal(await row.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,`${label}: indicator row fits`);
+    const geometry=await row.locator('[data-tile-face],.mahjong-indicator-back').evaluateAll(els=>els.map(el=>{const b=el.getBoundingClientRect();return {width:b.width,height:b.height};}));
+    assert.ok(geometry.every(b=>b.width>0&&b.height>0),`${label}: every face and back has physical dimensions`);
+  }
+  await privateIndicators.scrollIntoViewIfNeeded();
+  await detail.locator('.mahjong-result-indicators').screenshot({path:`${out}/${label}-indicators.png`});
   assert.equal(await detail.locator('[data-settlement-seat]').count(),0);
   assert.equal(await detail.locator('.mahjong-winning-hand [data-tile-face]').count(),14);
   assert.equal(await detail.locator('.mahjong-winning-hand__row').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,`${label}: the full winning hand must fit beside its winning tile`);
