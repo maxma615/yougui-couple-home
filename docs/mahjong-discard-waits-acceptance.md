@@ -93,3 +93,11 @@ Chromium/WebKit × 三四麻 × 667×375/1440×810 × 触控/鼠标 × 一气通
 Chromium/WebKit ×三/四麻 ×667×375/1440×810 ×触控/鼠标 ×四种牌型共64场景exit0，正式容器/CSS/字体/牌面与守恒136/108张原生墙。新增唯一切牌序列原生发牌得到p123456789s12z11+摸z7，14张提前按住看s3待牌、4张公开余量、不振听；其余三种多可切形态无提前入口。原生touchscreen事件在14张和13张入口分别检查按下显示、松开收起，早期触控事件记录入summary。原鼠标悬停、单击选牌、二次真实弃牌、当前13张入口、无役/振听、命令次数和视口命中验证保留。证据 `.local/audit/discard-waits-browser-1791477731349/{manifest,summary}.json`，144截图，主任务查看Chromium三麻短横屏提前待牌图。根审查非独立，未宣称真实Android/全部开放状态或当前厂商像素/服务器协议全部验收。
 
 候选每次commit立即普通快进推送main及麻将开发分支，尚需固定Linux与ECS；线上此时仍353434e。WebKit软件像素透视、高价值手牌反馈、真实Android、完整当前厂商体验与私有牌墙继续待完成，整体目标active。本轮无服务器或真实资料操作。
+
+## 单一切牌入口实际上线（2026-10-09）
+
+运行源码 `cfab111586b284dfd7dce708494a9ddeaa9bdd8d` / Build `pNittH_PZMUP958kouvxB` 已在已授权ECS发布。镜像 `sha256:5a8b75f1888da70fed1b2cfec4bffa7f161caa1732b18554a8b3ee9f1ea837e5`；639源码/449构建全文件摘要一致，清单 `a7b60d611f609d7d807622fca0b64d59d19a4eb14f342c099a89007db1f65a20`。同一固定候选隔离Linux422项/27文件全部通过，保留882本地完整、31定向、RED2及64原生浏览器/144截图证据。
+
+发布器权威确认没有活动真人桌后切换，实际exit0，入口屏障恢复。公网默认可信TLS健康200、133资源摘要一致，最终appHealthy/publisherFinished为true；12表指纹保持 `9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`。照片清理器身份、1CPU/768MiB和禁备份保持，无备份创建或下载，也未在线构造测试桌。13终态阶段及公网记录 `.local/ecs-deploy/wait-single-published-closeout-r01.json`；上传实际exit0，远端完整归档和展开摘要通过。
+
+发布记录立即提交并普通快进推送main/麻将开发分支；主目录只同步所属文档，保留HEAD、索引和其他文件。WebKit软件像素透视、高价值手牌反馈、真实Android、当前厂商完整体验及私有牌墙继续待验证，整体目标active。
