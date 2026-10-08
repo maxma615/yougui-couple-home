@@ -16,7 +16,7 @@ function make(variant:'yonma'|'sanma',hands:Record<number,string>,draws:string[]
  const build=(physical:string[])=>{
   const pool=physical.slice(),take=(t:string)=>{const i=pool.indexOf(t);assert.ok(i>=0,`unavailable physical tile ${t}`);return pool.splice(i,1)[0]};
   const dealt=Array.from({length:count},(_,seat)=>hands[seat]?parse(hands[seat]).map(take):[]);
-  const drawn=draws.map(take),indicators=['m1','m1'].map(take),replacementTile=replacement?take(replacement):undefined;
+  const drawn=draws.map(take),indicators=['p0','m1'].map(take),replacementTile=replacement?take(replacement):undefined;
   for(const hand of dealt){if(!hand.length)hand.push(...pool.splice(0,13));assert.equal(hand.length,13)}
   if(replacementTile)pool.unshift(replacementTile);
   return {pool,dealt,drawn,indicators};
@@ -64,6 +64,8 @@ for(const engine of [chromium,webkit]){const browser=await engine.launch();try{f
  await page.evaluate(r=>(window as any).paint(r),r);
  const panel=page.getByRole('region',{name:'和牌详情'});await panel.waitFor();
  for(const [name,values] of [['宝牌指示牌',game.doraIndicators],['里宝牌指示牌',game.settlement!.uraIndicators]] as const){const row=panel.getByRole('group',{name,exact:true});assert.deepEqual(await row.locator('[data-tile-face]').evaluateAll(els=>els.map(el=>el.getAttribute('data-tile-face'))),values);assert.equal(await row.locator('.mahjong-indicator-back').count(),5-values.length);assert.ok(await row.evaluate(el=>el.scrollWidth<=el.clientWidth+1));}
+ const red=panel.getByRole('group',{name:'宝牌指示牌',exact:true}).locator('[data-tile-face="p0"]');
+ assert.equal(await red.count(),1);assert.ok(await red.evaluate(el=>el.classList.contains('is-red')));assert.equal(await red.locator('img').getAttribute('src'),'/images/mahjong-tiles/regular/Pin5-Dora.svg');
  await panel.locator('.mahjong-result-indicators').scrollIntoViewIfNeeded();await page.waitForFunction(()=>[...document.querySelectorAll('.mahjong-result-indicators img')].every(i=>(i as HTMLImageElement).complete&&(i as HTMLImageElement).naturalWidth>0));
  const label=`${engine.name()}-${variant}-${width}-${scenario}`;await panel.locator('.mahjong-result-indicators').screenshot({path:`${out}/${label}.png`});
  results.push({label,dora:game.doraIndicators,ura:game.settlement!.uraIndicators,scenario});await page.close();console.log('PASS '+label);
