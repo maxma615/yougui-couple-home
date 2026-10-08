@@ -767,3 +767,30 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
   .mahjong-settlement-panel.is-detail .mahjong-settlement-panel__heading,
   .mahjong-settlement-panel.is-detail .is-revealed { animation: none; }
 }
+
+/* Final native ranking: ordered finite reveal, independent of table perspective. */
+.mahjong-game.is-finished { min-height: 100dvh; background: radial-gradient(ellipse at 25% 45%, #23394b, #0b131e 75%); }
+.mahjong-game.is-finished > .mahjong-table, .mahjong-game.is-finished > .mahjong-action-dock { display: none; }
+.mahjong-game.is-finished .mahjong-ranking { width: min(760px,92%); max-width: 760px; box-sizing: border-box; margin: 3dvh auto; padding: clamp(16px,3dvh,32px); background: linear-gradient(130deg,#182b3ae8,#101b28f5); border-color: #9dbac04d; border-radius: 4px; animation: mahjong-ranking-fade 1000ms linear both; animation-delay: var(--ranking-start-age,0ms); }
+.mahjong-ranking__list { margin: 0; padding: 0; list-style: none; }
+.mahjong-ranking .mahjong-ranking__row { min-height: 56px; box-sizing: border-box; grid-template-columns: 50px minmax(0,1fr) max-content; gap: 16px; padding: 12px 16px; margin: 5px 0; background: linear-gradient(90deg,#52728832,#21344720); border-top: 0; opacity: 0; visibility: hidden; transform: translateX(200px); }
+.mahjong-ranking .mahjong-ranking__row.is-visible { visibility: visible; opacity: 1; transform: translateX(0); transition: transform 200ms cubic-bezier(.9,0,1,1),opacity 200ms cubic-bezier(.9,0,1,1); }
+.mahjong-ranking .mahjong-ranking__row[data-own-seat="true"] { box-shadow: inset 3px 0 #c8b378; background: linear-gradient(90deg,#9b885329,#21344720); }
+.mahjong-ranking .mahjong-ranking__row > span { font-size: clamp(22px,4dvh,34px); }
+.mahjong-ranking .mahjong-ranking__row > strong { font-size: clamp(12px,2.4dvh,17px); overflow-wrap: anywhere; }
+.mahjong-ranking__row small { display: inline-block; margin-left: 8px; font-size: 10px; color: #c8b378; }
+.mahjong-ranking .mahjong-ranking__row > b { font-size: clamp(14px,3dvh,23px); font-variant-numeric: tabular-nums; }
+.mahjong-ranking .mahjong-ranking__actions { min-height: 44px; justify-content: flex-end; }
+.mahjong-ranking__actions .mahjong-button { min-height: 44px; }
+@keyframes mahjong-ranking-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-height: 450px) and (orientation: landscape) {
+ .mahjong-game.is-finished .mahjong-ranking { margin: 5px auto; padding: 10px 16px; }
+ .mahjong-ranking__heading { display: flex; align-items: baseline; gap: 14px; }
+ .mahjong-ranking .mahjong-ranking__heading h1 { margin: 0 0 6px; font-size: 22px; }
+ .mahjong-ranking .mahjong-ranking__row { min-height: 44px; margin: 3px 0; padding: 5px 10px; }
+ .mahjong-ranking .mahjong-ranking__actions { margin-top: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .mahjong-game.is-finished .mahjong-ranking { animation: none; }
+ .mahjong-ranking .mahjong-ranking__row, .mahjong-ranking .mahjong-ranking__row.is-visible { transform: none; transition: none; }
+}

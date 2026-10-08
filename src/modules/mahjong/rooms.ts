@@ -36,6 +36,7 @@ type Room = {
   game: MahjongGame | null;
   lastActivity: number;
   disconnectedSince: number | null;
+  finishedAt: number | null;
 };
 export type BotDecision = {
   roomId: string;
@@ -107,11 +108,18 @@ export class RoomStore {
     const room = this.rooms.get(job.roomId)!;
     if (!room.game!.view(job.seat).choices.some(c => c.id === choiceId)) return false;
     room.game!.respond(job.seat, job.decisionId, choiceId);
-    if (room.game!.view(job.seat).ranking) room.status = "finished";
+    this.updateFinished(room, job.seat);
     room.version++;
     // Computer activity never extends the human offline grace period.
     this.changed();
     return true;
+  }
+
+  private updateFinished(room: Room, seat: number) {
+    if (room.game?.view(seat).ranking) {
+      room.status = "finished";
+      room.finishedAt ??= this.now();
+    }
   }
 
   connection(userId: string, delta: number) {
@@ -145,11 +153,15 @@ export class RoomStore {
     const room = this.ownRoom(userId);
     const me = room?.members.find(m => m.userId === userId);
     if (!room || !me) return null;
+    const game = room.game?.view(me.seat) ?? null;
+    if (game && game.ranking && room.status === "finished" && room.finishedAt !== null) {
+      game.rankingFlow = { id: game.gameInstanceId ?? room.id, elapsedMs: Math.max(0, this.now() - room.finishedAt) };
+    }
     return {
       id: room.id, code: room.code, hostUserId: room.hostUserId, variant: room.variant, mode: room.mode, status: room.status,
       version: room.version, mySeat: me.seat,
       members: room.members.map(m => ({ ...m, connected: m.kind === "human" && (this.connections.get(m.userId) ?? 0) > 0 })),
-      game: room.game?.view(me.seat) ?? null,
+      game,
     };
   }
 
@@ -179,7 +191,7 @@ export class RoomStore {
       let code: string;
       const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       do { code = Array.from({ length: 8 }, () => alphabet[randomInt(alphabet.length)]).join(""); } while ([...this.rooms.values()].some(r => r.code === code));
-      room = { id: randomUUID(), code, hostUserId: player.userId, variant: command.variant ?? "yonma", mode: command.mode, status: "lobby", version: 1, members: [{ ...player, kind: "human", seat: 0, ready: false }], game: null, lastActivity: this.now(), disconnectedSince: null };
+      room = { id: randomUUID(), code, hostUserId: player.userId, variant: command.variant ?? "yonma", mode: command.mode, status: "lobby", version: 1, members: [{ ...player, kind: "human", seat: 0, ready: false }], game: null, lastActivity: this.now(), disconnectedSince: null, finishedAt: null };
       this.rooms.set(room.id, room);
       this.membership.set(player.userId, room.id);
       this.updateDisconnected(room);
@@ -232,11 +244,11 @@ export class RoomStore {
         case "start":
           if (room.status !== "lobby" || room.members.length !== (room.variant === "sanma" ? 3 : 4) || !room.members.every(m => m.ready)) throw new AppError(409, "all_ready_required", "需要席位补齐且全部真人准备");
           room.game = new SettlementSequenceGame(this.gameFactory(room.variant, room.mode, room.members.map(m => m.displayName)), room.variant === "sanma" ? 3 : 4, { now: this.now });
-          room.status = "playing"; break;
+          room.status = "playing"; room.finishedAt = null; break;
         case "respond":
           if (room.status !== "playing" || !room.game) throw new AppError(409, "no_active_game", "当前没有进行中的对局");
           room.game.respond(member.seat, command.decisionId, command.choiceId);
-          if (room.game.view(member.seat).ranking) room.status = "finished";
+          this.updateFinished(room, member.seat);
           break;
         case "leave":
           if (room.status === "playing") throw new AppError(409, "game_in_progress", "正在对局，短暂离线会保留你的座位；需要结束请由房主解散");
@@ -248,7 +260,7 @@ export class RoomStore {
         case "finish": this.removeRoom(room); return;
         case "rematch":
           if (room.status !== "finished") throw new AppError(409, "game_not_finished", "请先完成当前对局");
-          room.game = null; room.status = "lobby";
+          room.game = null; room.status = "lobby"; room.finishedAt = null;
           room.members.forEach(m => { m.ready = m.kind === "bot"; }); break;
       }
     }

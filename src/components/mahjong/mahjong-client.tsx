@@ -1,5 +1,7 @@
 "use client";
 
+import { MahjongFinalRanking } from "./mahjong-final-ranking";
+
 import { MahjongCallOption } from "./mahjong-call-option";
 
 import Link from "next/link";
@@ -600,11 +602,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside>
     {!connected ? <div className="mahjong-reconnect" role="status" aria-label="连接状态"><WifiOff size={15}/>正在重连…</div> : null}
 
-    {isFinished && game.ranking ? <section className="mahjong-ranking" aria-label="最终名次"><p className="mahjong-kicker">FINAL TABLE</p><h1>最终<em>名次</em></h1><div>{[...game.ranking].sort((a, b) => a.rank - b.rank).map((row) => {
-      const player = game.players.find((candidate) => candidate.seat === row.seat);
-      const member = room.members.find((candidate) => candidate.seat === row.seat);
-      return <div className="mahjong-ranking__row" key={row.seat}><span>0{row.rank}</span><strong>{member?.displayName || (player?.seat === ownSeat ? ownMember?.displayName || "你" : "牌友")}</strong><b>{row.score.toLocaleString()} 点</b></div>;
-    })}</div><div className="mahjong-ranking__actions">{host ? <button type="button" className="mahjong-button mahjong-button--gold" disabled={busy} onClick={onRematch}><RefreshCw size={16}/>再开一场</button> : <span>等待房主发起下一场</span>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散牌桌</button> : null}</div></section> : null}
+    {isFinished && game.ranking ? <MahjongFinalRanking ranking={game.ranking} flow={game.rankingFlow} members={room.members} ownSeat={ownSeat} host={host} connected={connected} busy={busy} onRematch={onRematch} onFinish={onFinish}/> : null}
 
     <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
       {feedback ? feedback.actionLabel && ["call", "riichi", "nuki", "win"].includes(feedback.kind)

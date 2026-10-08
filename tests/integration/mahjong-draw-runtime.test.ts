@@ -12,7 +12,7 @@ import { createTestDatabase, type TestDatabase } from "../helpers/database";
 import type { GameVariant, MahjongResponse, RoomView } from "@/modules/mahjong/types";
 
 let db: TestDatabase, service: Awaited<ReturnType<typeof runMahjongServer>>, address: string;
-let drawEnding: "exhaustive" | "nagashi" | "abort" = "exhaustive";
+let drawEnding: "exhaustive" | "nagashi" | "abort" | "final" = "exhaustive";
 const users: string[] = [], cookies: string[] = [], sockets: Socket[] = [];
 const origin = "http://127.0.0.1:34447";
 beforeAll(async () => {
@@ -26,7 +26,7 @@ beforeAll(async () => {
   const port=await new Promise<number>((resolve,reject)=>{const socket=net.createServer();socket.on('error',reject);socket.listen(0,'127.0.0.1',()=>{const p=(socket.address() as net.AddressInfo).port;socket.close(()=>resolve(p));});});
   address=`http://127.0.0.1:${port}`;
   const rooms=new RoomStore({gameFactory:variant=>{
-      const raw=drawEnding==='abort'?physicalEngine(variant,{0:'m19p19s19z1234567'},'z1'):drawEngine(variant,drawEnding==='nagashi'?[0,1]:[]);
+      const raw=drawEnding==='abort'?physicalEngine(variant,{0:'m19p19s19z1234567'},'z1'):drawEngine(variant,drawEnding==='nagashi'?[0,1]:[],drawEnding==='final'?{hands:['m19p369s369z14577','m19p147s258z13566','m19p258s147z23477','m2346p3468s2468z3']}:{});
       if(drawEnding==='abort') {const v=raw.view(0);raw.respond(0,v.decisionId,v.choices.find(c=>c.type==='abort')!.id);}
       else playToDraw(raw,variant==='sanma'?3:4);
       return raw;
@@ -107,4 +107,40 @@ for(const kind of ['exhaustive','nagashi','abort'] as const) it.each(['sanma','y
     expect((await post(0,{action:'finish'})).status).toBe(200);
     await vi.waitFor(()=>expect(human.states.at(-1)?.room===null).toBe(true));
   }finally {human.socket.disconnect();}
+});
+
+it.each(['sanma','yonma'] as const)('publishes %s final ranking only after the last authenticated ACK and restores its clock',async variant=>{
+ drawEnding='final';const count=variant==='sanma'?3:4,client=await connect(0);
+ try {
+  const room=await create(variant,count);
+  // Setup remains a real native game with legal choices; only the final
+  // boundary traverses HTTP, avoiding thousands of irrelevant rate-limit calls.
+  for(let step=0;step<3000;step++) {
+   const current=view().game!;
+   if(current.roundNumber===count && current.settlementFlow?.stage==='scores')break;
+   let acted=false;
+   for(let seat=0;seat<count;seat++) {
+    const g=view(seat).game!;
+    const c=g.choices.find(c=>c.type==='ack')??g.choices.find(c=>c.type==='pass')??g.choices.find(c=>c.type==='discard'&&c.value?.endsWith('_'));
+    if(c){service.rooms.execute({userId:users[seat],displayName:`玩家${seat}`},{nonce:randomUUID(),action:'respond',roomId:room.id,decisionId:g.decisionId,choiceId:c.id});acted=true;break;}
+   }
+   expect(acted).toBe(true);
+  }
+  expect(view().game!.roundNumber).toBe(count);expect(view().game!.settlementFlow?.stage).toBe('scores');
+  for(let seat=0;seat<count-1;seat++) {
+   if(view(seat).game!.settlementFlow?.stage==='draw')await choose(seat,'ack');
+   await choose(seat,'ack');expect(view().game!.rankingFlow).toBeUndefined();
+  }
+  if(view(count-1).game!.settlementFlow?.stage==='draw')await choose(count-1,'ack');
+  const final=await choose(count-1,'ack');expect(final.status).toBe('finished');
+  expect(final.game!.rankingFlow?.id).toBe(final.game!.gameInstanceId);
+  await vi.waitFor(()=>expect(client.states.at(-1)?.room?.game?.rankingFlow?.id).toBe(final.game!.gameInstanceId));
+  client.socket.disconnect();
+  const restored=await fetch(`${address}/internal/room`,{headers:{cookie:cookies[0]}});
+  const payload=(await restored.json() as MahjongResponse).room!;
+  expect(payload.game!.ranking).toEqual(final.game!.ranking);
+  expect(payload.game!.rankingFlow!.elapsedMs).toBeGreaterThanOrEqual(final.game!.rankingFlow!.elapsedMs);
+  expect((await post(1,{action:'rematch'})).status).toBe(403);
+  expect((await post(0,{action:'rematch'})).status).toBe(200);expect(view().game).toBeNull();
+ }finally{client.socket.disconnect();}
 });
