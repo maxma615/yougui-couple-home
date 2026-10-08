@@ -1,0 +1,14 @@
+{
+  "sourceRevision": "f7f27e92e34991f9511bf506507c7e849894c7b2",
+  "buildId": "INXlDcgMUPbQXMfw7YjA6",
+  "imageId": "sha256:74b266c7ea9fadf3331a73932e6c765249be01f0e62e203584f0a196a82ce051",
+  "linuxTests": 230,
+  "localTests": 778,
+  "publicAssets": 130,
+  "fullGoalComplete": false,
+  "cameraUserReportReproduced": false,
+  "evidence": {
+    "declaration-feedback-f7f27e9-r01-public-proof.json": "f1b868d5ebe7ad8952e0ce25ee0e12d5b3459c62c3d5c48dfd19690cc12ea3f6",
+    "declaration-feedback-f7f27e9-r01-owned-sync-proof.json": "2c9addd8ca834b82545e64fbe34136ceb3e46590cac904abcd8a44f50a295112"
+  }
+}

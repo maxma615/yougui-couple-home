@@ -19,7 +19,9 @@ Task2 evidence in `.local/audit/declaration-feedback-20261008/`: planner RED r02
 
 ## Task3 验收与发布
 - [x] 完整 tests/type/build/secrets、旧声明/流局/声音/副露回归；一次整阶段审查与单次必要修复。
-- [ ] 父版 a258986 固定镜像与 Linux 验证、无真人牌局受保护发布/Public TLS/12表/清理器/禁备份核对。
-- [ ] 保护主目录同步与验收文档，保留角色素材/Android/整体目标未完成范围。
+- [x] 父版 a258986 固定镜像与 Linux 验证、无真人牌局受保护发布/Public TLS/12表/清理器/禁备份核对。
+- [x] 保护主目录同步与验收文档，保留角色素材/Android/整体目标未完成范围。
 
 Review/fix evidence: one fresh read-only review `/root/declaration_feedback_final_review`, summary `.local/audit/declaration-feedback-final-review-20261008.md`. Two Important findings handled in one fix pass: native normal/kokushi/double north robbery RED six cases → GREEN34; first winner confirmation tests fail5 on isolated pre-intro parent cd888e5 → current23/23. During the same pass, browser-r06 exposed stalled main-thread multi-ron coalescing; component stalled-spacing RED reproduces0ms gap → GREEN27 declaration/old audio tests, with actual-start minimum30ms for later cues and muted intermediate cue cancellation. Final full-r04 passes778/778 in78files; type-r05/build-r03/secrets-r02 pass. Browser-r07 passes18 actual native declaration scenes (including all three north robberies) plus20 pending multi-ron interruptions; table-audio-regression-r01 42, abort-regression-r01 38, draw-regression-r01 24 and call-regression-r03 36. Local Linux target selection14files/230 tests is only selection evidence, not Linux acceptance. ECS read-only parent-r01 verifies live a258986 hashes, cleaner and disabled backup policy; no production mutation. Linux/publish/protected sync still pending.
+
+最终发布 f7f27e9：实际 Linux 14文件/230通过，公网 TLS 130资源通过，12表摘要/清理器/禁备份/主目录保护同步通过；详细状态见声明验收记录。此前 pending 文字为对应历史阶段，不代表最终状态。全体验目标未完成。
