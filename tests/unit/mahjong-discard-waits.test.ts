@@ -72,3 +72,16 @@ it('honors sanma one-man dora succession and extracted north indicator bonuses',
  const g=view('p111222333m99z55');g.drawnTile=null;g.choices=[];g.players[0].nuki=4;g.doraIndicators=['m1','z3'];
  expect(currentWaits(g,0,'sanma').every(w=>w.ronYakuman&&w.tsumoYakuman)).toBe(true);
 });
+
+for(const variant of ['yonma','sanma'] as const)it(`${variant} counts double riichi at the thirteen-han boundary for current and offered waits`,()=>{
+ const g=view('p1113337770599');g.drawnTile=null;g.choices=[];g.players[0].riichi=true;
+ Object.assign(g,{ownRiichi:{han:1,declarationHan:0}});
+ expect(currentWaits(g,0,variant).every(w=>!w.ronYakuman)).toBe(true);
+ Object.assign(g,{ownRiichi:{han:2,declarationHan:0}});
+ expect(currentWaits(g,0,variant).every(w=>w.ronYakuman&&w.tsumoYakuman)).toBe(true);
+ g.players[0].riichi=false;g.hand.push('z7');g.drawnTile='z7';g.choices=[{id:'riichi',type:'riichi',value:'z7_'}];
+ Object.assign(g,{ownRiichi:{han:0,declarationHan:1}});
+ expect(discardWaits(g,0,variant,'riichi').every(w=>!w.ronYakuman)).toBe(true);
+ Object.assign(g,{ownRiichi:{han:0,declarationHan:2}});
+ const waits=discardWaits(g,0,variant,'riichi');expect(waits.map(w=>w.tile)).toEqual(['p5','p9']);expect(waits.every(w=>w.ronYakuman&&w.tsumoYakuman)).toBe(true);
+});

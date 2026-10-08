@@ -45,6 +45,7 @@ declare module "@kobalab/majiang-core" {
     _hule_option: string | null;
     _paipu: { rank: number[] };
     _diyizimo: boolean;
+    _lizhi: (0 | 1 | 2)[];
     _neng_rong: boolean[];
     _fenpei: number[];
     delay(callback: () => void, timeout?: number): void;

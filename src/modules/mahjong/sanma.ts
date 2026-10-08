@@ -15,7 +15,7 @@ type Player = {
   hand: Hand;
   discards: string[];
   nuki: number;
-  riichi: number;
+  riichi: 0 | 1 | 2;
   ippatsu: boolean;
   temporaryFuriten: boolean;
   riichiFuriten: boolean;
@@ -484,6 +484,7 @@ export class SanmaGame {
       doraIndicators: this.wall.dora,
       turnSeat: this.turn,
       ronBlocked: this.players[seat].temporaryFuriten || this.players[seat].riichiFuriten,
+      ownRiichi: { han: this.players[seat].riichi, declarationHan: (this.pending.get(seat) ?? []).some(c => c.type === "riichi") ? (this.uninterrupted && this.players[seat].discards.length === 0 ? 2 : 1) : 0 },
       hand: concealedTiles(hand.toString()),
       drawnTile: hand._zimo?.length === 2 ? hand._zimo : null,
       players: this.players.map((p, s) => ({

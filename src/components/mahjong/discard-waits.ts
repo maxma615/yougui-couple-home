@@ -54,8 +54,12 @@ function analyzeWaits(game:GameView,seat:number,variant:GameVariant,physical:str
   // its existing block; permanent furiten includes the prospective discard.
   const river=[...own.discards,...(discard?[discard]:[])].map(normal);
   const furiten=Boolean(game.ronBlocked&&(!discard||own.riichi))||waiting.some(tile=>river.includes(normal(tile)));
-  const param=Majiang.Util.hule_param({rule:variant==='sanma'?sanmaRule:Majiang.rule(),zhuangfeng:game.roundWind,menfeng:own.wind,lizhi:(own.riichi||declareRiichi)?1:0});
-  const scoreOptions={rule:variant==='sanma'?sanmaRule:Majiang.rule(),zhuangfeng:game.roundWind,menfeng:own.wind,lizhi:(own.riichi||declareRiichi)?1:0,baopai:game.doraIndicators};
+  // Use the requesting player's native base value, including double riichi.
+  // No future ippatsu, hidden ura or other speculative win context is added.
+  const lizhi=game.ownRiichi?.han??(own.riichi?1:0);
+  const riichiHan=lizhi||(declareRiichi?(game.ownRiichi?.declarationHan||1):0);
+  const param=Majiang.Util.hule_param({rule:variant==='sanma'?sanmaRule:Majiang.rule(),zhuangfeng:game.roundWind,menfeng:own.wind,lizhi:riichiHan});
+  const scoreOptions={rule:variant==='sanma'?sanmaRule:Majiang.rule(),zhuangfeng:game.roundWind,menfeng:own.wind,lizhi:riichiHan,baopai:game.doraIndicators};
   const yakuman=(tile:string,tsumo:boolean)=>{
    const shape=tsumo?hand.clone().zimo(tile):hand.clone(),ron=tsumo?null:tile+'+';
    if(variant==='sanma'){
