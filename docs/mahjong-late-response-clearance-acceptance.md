@@ -1,6 +1,6 @@
-# 晚局多响应布局验证（本地候选）
+# 晚局多响应布局验收与发布
 
-2026-10-08。ECS仍为2d7c789；本文不表示新布局已经上线。用户设备偏斜与真实Android仍待验证，全体验目标保持active。
+2026-10-08。以下本地候选记录为历史阶段；最新运行源d124f1b已发布，以末节为准。用户设备偏斜与真实Android仍待验证，全体验目标保持active。
 
 ## 复现与修正
 
@@ -37,3 +37,12 @@
 ## 同一确定性牌局与父版对照
 
 `.local/audit/late-response-parent-comparison-r01.tsx`保持当前实际引擎及确定性物理牌序，仅从Git读取父版119ef4的standing-tile CSS；其余正式页面CSS保持。上家与非上家14轮各10场景均实际exit1，失败属于信息遮挡断言，非fixture断言。比较用探针独立保存自身SHA及cssParent；索引`.local/audit/late-response-parent-comparison-r01-index.json`。与最终r07当前CSS的120场景通过构成同牌局前后对照，未暂时覆盖产品源码。
+
+
+## 实际发布（2026-10-08）
+
+运行源d124f1bfec3b46ea4868d7919af98acf317cd578 / Build7sysnizZ1XP01hLiOkrrH / 镜像sha256:fd3bba9b708422df510814a69fb9093712334ba0b1f62e5451af51003e9d9dfd。600源码/449 Next文件摘要全匹配；实际Linux263/16正常exit0。构建与Linux的初次状态为running，后续只查询同一PID，未重复启动。
+
+发布确认没有真人牌局、实际exit0、入口屏障恢复，health200。默认可信TLS130公网资源摘要全部匹配；12业务表发布前后摘要保持，清理CID/镜像与1CPU/768MiB限制保持；禁备份标记、masked/inactive状态及备份目录不存在保持，没有创建备份或下载用户资料。6所属源码路径保护同步成功，以主目录606个既有文件为保护基线，仅更新所属路径；其他文件、HEAD/索引/next-env及其他状态保持。
+
+120原生布局场景、110副露、24操作、780本地与263Linux验证通过。一次独立审查及根一次修正，无第二次审查。详情见[发布测量](measurements/mahjong-late-response-clearance-published-2026-10-08.json)。其他副露数量、真实Android与用户设备偏斜仍未完全验收，整体目标active。
