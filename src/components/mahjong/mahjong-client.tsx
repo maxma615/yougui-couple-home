@@ -178,18 +178,21 @@ function MahjongRoot() {
     const socket = io({ path: "/mahjong/socket.io", addTrailingSlash: false, transports: ["websocket", "polling"], tryAllTransports: true, reconnection: true, reconnectionDelayMax: 4_000 });
     socketRef.current = socket;
     const isCurrent = () => socketRef.current === socket;
+    let transportReady = false;
     socket.on("connect", () => {
       if (!isCurrent()) return;
+      transportReady = true;
       socketHasBaseline.current = false;
       setMotionCanAnimate(false);
-      setConnected(true);
+      setConnected(false);
       void refresh(true);
     });
-    socket.on("disconnect", () => { if (isCurrent()) { socketHasBaseline.current = false; setConnected(false); setMotionCanAnimate(false); } });
-    socket.on("connect_error", () => { if (isCurrent()) { socketHasBaseline.current = false; setConnected(false); setMotionCanAnimate(false); } });
+    socket.on("disconnect", () => { if (isCurrent()) { transportReady = false; socketHasBaseline.current = false; setConnected(false); setMotionCanAnimate(false); } });
+    socket.on("connect_error", () => { if (isCurrent()) { transportReady = false; socketHasBaseline.current = false; setConnected(false); setMotionCanAnimate(false); } });
     socket.on("mahjong:state", (next: MahjongResponse) => {
-      if (!isCurrent()) return;
-      applyResponse(next, undefined, { canAnimate: socketHasBaseline.current, intent: latestMotionIntent.current });
+      if (!isCurrent() || !transportReady) return;
+      const accepted = applyResponse(next, undefined, { canAnimate: socketHasBaseline.current, intent: latestMotionIntent.current });
+      if (!accepted || !isCurrent()) return;
       socketHasBaseline.current = true;
       if (isCurrent()) setConnected(true);
     });
@@ -490,7 +493,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     };
   }, [clearHandSelection, room.id, Boolean(game)]);
   useEffect(() => { setRiichiMode(false); setPendingCallType(null); }, [game?.decisionId, room.id]);
-  useEffect(() => { if (!connected) setPendingCallType(null); }, [connected]);
+  useEffect(() => { if (!connected) { setPendingCallType(null); setRiichiMode(false); } }, [connected]);
   useEffect(() => {
     clearHandSelection();
     activeTilePointerRef.current = null;

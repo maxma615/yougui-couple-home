@@ -464,3 +464,14 @@ for(const event of ['blur','pagehide','visibilitychange'])it(`cancels an in-flig
   expect(onChoice).toHaveBeenCalledExactlyOnceWith(discard);
  }finally{if(descriptor)Object.defineProperty(document,'visibilityState',descriptor);else Reflect.deleteProperty(document,'visibilityState');}
 });
+
+it('clears uncommitted riichi mode across disconnect even if the native decision stays unchanged',()=>{
+ const game=fixtureGame(),view=game.view(0),onChoice=vi.fn(),props={busy:false,host:true,ownSeat:0,onChoice,onFinish:()=>{},onLeave:()=>{},onRematch:()=>{}};
+ expect(view.choices.some(c=>c.type==='riichi')).toBe(true);
+ const mounted=render(<GameRoom {...props} room={room(view)} connected/>);
+ fireEvent.click(screen.getByRole('button',{name:'立直'}));expect(screen.getByRole('button',{name:'选择立直牌'}).getAttribute('aria-pressed')).toBe('true');
+ mounted.rerender(<GameRoom {...props} room={room(view)} connected={false}/>);
+ mounted.rerender(<GameRoom {...props} room={room(view)} connected/>);
+ expect(screen.getByRole('button',{name:'立直'}).getAttribute('aria-pressed')).toBe('false');
+ expect(document.querySelectorAll('.mahjong-hand [data-choice-type="riichi"]')).toHaveLength(0);expect(onChoice).not.toHaveBeenCalled();
+});

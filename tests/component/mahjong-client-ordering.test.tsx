@@ -17,10 +17,11 @@ function table(id: string, version = 1, ready = false): MahjongResponse {
 function deferred() { let resolve!: (state: MahjongResponse) => void; const promise = new Promise<MahjongResponse>(r => { resolve = r; }); return { promise, resolve }; }
 class DeliveredSocket {
   callbacks = new Map<string, ((payload?: unknown) => void)[]>();
+  connected = false;
   disconnect = vi.fn();
   on(event: string, callback: (payload?: unknown) => void) { this.callbacks.set(event, [...this.callbacks.get(event) || [], callback]); return this; }
   // Deliberately deliver callbacks even after disconnect, as an already queued transport callback can.
-  deliver(event: string, payload?: unknown) { for (const callback of this.callbacks.get(event) || []) callback(payload); }
+  deliver(event: string, payload?: unknown) { if(event==="connect")this.connected=true; if(event==="disconnect"||event==="connect_error")this.connected=false; for (const callback of this.callbacks.get(event) || []) callback(payload); }
 }
 let server: MahjongResponse, nextGet: ReturnType<typeof deferred> | undefined, nextPost: ReturnType<typeof deferred> | undefined;
 let sockets: DeliveredSocket[];
@@ -40,10 +41,10 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
-async function start(state = table("a", 8)) { server = state; render(<MahjongClient/>); if (state.room) await screen.findByText(state.room.code); else await screen.findByRole("button", { name: "创建东风牌桌" }); }
+async function start(state = table("a", 8)) { server = state; render(<MahjongClient/>); if (state.room?.status==='playing') await screen.findByTestId('mahjong-board'); else if (state.room) await screen.findByText(state.room.code); else await screen.findByRole("button", { name: "创建东风牌桌" }); }
 function holdRefresh() { const held = deferred(); nextGet = held; fireEvent(window, new Event("online")); return held; }
 async function deliver(held: ReturnType<typeof deferred>, state: MahjongResponse) { await act(async () => held.resolve(state)); }
-async function socketState(state: MahjongResponse, socket = sockets.at(-1)!) { server = state; await act(async () => socket.deliver("mahjong:state", state)); }
+async function socketState(state: MahjongResponse, socket = sockets.at(-1)!) { server = state; await act(async () => { if(!socket.connected)socket.deliver("connect"); socket.deliver("mahjong:state", state); }); }
 function beginFinish() { fireEvent.click(screen.getByRole("button", { name: "解散牌桌" })); fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "解散牌桌" })); }
 async function finish() { beginFinish(); await screen.findByRole("button", { name: "创建东风牌桌" }); }
 async function create() { fireEvent.click(screen.getByRole("button", { name: "创建东风牌桌" })); await screen.findByText("BBBBBBBB"); }
@@ -68,7 +69,7 @@ it("accepts other-tab leave/join including return to an earlier room ID and inva
 });
 it("retires queued state/connect/error/disconnect callbacks from the replaced socket", async () => {
   await start(); const old = sockets.at(-1)!; await finish(); await create();
-  const current = sockets.at(-1)!; await act(async () => current.deliver("connect"));
+  const current = sockets.at(-1)!; await act(async () => current.deliver("connect")); await socketState(table("b"),current);
   const requestsBefore = mocks.api.mock.calls.length;
   await act(async () => { old.deliver("mahjong:state", table("a", 99)); old.deliver("mahjong:error", { message: "retired error" }); old.deliver("connect"); old.deliver("disconnect"); old.deliver("connect_error"); });
   expectRoom("b"); expect(screen.queryByText("retired error")).toBeNull(); expect(mocks.api.mock.calls.length).toBe(requestsBefore);
@@ -118,4 +119,38 @@ it("ignores an earlier overlapping GET even when it arrives before the latest GE
   await start(); const older = holdRefresh(), latest = holdRefresh();
   await deliver(older, table("b", 50)); expectRoom("a");
   await deliver(latest, table("c", 2)); expectRoom("c");
+});
+
+import {physicalEngine} from '../fixtures/mahjong-settlement-game';
+function playing(version=8):MahjongResponse{
+ const game=physicalEngine('sanma',{0:'p123456789s123z2'},'z2');
+ const r=table('a',version);r.room!.status='playing';r.room!.game=game.view(0);return r;
+}
+it('keeps old hand actions disabled after transport connect until an accepted room snapshot arrives',async()=>{
+ const current=playing();await start(current);const socket=sockets.at(-1)!;
+ await socketState(current,socket);
+ await act(async()=>socket.deliver('disconnect'));
+ const held=deferred();nextGet=held;
+ await act(async()=>socket.deliver('connect'));
+ expect(screen.getByRole('status',{name:'连接状态'}).textContent).toContain('正在重连');
+ const tile=document.querySelector<HTMLButtonElement>('.mahjong-hand [data-choice-type="discard"]')!;expect(tile.disabled).toBe(true);
+ const before=mocks.api.mock.calls.filter(([,o])=>o.method==='POST').length;
+ fireEvent.click(tile);fireEvent.click(tile);expect(mocks.api.mock.calls.filter(([,o])=>o.method==='POST')).toHaveLength(before);
+ await socketState({...current,room:{...current.room!,version:7}},socket);
+ expect(tile.disabled).toBe(true);expect(screen.getByRole('status',{name:'连接状态'})).toBeTruthy();
+ await socketState({...current,room:{...current.room!,version:9}},socket);
+ expect(document.querySelector<HTMLButtonElement>('.mahjong-hand [data-choice-type="discard"]')!.disabled).toBe(false);
+ await deliver(held,{...current,room:{...current.room!,version:8}});
+ expect(screen.queryByRole('status',{name:'连接状态'})).toBeNull();
+});
+it('ignores queued room frames after disconnect until the same transport reconnects',async()=>{
+ const current=playing();await start(current);const socket=sockets.at(-1)!;await socketState(current,socket);
+ await act(async()=>socket.deliver('disconnect'));
+ await act(async()=>socket.deliver('mahjong:state',{...current,room:{...current.room!,version:9}}));
+ expect(screen.getByRole('status',{name:'连接状态'})).toBeTruthy();
+ expect(document.querySelector<HTMLButtonElement>('.mahjong-hand [data-choice-type="discard"]')!.disabled).toBe(true);
+ await act(async()=>socket.deliver('connect'));
+ await socketState({...current,room:{...current.room!,version:10}},socket);
+ expect(screen.queryByRole('status',{name:'连接状态'})).toBeNull();
+ expect(document.querySelector<HTMLButtonElement>('.mahjong-hand [data-choice-type="discard"]')!.disabled).toBe(false);
 });
