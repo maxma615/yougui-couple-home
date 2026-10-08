@@ -126,3 +126,43 @@ it("reconnected published hands skip completed flip animations instead of replay
  rerender(<GameRoom room={room} host={false} busy={false} ownSeat={0} connected motionCanAnimate={false} onChoice={()=>{}} onFinish={()=>{}} onRematch={()=>{}} onLeave={()=>{}}/>);
  expect(rack.style.getPropertyValue('--draw-flip-age')).toBe('-300ms');
 });
+it("same mounted ron animation freezes its initial CSS delay across live snapshots",()=>{
+ const {room}=setup('ron');room.game!.settlementFlow!.elapsedMs=800;
+ const props={room,host:false,busy:false,ownSeat:0,connected:true,motionCanAnimate:false,onChoice:vi.fn(),onFinish:vi.fn(),onRematch:vi.fn(),onLeave:vi.fn()};
+ const {rerender}=render(<GameRoom {...props}/>);
+ const mark=document.querySelector<HTMLElement>('[data-abort-ron-seat="1"]')!;
+ expect(mark.style.getPropertyValue('--abort-animation-age')).toBe('0ms');tick(100);
+ room.game={...room.game!,settlementFlow:{...room.game!.settlementFlow!,elapsedMs:900}};
+ rerender(<GameRoom {...props}/>);
+ expect(mark.style.getPropertyValue('--abort-animation-age')).toBe('0ms');
+});
+it("same mounted public rack does not double count animation time on live refresh",()=>{
+ const {room}=setup('ron');room.game!.settlementFlow!.elapsedMs=2000;
+ const props={room,host:false,busy:false,ownSeat:0,connected:true,motionCanAnimate:false,onChoice:vi.fn(),onFinish:vi.fn(),onRematch:vi.fn(),onLeave:vi.fn()};
+ const {rerender}=render(<GameRoom {...props}/>);
+ const rack=document.querySelector<HTMLElement>('[data-draw-reveal-seat="1"]')!;
+ expect(rack.style.getPropertyValue('--draw-flip-age')).toBe('0ms');tick(150);
+ room.game={...room.game!,settlementFlow:{...room.game!.settlementFlow!,elapsedMs:2150}};
+ rerender(<GameRoom {...props}/>);
+ expect(rack.style.getPropertyValue('--draw-flip-age')).toBe('0ms');
+});
+it("same mounted cause fade does not double count elapsed CSS playback",()=>{
+ const {room}=setup('ron');room.game!.settlementFlow!.elapsedMs=3000;
+ const props={game:room.game!,room,connected:true,busy:false,onChoice:vi.fn()};
+ const {rerender}=render(<MahjongSettlementPanel {...props}/>);
+ const reason=screen.getByRole('region',{name:'流局原因'});
+ expect(reason.style.getPropertyValue('--abort-cause-age')).toBe('0ms');tick(250);
+ const game={...props.game,settlementFlow:{...props.game.settlementFlow!,elapsedMs:3250}};
+ rerender(<MahjongSettlementPanel {...props} game={game}/>);
+ expect(reason.style.getPropertyValue('--abort-cause-age')).toBe('0ms');
+});
+it.each([['ron',false,800],['ron',true,300]] as const)("offline %s declared=%s expires transient declarations without submitting ACK",(kind,declare,age)=>{
+ const {room,onChoice}=setup(kind,0,declare);room.game!.settlementFlow!.elapsedMs=age;
+ const props={room,host:false,busy:false,ownSeat:0,connected:true,motionCanAnimate:false,onChoice,onFinish:vi.fn(),onRematch:vi.fn(),onLeave:vi.fn()};
+ const {rerender}=render(<GameRoom {...props}/>);tick(100);
+ expect(document.querySelector('[data-abort-ron-seat],[data-abort-riichi-seat]')).not.toBeNull();
+ rerender(<GameRoom {...props} connected={false}/>);tick(10000);
+ expect(document.querySelector('[data-abort-ron-seat],[data-abort-riichi-seat]')).toBeNull();
+ expect(onChoice).not.toHaveBeenCalled();
+ expect((screen.getByRole('button',{name:/继续/}) as HTMLButtonElement).disabled).toBe(true);
+});

@@ -40,7 +40,7 @@ export function useSettlementPresentation({ flow, settlement, ack, connected, bu
       const current = age + performance.now() - time;
       setClock({ key, elapsed: current });
       const next = boundaries.find(boundary => boundary > current);
-      if (connected && next !== undefined) timer = setTimeout(update, next - current);
+      if (next !== undefined) timer = setTimeout(update, next - current);
     };
     update();
     return () => { cancelled = true; clearTimeout(timer); };

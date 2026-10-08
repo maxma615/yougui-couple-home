@@ -1,5 +1,5 @@
 "use client";
-import {useEffect, useState, type CSSProperties} from "react";
+import {useEffect, useRef, useState, type CSSProperties} from "react";
 import type {RoomMember, Settlement, SettlementFlow} from "@/modules/mahjong/types";
 import {abortBaseAt} from "./settlement-presentation";
 
@@ -22,11 +22,18 @@ export function MahjongAbortAnnouncements({settlement,flow,elapsed,members,ownSe
       const relative=(d.seat-ownSeat+capacity)%capacity;
       const position=relative===0?"south":relative===1?"east":relative===3||capacity===3?"west":"north";
       const actor=d.seat===ownSeat?"你":members.find(m=>m.seat===d.seat)?.displayName||`座位 ${d.seat+1}`;
-      return <div key={`${key}:${d.type}:${d.seat}`} className={`mahjong-abort-declaration is-${d.type} is-${position}`} role="status" aria-label={`${actor} · ${d.type==="ron"?"荣和":"立直"}`}
+      return <MountedDeclaration key={`${key}:${d.type}:${d.seat}`} initialAge={age-d.start} className={`mahjong-abort-declaration is-${d.type} is-${position}`} role="status" aria-label={`${actor} · ${d.type==="ron"?"荣和":"立直"}`}
         {...(d.type==="ron"?{"data-abort-ron-seat":d.seat}:{"data-abort-riichi-seat":d.seat})}
-        style={{"--abort-animation-age":`${-Math.min(200,age-d.start)}ms`} as CSSProperties}>
+>
         <b aria-hidden="true">{d.type==="ron"?"荣":"立直"}</b><small aria-hidden="true" title={actor}>{actor}</small>
-      </div>;
+      </MountedDeclaration>;
     })}
   </div>;
+}
+
+function MountedDeclaration({initialAge,children,...props}: React.HTMLAttributes<HTMLDivElement> & {initialAge:number}) {
+  // CSS retains its own playback time; changing its delay would count that
+  // elapsed time twice. A keyed remount alone anchors a new resume position.
+  const delay=useRef(-Math.min(200,Math.max(0,initialAge)));
+  return <div {...props} style={{"--abort-animation-age":`${delay.current}ms`} as CSSProperties}>{children}</div>;
 }

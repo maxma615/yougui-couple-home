@@ -691,7 +691,7 @@ function PlayerPanel({ revealKey, revealAge = 300, revealedHand, player, member,
   return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
     {includeIdentity ? <PlayerIdentity player={player} member={member} ownSeat={ownSeat} active={active} offset={offset} capacity={capacity} onInspect={onInspect}/> : null}
     {offset !== 0 ? <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
-      {revealedHand ? <div key={revealKey} style={{"--draw-flip-age":`${-Math.min(300,revealAge)}ms`} as CSSProperties} className="mahjong-draw-rack" data-draw-reveal-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的公开手牌`}>{winningHand({kind:"draw", name:"", hand:revealedHand,yaku:[],delta:[],uraIndicators:[]}).closed.map((tile,index)=><span key={`${index}-${tile}`} className="mahjong-draw-rack__tile"><MahjongFaceUpFlightTile value={tile}/></span>)}</div> : Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
+      {revealedHand ? <MountedDrawRack key={revealKey} age={revealAge} hand={revealedHand} seat={player.seat} name={member?.displayName || "牌友"}/> : Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
         const drawn = player.hasDrawnTile === true && index === Math.min(player.handCount, 14) - 1;
         return <MahjongStandingTile key={index} drawn={drawn}/>;
       }) }
@@ -766,4 +766,9 @@ function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriv
   const dragging = Boolean(drag);
   const style = drag ? { "--mahjong-drag-x": `${drag.x}px`, "--mahjong-drag-y": `${drag.y}px` } as CSSProperties : undefined;
   return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)} onLostPointerCapture={event => onPointerCancel(tileId, event)}/>;
+}
+
+function MountedDrawRack({age,hand,seat,name}:{age:number;hand:string;seat:number;name:string}) {
+  const delay=useRef(-Math.min(300,Math.max(0,age)));
+  return <div style={{"--draw-flip-age":`${delay.current}ms`} as CSSProperties} className="mahjong-draw-rack" data-draw-reveal-seat={seat} aria-label={`${name}的公开手牌`}>{winningHand({kind:"draw",name:"",hand,yaku:[],delta:[],uraIndicators:[]}).closed.map((tile,index)=><span key={`${index}-${tile}`} className="mahjong-draw-rack__tile"><MahjongFaceUpFlightTile value={tile}/></span>)}</div>;
 }
