@@ -19,4 +19,17 @@
 
 ## 交付状态
 
-本步为完成本地验收的候选，提交后立即推送GitHub main和工作分支；线上仍fef6e66 / Build SyqNXitxCD_KjJQ7Iwn4g。Linux固定候选验证及ECS发布继续待完成，未宣称此界面已上线。原完整体验目标保持active，真实Android/当前厂商全体验仍未验收。
+本步代码已立即推送GitHub main和工作分支，固定候选Linux及ECS实际发布已完成；线上现820bc85 / Build gxd3NxhCMNuLmu2jN1ePn。原完整体验目标保持active，真实Android/当前厂商全体验仍未验收。
+
+
+## ECS实际发布
+
+入口：https://8.133.186.15/mahjong。运行源`820bc8577b39aa29941d1b36a93702c091c24ed4`，Build `gxd3NxhCMNuLmu2jN1ePn`，镜像`sha256:0750a1c2d0f9c05c87974be161fe381fb074aab3a25bf2690b8e332fe2b00bd2`。
+
+- 新鲜父版本fef6e66及固定发布器、8项辅助脚本、清理器、禁备份策略预检通过。冻结包37321654字节，SHA256 `9f0f3250dfaca0c8f285c86f14ac386799b131cf0ed1885c3622ee9884e0c27e`匹配。657源码/449构建全摘要、Linux x64及父镜像依赖层继承通过。
+- 本地与同一冻结镜像的Linux受限验证517项/33文件实际exit0，含选牌、出牌动作及Root排序；精确文件/断言数通过。单worker、threads/isolate:true、0.5CPU/384MiB、无网络/只读/64MiB临时目录、单项120秒/整个240秒保持。只轮询同一PID1481208，实际exit0后才进入发布，没有重启或将running当成通过。
+- 发布命令根复核初始两项错误假设（每阶段均直接包含完整版本号、PID文件使用字面拼接）产生本地误报；按实际候选image/证据摘要与Path.with_suffix生成PID/exit文件进行分阶段复核后通过。六个阶段命令未改，也未在误报期间提交切换；记录`.local/ecs-deploy/inline-command-review-r03.json`。身份、资源、数据和策略检查保持。
+- 固定发布器实际exit0，屏障内权威确认无真人活动牌局，切换后健康通过并恢复入口。默认可信TLS公网健康200，133项公开资源摘要一致；应用Running无OOM，1CPU/768MiB预算保持。
+- 12张业务/迁移表摘要发布前后相同`9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`，用户7/空间3/成员5/照片29/迁移7。照片清理器CID/image保持，禁备份标记、timer masked/inactive、service inactive及三个不存在的备份路径保持。没有备份创建或真实资料下载。
+
+实际发布闭环`.local/ecs-deploy/inline-published-closeout-r01.json`绑定13个终结成功阶段、133公网资源、同一冻结清单`bc4fb08a18c3d270d43f3f151467090cece16e2a19e895d5318f2c7950242f90`。发布记录立即推送GitHub两分支。公网身份/资源与健康检查不能代替真实生产账号/WSS选牌端到端、真实Android或当前厂商画面完整对齐，原整体目标继续active。
