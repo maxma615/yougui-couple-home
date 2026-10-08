@@ -1,6 +1,7 @@
 "use client";
 
 import {useMahjongActionPlacement} from "./use-action-placement";
+import {discardWaits} from "./discard-waits";
 import { MahjongFinalRanking } from "./mahjong-final-ranking";
 
 import { MahjongCallOption } from "./mahjong-call-option";
@@ -626,6 +627,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   }
   const pendingCalls = pendingCallType ? otherChoices.filter(choice => choice.type === pendingCallType) : [];
   const allowedChoices = riichiMode ? riichiChoices : discardChoices;
+  const selectedWaits = selectedHandTile && allowedChoices.some(choice=>choice.id===selectedHandTile.choiceId) && connected && !busy && !choiceSubmitted && !isFinished ? discardWaits(game,ownSeat,room.variant,selectedHandTile.choiceId) : [];
   const ownMember = room.members.find((member) => member.seat === ownSeat);
 
   const cancelNukiInput = (event: { target: EventTarget | null }) => {
@@ -674,7 +676,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       })}
       <div className="mahjong-table__dora" role="group" aria-label="宝牌指示牌" data-testid="mahjong-dora"><span>宝牌指示牌</span><div>{game.doraIndicators.map((tile, index) => <TileFace key={`${tile}-${index}`} value={tile}/>)}{Array.from({length: Math.max(0, 5 - game.doraIndicators.length)}, (_, index) => <i className="mahjong-indicator-back" aria-hidden="true" key={`back-${index}`}/>)}</div><small>宝牌 <b>{game.doraIndicators.map(tile => tileName(indicatorBonus(tile, room.variant))).join(" · ")}</b></small><div className="mahjong-table__counters" role="group" aria-label="场况计数"><span className="mahjong-table__counter" aria-label={`本场 ${game.honba}`}><small>本场</small><b>{game.honba}</b></span><span className="mahjong-table__counter" aria-label={`立直棒 ${game.riichiSticks}`}><i className="mahjong-table__stick" aria-hidden="true"/><small>立直棒</small><b>{game.riichiSticks}</b></span></div></div>
       <div className="mahjong-table__own"><PlayerIdentity player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
-        <div className="mahjong-hand-block"><div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
+        <div className="mahjong-hand-block">{selectedWaits.length ? <aside className="mahjong-wait-preview" role="status" aria-label="待牌预览"><span>待牌</span><div>{selectedWaits.map(wait=><span className="mahjong-wait-preview__item" key={wait.tile}><TileFace value={wait.tile}/><small>{wait.remaining} 张</small></span>)}</div></aside> : null}<div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
           {hand.map((tile, index) => {
             const tileId = `hand:${index}:${tile}`;
             const choices = allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(tile) && !choice.value.endsWith("_"));
