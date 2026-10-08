@@ -1,4 +1,4 @@
-# 第一次重读失败后的快捷恢复（2026-10-09，本地候选）
+# 第一次重读失败后的快捷恢复（2026-10-09，已发布）
 
 上线3205c63只在失败POST后的立即GET成功时解锁快捷手势。如果这一GET也失败，后续合法的GET或Socket已恢复界面，双击仍被同一决定的consumed挡住。正式Root新增两种迟恢复测试取得有效RED，分别为后续online触发的GET及当前Socket重新发送同一合法决定，第二次明确双击均无回调。证据late-recovery-red-r01.log（2失败/20通过）。
 
@@ -10,4 +10,15 @@
 
 448种真实HTTP/Socket场景全部实际exit0：两浏览器、三四麻、两横屏、WebSocket/polling、鼠标触屏、弃牌/pass与七种故障/恢复次序。新增later-get及later-socket先确认立即GET失败且第二次手势仍零提交，再恢复真实GET或发出当前真实Socket状态，确认没有自动回调后重新双击，正好一次合法提交。持续GET失败仍锁定，已经接受的出牌/传输重试仍逐决定去重；过牌后的新决定可以等待入手完成后明确摸切。共448原生接受操作、768笔明确逻辑POST、64次相同nonce的浏览器传输重试，最多一笔在途。真实RoomStore经正常create/join/ready/start初始化，原生108/136张引擎，每个原生决定接受至多一次，无force输入、假时钟或超时放宽。
 
-最终late-recovery-network-r01.log / .local/audit/blank-recovery-network-1791497818253/proof.json，结束后重新核对所有绑定源摘要；根非独立复核.local/audit/later-final/review.json。账号会话由本地测试HTTP端提供，不是生产账号鉴权验收。候选尚未上线。线上仍3205c63 / Build wxz_uK5KxqUXj9IPPPaNw。真实Android、生产账号认证/TLS/WSS故障及全部当前厂商视觉/语音/交互仍未完整验证，原对齐目标active。
+最终late-recovery-network-r01.log / .local/audit/blank-recovery-network-1791497818253/proof.json，结束后重新核对所有绑定源摘要；根非独立复核.local/audit/later-final/review.json。账号会话由本地测试HTTP端提供，不是生产账号鉴权验收。运行b00727e / Build 2HBMGK05H4pDwhgkgTWAH已上线；此前候选记录的发布最终状态见下方。真实Android、生产账号认证/TLS/WSS故障及全部当前厂商视觉/语音/交互仍未完整验证，原对齐目标active。
+
+
+## ECS正式发布
+
+运行b00727ecfc62ac00c8b989d2c74774f865eb0a8f / Build 2HBMGK05H4pDwhgkgTWAH上线https://8.133.186.15/mahjong。冻结镜像sha256:51442058c3b7f9b0520162c672e807a06d28031d76894b2d3140900234f13a0b，manifest摘要8be8be4d7ce911bbdf859ffee146c5c42ac5e1ba253e89fe9528461493e9d6fb。665份源码/449份构建逐文件核对一致，父依赖层继承，原相机/依赖/规则/部署配置未改。
+
+同一镜像隔离Linux548项/35文件及整条任务实际exit0；0.5CPU/384MiB、原生单worker/threads/isolate、120s测试/hook时限及360s任务监督，终态late-response-b00727e-r04-linux-status.json。未以观察超时或运行状态代替终态。固定发布器屏障内排空请求、确认无活动真人牌局后切换，镜像健康、入口恢复，发布进程实际exit0。13个远端阶段均取得实际成功终态；默认可信TLS公网健康200及133资源摘要一致，12表发布前后摘要一致（9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41）。
+
+应用1CPU/768MiB、清理器实例及镜像保持，禁备份标记与masked/inactive策略保持，未生成备份或下载真实资料。发布闭环.local/ecs-deploy/later-published-closeout-r01.json。代码b00727e和本次发布记录均立即提交推送GitHub main与工作分支，主目录仅安全同步所属提交文件，外部文件/主目录HEAD及索引未改。
+
+本次证明迟恢复逻辑、真实本地HTTP/Socket故障交叉及ECS部署；生产账号WSS故障交叉、真实Android和完整当前厂商画面/语音/全部交互仍未完整验收，完整对齐目标保持active。
