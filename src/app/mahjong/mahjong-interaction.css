@@ -35,3 +35,14 @@
     transition: none;
   }
 }
+
+/* Preferences are separate from the engine's contextual operation dock. */
+.mahjong-automatic{position:relative;z-index:24;font-size:12px;color:#f2e6ca}
+.mahjong-automatic summary{cursor:pointer;min-height:44px;padding:12px 14px;border:1px solid #a28a554d;border-radius:6px;background:#101c29ee;list-style:none}
+.mahjong-automatic[open] summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.mahjong-automatic [role="group"]{position:absolute;right:0;top:100%;display:grid;min-width:142px;background:#101c29f5;border:1px solid #a28a554d;border-top:0;border-radius:0 0 6px 6px;padding:4px}
+.mahjong-automatic button{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:44px;border:0;border-radius:4px;background:transparent;color:inherit;padding:8px 12px;cursor:pointer;font:inherit}
+.mahjong-automatic button span{color:#8998a5}
+.mahjong-automatic button[aria-pressed="true"]{background:#ac8b3633;color:#ffe7a2}
+.mahjong-automatic button[aria-pressed="true"] span{color:#ffe7a2}
+@media(max-height:500px){.mahjong-automatic summary{padding:10px 8px;font-size:11px}}
