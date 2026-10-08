@@ -1,6 +1,6 @@
-# 本家副露与操作区避让（本地候选）
+# 本家副露与操作区避让验收与发布
 
-用户要求副露清晰、有实体感，吃碰杠和拔北等操作仅在合法时出现。当前运行源 b17ef23，本步尚未上线；相机偏斜和真实安卓验收仍未解决。
+用户要求副露清晰、有实体感，吃碰杠和拔北等操作仅在合法时出现。初始候选准备时运行源 b17ef23，以下前几节为本地阶段历史记录，最新发布以末节为准；相机偏斜和真实安卓验收仍未解决。
 
 ## 实际失败与定位
 
@@ -25,3 +25,11 @@
 原生实际 RED：`.local/audit/meld-native-response-red-r01.log`。最终碰牌6场景 `.local/audit/mahjong-native-response-clearance-pon-1791448843872/legal-results.json`；加杠6场景 `.local/audit/mahjong-native-response-clearance-added-1791448843872/legal-results.json`。两个 r03 日志均正常 exit 0，场景有 CSS/测试 SHA；较早并行 r02 输出目录碰撞，保留日志但不用作最终独立证据。
 
 最终110副露：`.local/audit/meld-dock-clearance-final-r01.log`；24操作：`.local/audit/meld-dock-action-final-r01.log`；780测试：`.local/audit/meld-dock-full-final-r01.log`；构建、类型、秘密扫描分别为 build-final-r01 / type-final-r04 / secrets-final-r01，全部正常 exit 0。根裁定无未解决 Critical/Important；未二次审查。只读 ECS 父版核对正常 exit 0，仍 b17ef23，清理器与禁备份保持；真实候选 Linux 和发布尚待完成。全目标与真实安卓、用户实际偏斜原因仍未验收。
+
+## 实际发布（2026-10-08）
+
+源 2d7c789cf0fdb10d200ccb4f69e20c4f836bc027 / Build unx1HqEJl0N2ry1IH3OR1 / 镜像 sha256:9787cc3c362b0caa07669d89a87c7bc64f8dc19be70a9017821a0df0f8563df0 已实际上线。598 源码与449 Next 文件全摘要核验，Linux 16文件263检查正常exit0。构建状态首次读取返回空JSON，如实保留失败证据，r02只查询同一构建任务并确认终止成功，未重复构建。
+
+发布脚本实际确认没有真人牌局、发布exit0并恢复屏障；上线health200，默认可信TLS130公网文件全SHA匹配。12表发布前后摘要一致，清理CID/镜像、1CPU/768MiB限制及禁备份标记/定时器状态保持；未创建备份或下载用户数据。7所属路径同步保护603个主目录文件，其他文件、状态、HEAD、索引和next-env保持。
+
+最终12原生多响应场景有独立 pon/added 输出目录、44px尺寸和中心/四角命中、所有按钮矩形与桌面信息零交叠。另110副露、24原操作场景、780本地测试和构建/类型/秘密扫描通过。本步骤有一次独立审查及根一次修正，未二次审查。记录与摘要见 [发布测量](measurements/mahjong-meld-action-clearance-published-2026-10-08.json)。这些有限场景不证明所有晚局布局、实际Android或用户报告的偏斜原因；整体目标继续active。
