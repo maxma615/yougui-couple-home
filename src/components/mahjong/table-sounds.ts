@@ -1,6 +1,6 @@
 import type {RoomView} from '@/modules/mahjong/types';
 import {acceptedNukiEvent} from './nuki-motion';
-import {acceptedPublicCallEvent} from './public-call-motion';
+import {acceptedPendingKakanEvent,acceptedPublicCallEvent,type PublicCallEvent} from './public-call-motion';
 import {createDiscardEventId} from './discard-motion';
 
 export type TableSoundEvent = {id:string;kind:'discard'|'draw'|'call'|'nuki';seat:number;replacement?:boolean};
@@ -44,4 +44,29 @@ export function acceptedTableSounds(before:RoomView|null,after:RoomView):TableSo
   &&game.turnSeat===(old.turnSeat+1)%count&&game.remainingTiles===old.remainingTiles-1
   &&player?.hasDrawnTile===true&&prior?.hasDrawnTile!==true)result.push(draw(false));
  return result;
+}
+
+export type PendingKakanSound={event:PublicCallEvent;room:RoomView};
+const publicPlayers=(r:RoomView)=>r.game?.players.map(p=>({seat:p.seat,melds:p.melds,discards:p.discards,nuki:p.nuki??0,riichi:p.riichi}));
+/** Preserve only a continuously witnessed public declaration, never infer one after a gap. */
+export function tableSoundTransition(before:RoomView|null,after:RoomView,pending:PendingKakanSound|null=null):{cues:TableSoundEvent[];pending:PendingKakanSound|null}{
+ const old=before?.game,game=after.game;
+ if(pending&&before&&old&&game){
+  const proof=pending.room,prior=proof.game;
+  const continuous=prior&&proof.id===before.id&&before.id===after.id&&proof.variant===before.variant&&before.variant===after.variant
+   &&proof.mySeat===before.mySeat&&before.mySeat===after.mySeat&&proof.version===before.version&&after.version===before.version+1
+   &&prior.gameInstanceId===old.gameInstanceId&&old.gameInstanceId===game.gameInstanceId&&prior.handId===old.handId&&old.handId===game.handId
+   &&prior.decisionId===old.decisionId&&old.phase==='gang'&&old.turnSeat===pending.event.seat&&game.turnSeat===old.turnSeat
+   &&!old.settlement&&!game.settlement&&before.status==='playing'&&after.status==='playing'
+   &&same(publicPlayers(proof),publicPlayers(before))&&same(publicPlayers(before),publicPlayers(after));
+  if(continuous){
+   if(game.phase==='gang'&&game.remainingTiles===old.remainingTiles)return {cues:[],pending:{event:pending.event,room:after}};
+   const actor=game.players.find(p=>p.seat===game.turnSeat),previousActor=old.players.find(p=>p.seat===old.turnSeat);
+   if(game.phase==='gangzimo'&&game.decisionId!==old.decisionId&&game.remainingTiles===old.remainingTiles-1&&actor?.hasDrawnTile===true&&previousActor?.hasDrawnTile!==true){
+    return {cues:[{id:pending.event.id,kind:'call',seat:pending.event.seat},{kind:'draw',seat:game.turnSeat,replacement:true,id:JSON.stringify(['draw',after.id,game.gameInstanceId,game.handId,game.decisionId,game.turnSeat])}],pending:null};
+   }
+  }
+ }
+ const declaration=acceptedPendingKakanEvent(before,after);
+ return {cues:acceptedTableSounds(before,after),pending:declaration?{event:declaration,room:after}:null};
 }

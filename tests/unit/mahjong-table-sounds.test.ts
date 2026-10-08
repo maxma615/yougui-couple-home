@@ -1,7 +1,8 @@
+import {kakanSoundFixture} from '../fixtures/mahjong-audio-game';
 import Majiang from '@kobalab/majiang-core';
 import {RiichiGame} from '@/modules/mahjong/engine';
 import {describe,expect,it} from 'vitest';
-import {acceptedTableSounds} from '@/components/mahjong/table-sounds';
+import {tableSoundTransition,acceptedTableSounds} from '@/components/mahjong/table-sounds';
 import {abortPhysicalEngine} from '../fixtures/mahjong-abort-game';
 import {physicalEngine} from '../fixtures/mahjong-settlement-game';
 import {northReplacementFixture} from '../fixtures/mahjong-view-game';
@@ -105,4 +106,21 @@ it('proves native kakan after a real pon and three subsequent turns',()=>{
  const before=room(game,'yonma');expect(before.game!.turnSeat).toBe(1);choose(1,'kan',v=>!!v?.match(/^[mpsz]\d{3}[+\-=]\d$/));
  for(let seat=0;seat<4;seat++){const v=game.view(seat),pass=v.choices.find(c=>c.type==='pass');if(pass)game.respond(seat,v.decisionId,pass.id);}
  const cues=acceptedTableSounds(before,room(game,'yonma',2));expect(cues).toMatchObject([{kind:'call',seat:1},{kind:'draw',seat:1,replacement:true}]);expect(new Set(cues.map(c=>c.id)).size).toBe(2);
+});
+
+it.each(['pass','ron'] as const)('tracks real kakan response window: %s',answer=>{
+ const game=kakanSoundFixture(),before=room(game,'yonma');const v=game.view(1),kan=v.choices.find(c=>c.type==='kan'&&!!c.value?.match(/^[mpsz]\d{3}[+\-=]\d$/))!;expect(kan).toBeTruthy();game.respond(1,v.decisionId,kan.id);const window=room(game,'yonma',2);expect(window.game!.phase).toBe('gang');const first=tableSoundTransition(before,window);expect(first.cues).toEqual([]);expect(first.pending).toBeTruthy();const w=game.view(2);expect(w.choices.some(c=>c.type==='ron')).toBe(true);const choice=w.choices.find(c=>c.type===answer)!;game.respond(2,w.decisionId,choice.id);const after=room(game,'yonma',3),last=tableSoundTransition(window,after,first.pending);expect(last.pending).toBeNull();if(answer==='pass'){expect(after.game!.phase).toBe('gangzimo');expect(last.cues).toMatchObject([{kind:'call',seat:1},{kind:'draw',seat:1,replacement:true}]);}else expect(last.cues).toEqual([]);
+});
+
+function pendingKakanFixture(double=false){
+ const game=kakanSoundFixture(double?'double':true),before=room(game,'yonma'),v=game.view(1),kan=v.choices.find(c=>c.type==='kan'&&!!c.value?.match(/^[mpsz]\d{3}[+\-=]\d$/))!;expect(kan).toBeTruthy();game.respond(1,v.decisionId,kan.id);const window=room(game,'yonma',2),first=tableSoundTransition(before,window);expect(window.game!.phase).toBe('gang');expect(first.pending).toBeTruthy();return {game,before,window,first};
+}
+it('carries the exact public declaration through two separate native pass versions',()=>{
+ const {game,window,first}=pendingKakanFixture(true);let previous=window,pending=first.pending;
+ for(const seat of [2,3]){const v=game.view(seat);expect(v.choices.some(c=>c.type==='ron')).toBe(true);const pass=v.choices.find(c=>c.type==='pass')!;game.respond(seat,v.decisionId,pass.id);const after=room(game,'yonma',previous.version+1),next=tableSoundTransition(previous,after,pending);if(seat===2){expect(after.game!.phase).toBe('gang');expect(next.cues).toEqual([]);expect(next.pending).toBeTruthy();}else{expect(after.game!.phase).toBe('gangzimo');expect(next.cues).toHaveLength(2);expect(next.pending).toBeNull();}previous=after;pending=next.pending;}
+});
+it.each(['gap','old','room','viewer','variant','instance','hand','public-change','wall','turn','decision','missing-proof'] as const)('does not invent kakan completion across %s',reason=>{
+ const {game,window,first}=pendingKakanFixture(),v=game.view(2),pass=v.choices.find(c=>c.type==='pass')!;game.respond(2,v.decisionId,pass.id);const after=room(game,'yonma',3);
+ if(reason==='gap')after.version++;if(reason==='old')after.version=1;if(reason==='room')after.id='other';if(reason==='viewer')after.mySeat=2;if(reason==='variant')after.variant='sanma';if(reason==='instance')after.game!.gameInstanceId='other';if(reason==='hand')after.game!.handId!++;if(reason==='public-change')after.game!.players[0].discards.push('s1');if(reason==='wall')after.game!.remainingTiles++;if(reason==='turn')after.game!.turnSeat=2;if(reason==='decision')after.game!.decisionId=window.game!.decisionId;
+ const next=tableSoundTransition(window,after,reason==='missing-proof'?null:first.pending);expect(next.cues).toEqual([]);expect(next.pending).toBeNull();
 });

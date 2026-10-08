@@ -1,3 +1,4 @@
+import {kakanSoundFixture} from '../fixtures/mahjong-audio-game';
 // @vitest-environment jsdom
 import React,{useRef} from 'react';
 import {createPortal} from 'react-dom';
@@ -33,3 +34,9 @@ it('puts the remembered mute control on the real GameRoom',()=>{const {before}=p
 it('waits for a real flight portal outside the GameRoom DOM subtree',()=>{const {before,after}=pair(),id=acceptedTableSounds(before,after)[0].id,r=render(<Harness room={before}/>);r.rerender(<Harness room={after} flight={id} portal/>);frame();expect(audio.play).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'落地'}));expect(audio.play).toHaveBeenCalledOnce();});
 
 it('does not sound a replacement draw while its real tile is still held behind the extraction',()=>{const game=northReplacementFixture();const room=(version:number):RoomView=>({id:'north',code:'ABCDEFGH',hostUserId:'0',variant:'sanma',mode:'east',status:'playing',version,mySeat:0,game:game.view(0),members:[]});const before=room(1),v=game.view(0),c=v.choices.find(c=>c.type==='nuki')!;game.respond(0,v.decisionId,c.id);for(let seat=1;seat<3;seat++){const w=game.view(seat),pass=w.choices.find(c=>c.type==='pass');if(pass)game.respond(seat,w.decisionId,pass.id);}const after=room(2),id=acceptedTableSounds(before,after)[0].id,r=render(<Harness room={before}/>);r.rerender(<Harness room={after} flight={id} held/>);frame();fireEvent.click(screen.getByRole('button',{name:'落地'}));frame();expect(audio.play).toHaveBeenCalledOnce();expect(audio.play.mock.calls[0][0].kind).toBe('nuki');r.rerender(<Harness room={after}/>);frame();expect(audio.play).toHaveBeenCalledTimes(2);expect(audio.play.mock.calls[1][0].kind).toBe('draw');});
+
+it.each(['pass','ron','disconnect','refresh','mute'] as const)('handles pending native kakan %s without catch-up replay',mode=>{
+ const game=kakanSoundFixture(),view=(version:number):RoomView=>({id:'kakan',code:'ABCDEFGH',hostUserId:'0',variant:'yonma',mode:'east',status:'playing',version,mySeat:1,game:game.view(1),members:[]}),before=view(1),r=render(<Harness room={before}/>),v=game.view(1),kan=v.choices.find(c=>c.type==='kan'&&!!c.value?.match(/^[mpsz]\d{3}[+\-=]\d$/))!;game.respond(1,v.decisionId,kan.id);const pending=view(2);r.rerender(<Harness room={pending}/>);frame();expect(audio.play).not.toHaveBeenCalled();
+ if(mode==='disconnect'){r.rerender(<Harness room={pending} connected={false}/>);r.rerender(<Harness room={pending}/>);}if(mode==='refresh')r.rerender(<Harness room={pending} canAnimate={false}/>);if(mode==='mute'){fireEvent.click(screen.getByRole('button',{name:'关闭音效'}));fireEvent.click(screen.getByRole('button',{name:'开启音效'}));}
+ const w=game.view(2),choice=w.choices.find(c=>c.type===(mode==='ron'?'ron':'pass'))!;game.respond(2,w.decisionId,choice.id);r.rerender(<Harness room={view(3)}/>);frame();frame();if(mode==='pass'){expect(audio.play.mock.calls.map(c=>c[0].kind)).toEqual(['call','draw']);}else expect(audio.play).not.toHaveBeenCalled();
+});

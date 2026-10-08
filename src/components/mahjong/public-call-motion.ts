@@ -15,6 +15,16 @@ function direction(from: number, to: number, capacity: number) {
 
 /** Proves an accepted public group, independently of any concealed supplying tiles. */
 export function acceptedPublicCallEvent(before: RoomView | null, after: RoomView): PublicCallEvent | null {
+  return provePublicCall(before,after,false);
+}
+
+/** A declared added kan is pending until its legal robbing window resolves. */
+export function acceptedPendingKakanEvent(before:RoomView|null,after:RoomView):PublicCallEvent|null{
+  if(after.game?.phase!=='gang')return null;
+  const event=provePublicCall(before,after,true);
+  return event?.kind==='kakan'?event:null;
+}
+function provePublicCall(before: RoomView | null, after: RoomView, pendingKakan:boolean): PublicCallEvent | null {
   const old = before?.game, game = after.game;
   if (!before || !old || !game || before.status !== 'playing' || after.status !== 'playing'
     || before.id !== after.id || before.variant !== after.variant || before.mySeat !== after.mySeat
@@ -54,7 +64,7 @@ export function acceptedPublicCallEvent(before: RoomView | null, after: RoomView
     if (!valid(meld) || (meld.match(/0/g)?.length ?? 0) > 1) return null;
     const marker = meld.match(/[+\-=]/)?.[0];
     const kan = (meld.match(/\d/g)?.length ?? 0) === 4;
-    if (kan ? game.phase !== 'gangzimo' : game.phase !== 'fulou') return null;
+    if (kan ? game.phase !== 'gangzimo' && !(pendingKakan && kind==='kakan' && game.phase==='gang') : game.phase !== 'fulou') return null;
     if (kind === 'kakan' || !marker) {
       if (!['zimo','gang','gangzimo','nukizimo'].includes(old.phase) || old.turnSeat !== player.seat) return null;
     } else if (old.phase !== 'dapai') return null;

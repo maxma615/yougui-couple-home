@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useRef,useState,type RefObject} from 'react';
 import type {RoomView} from '@/modules/mahjong/types';
 import {TableAudioPlayer} from './table-audio';
-import {acceptedTableSounds,type TableSoundEvent} from './table-sounds';
+import {tableSoundTransition,type PendingKakanSound,type TableSoundEvent} from './table-sounds';
 
 type Pending={cue:TableSoundEvent;parent?:string;epoch:number};
 const storageKey='yougui.mahjong.sound';
@@ -12,9 +12,10 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
  const [enabled,setEnabled]=useState(true),enabledRef=useRef(true);
  const player=useRef<TableAudioPlayer|null>(null),previous=useRef<{room:RoomView;connected:boolean}|null>(null);
  const pending=useRef(new Map<string,Pending>()),frames=useRef(new Set<number>()),epoch=useRef(0);
+ const pendingKan=useRef<PendingKakanSound|null>(null);
  const scheduleRef=useRef<(id:string)=>void>(()=>{});
  const clear=useCallback(()=>{
-  epoch.current++;pending.current.clear();
+  epoch.current++;pending.current.clear();pendingKan.current=null;
   for(const id of frames.current)cancelAnimationFrame(id);frames.current.clear();
  },[]);
  const invalidate=useCallback(()=>{clear();previous.current=null;player.current?.cancel();},[clear]);
@@ -101,8 +102,9 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   const old=previous.current;previous.current={room,connected};
   if(old&&scope(old.room)!==scope(room)){clear();player.current?.cancel();}
   if(!connected||document.visibilityState==='hidden'){clear();player.current?.pause();return;}
-  if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room))return;
-  const cues=acceptedTableSounds(old.room,room);
+  if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room)){pendingKan.current=null;return;}
+  const transition=tableSoundTransition(old.room,room,pendingKan.current);pendingKan.current=transition.pending;
+  const cues=transition.cues;
   for(const cue of cues){
    const parent=cue.kind==='draw'&&cues[0]?.kind!=='draw'?cues[0].id:undefined;
    pending.current.set(cue.id,{cue,parent,epoch:epoch.current});
