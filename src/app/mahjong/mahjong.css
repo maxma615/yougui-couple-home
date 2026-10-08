@@ -725,6 +725,15 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 .mahjong-page .mahjong-call-options .mahjong-button { min-height: 58px; gap: 14px; }
 .mahjong-page .mahjong-call-options .mahjong-meld--public { --meld-tile-w: 27px; --meld-tile-h: 38px; }
 
+/* Compact landscape visuals retain a full fingertip target on touch devices. */
+@media (pointer: coarse) {
+  .mahjong-page .mahjong-game .mahjong-action-dock .mahjong-button,
+  .mahjong-page .mahjong-game .mahjong-action-dock__cancel {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 /* One result sequence: winner details, then one aggregate score roll. */
 .mahjong-settlement-panel.is-detail .mahjong-settlement-panel__content { grid-template-columns: minmax(0,1fr); }
 .mahjong-settlement-panel .mahjong-winning-hand { flex-direction: column; align-items: flex-start; }
