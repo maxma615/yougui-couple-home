@@ -426,17 +426,18 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const tableRef = useRef<HTMLDivElement>(null);
   const audioRootRef = useRef<HTMLElement>(null);
   useMahjongActionPlacement(audioRootRef,Boolean(game)&&room.status!=="finished",`${room.id}:${room.variant}:${ownSeat}:${game?.decisionId}:${room.version}:${riichiMode}:${pendingCallType}`);
-  const automatic = useAutomaticPlay({room,ownSeat,connected,busy,onChoice: choice => {
+
+  const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef});
+  const nukiMotion = useNukiMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
+  const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
+  const drawArrival = useDrawArrival(game, room.id, ownSeat, {connected, canAnimate: motionCanAnimate, heldDecisionId: nukiMotion.heldDecisionId});
+  const automatic = useAutomaticPlay({room,ownSeat,connected,busy: busy || nukiMotion.heldDecisionId === game?.decisionId || drawArrival.arriving,onChoice: choice => {
     if (choice.type === "discard") {
       const source = [...(audioRootRef.current?.querySelectorAll<HTMLButtonElement>(".mahjong-hand button[data-choice-id]") ?? [])].find(button => button.dataset.choiceId === choice.id);
       if (source) { submitHandChoice(choice, source); return; }
     }
     onChoice(choice);
   }});
-  const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef});
-  const nukiMotion = useNukiMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
-  const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
-  const drawArrival = useDrawArrival(game, room.id, ownSeat, {connected, canAnimate: motionCanAnimate, heldDecisionId: nukiMotion.heldDecisionId});
   const discardMotion = useDiscardMotion({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
   const finishDiscardAudio = useCallback((id:string)=>{audio.land(id);discardMotion.finishFlight(id);},[audio.land,discardMotion.finishFlight]);
   const finishCallAudio = useCallback((id:string)=>{audio.land(id);publicCallMotion.finishFlight(id);},[audio.land,publicCallMotion.finishFlight]);
