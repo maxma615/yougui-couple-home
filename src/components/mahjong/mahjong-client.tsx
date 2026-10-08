@@ -428,12 +428,12 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     let size = table.getBoundingClientRect();
     const observer = new ResizeObserver(() => {
       const next = table.getBoundingClientRect();
-      if (Math.abs(next.width - size.width) > .5 || Math.abs(next.height - size.height) > .5) drawArrival.cancel();
+      if (Math.abs(next.width - size.width) > .5 || Math.abs(next.height - size.height) > .5) { audio.invalidate(); drawArrival.cancel(); }
       size = next;
     });
     observer.observe(table);
     return () => observer.disconnect();
-  }, [drawArrival.cancel]);
+  }, [drawArrival.cancel, audio.invalidate]);
   const selectedHandTileRef = useRef<{ tileId: string; choiceId: string } | null>(null);
   const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; rackTop: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
   const submittedChoiceRef = useRef(false);

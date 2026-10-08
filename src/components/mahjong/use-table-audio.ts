@@ -17,6 +17,7 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   epoch.current++;pending.current.clear();
   for(const id of frames.current)cancelAnimationFrame(id);frames.current.clear();
  },[]);
+ const invalidate=useCallback(()=>{clear();previous.current=null;player.current?.cancel();},[clear]);
  const land=useCallback((id:string)=>{
   const entry=pending.current.get(id);
   if(!entry||entry.parent||entry.epoch!==epoch.current)return;
@@ -108,5 +109,5 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    if(!parent)schedule(cue.id);
   }
  },[room,connected,canAnimate,clear,schedule]);
- return {enabled,toggle,land};
+ return {enabled,toggle,land,invalidate};
 }

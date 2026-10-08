@@ -20,7 +20,7 @@ function pair(kind:string){
 const results:unknown[]=[];
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true});
- try{for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const kind of ['discard','nuki-own','nuki-opponent','kan'])for(const interruption of viewport.width===667&&['discard','nuki-own'].includes(kind)?['none','mute','disconnect','unmount','resize']:['none']){
+ try{for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const kind of ['discard','nuki-own','nuki-opponent','kan'])for(const interruption of viewport.width===667&&['discard','nuki-own'].includes(kind)?['none','mute','disconnect','unmount','resize',...(kind==='nuki-own'?['table-resize']:[])]:['none']){
   const context=await browser.newContext({viewport});
   try{const page=await context.newPage(),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route('https://mahjong.local/images/**',async route=>{const path=new URL(route.request().url()).pathname;await route.fulfill({status:200,contentType:path.endsWith('.svg')?'image/svg+xml':'image/webp',body:readFileSync(`public${path}`)});});
@@ -37,18 +37,21 @@ globalThis.process={env:{NODE_ENV:'development'}};globalThis.__name=(t,v)=>Objec
    await page.evaluate(r=>{(window as any).acceptedAt=performance.now();(window as any).paintSound(r);},after);
    if(kind!=='kan'){await page.waitForTimeout(75);assert.equal(await page.evaluate(()=>(window as any).playedSounds.length),0,'impact must wait for actual movement');}
    if(interruption!=='none'){
-    assert.equal(await page.evaluate(()=>(window as any).playedSounds.length),0);
-    assert(await page.locator('[data-motion-event]').count()>0,'interrupt an actual flight');
+    const expected=interruption==='table-resize'?1:0;
+    if(interruption==='table-resize')await page.waitForFunction(()=>!!document.querySelector('button.mahjong-tile.is-draw-arriving'));
+    assert.equal(await page.evaluate(()=>(window as any).playedSounds.length),expected);
+    if(interruption!=='table-resize')assert(await page.locator('[data-motion-event]').count()>0,'interrupt an actual flight');
     if(interruption==='mute')await page.getByRole('button',{name:'关闭音效'}).click();
     if(interruption==='disconnect')await page.evaluate(r=>(window as any).paintSound(r,true,false),after);
     if(interruption==='unmount')await page.evaluate(()=>(window as any).unmountSound());
+    if(interruption==='table-resize')await page.evaluate(()=>{const table=document.querySelector<HTMLElement>('.mahjong-table')!;table.style.width='90%';});
     if(interruption==='resize')await page.setViewportSize({width:viewport.width+10,height:viewport.height});
     await page.waitForTimeout(650);
-    assert.equal(await page.evaluate(()=>(window as any).playedSounds.length),0,`${interruption} must discard in-flight and dependent replacement cues`);
+    assert.equal(await page.evaluate(()=>(window as any).playedSounds.length),expected,`${interruption} must discard in-flight and dependent replacement cues`);
     if(interruption==='mute')await page.getByRole('button',{name:'开启音效'}).click();
     if(interruption!=='unmount'){
      await page.evaluate(r=>(window as any).paintSound(r,false,true),after);await page.waitForTimeout(100);
-     assert.equal(await page.evaluate(()=>(window as any).playedSounds.length),0,'reconnect/unmute/GET cannot replay canceled sounds');
+     assert.equal(await page.evaluate(()=>(window as any).playedSounds.length),expected,'reconnect/unmute/GET cannot replay canceled sounds');
      await page.evaluate(()=>(window as any).unmountSound());
     }
     await page.waitForFunction(()=>(window as any).audioContexts.every((c:AudioContext)=>c.state==='closed'),null,{timeout:5000});
