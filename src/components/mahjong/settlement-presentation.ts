@@ -4,9 +4,13 @@ export const SCORE_START_MS = 1200;
 export const SCORE_STEP_MS = 30;
 export const SCORE_STEPS = 33;
 export const AUTO_CONFIRM_MS = 3000;
-export const detailValueAt = (settlement: Settlement) => 300 + Math.min(15, settlement.yaku.length) * 180;
+export const drawRevealAt = (settlement: Settlement) => settlement.drawInfo?.kind === "abort" ? 500 : 1000;
+export const drawSummaryAt = (settlement: Settlement) => settlement.drawInfo?.kind === "abort" ? 1000 : 2000;
+export const NAGASHI_YAKU_MS = 600;
+export const NAGASHI_TITLE_MS = 2500;
+export const detailValueAt = (settlement: Settlement) => settlement.drawInfo?.kind === "nagashi" ? 1800 : 300 + Math.min(15, settlement.yaku.length) * 180;
 export function confirmationAt(flow: SettlementFlow, settlement: Settlement) {
-  return flow.stage === "detail" ? detailValueAt(settlement) + 600 : flow.delta.some(delta => delta !== 0) ? 4500 : 1200;
+  return flow.stage === "draw" ? drawSummaryAt(settlement) + 1000 : flow.stage === "detail" ? settlement.drawInfo?.kind === "nagashi" ? 2800 : detailValueAt(settlement) + 600 : flow.delta.some(delta => delta !== 0) ? 4500 : 1200;
 }
 export function displayedScores(flow: SettlementFlow, elapsed: number, reducedMotion: boolean) {
   if (reducedMotion) return flow.newScores;
@@ -15,8 +19,8 @@ export function displayedScores(flow: SettlementFlow, elapsed: number, reducedMo
 }
 export function presentationBoundaries(flow: SettlementFlow, settlement: Settlement) {
   const ready = confirmationAt(flow, settlement);
-  const reveal = flow.stage === "detail"
+  const reveal = flow.stage === "draw" ? [drawRevealAt(settlement),drawRevealAt(settlement)+300,drawSummaryAt(settlement)] : flow.stage === "detail"
     ? Array.from({ length: Math.min(15, settlement.yaku.length) + 1 }, (_, i) => 300 + i * 180)
     : Array.from({ length: SCORE_STEPS }, (_, i) => SCORE_START_MS + i * SCORE_STEP_MS);
-  return [...new Set([...reveal, ready, ready + 1000, ready + 2000, ready + AUTO_CONFIRM_MS])].sort((a, b) => a - b);
+  return [...new Set([...reveal, ...(flow.stage === "detail" ? [detailValueAt(settlement), ...(settlement.drawInfo?.kind === "nagashi" ? [NAGASHI_YAKU_MS,NAGASHI_TITLE_MS] : [])] : []), ready, ready + 1000, ready + 2000, ready + AUTO_CONFIRM_MS])].sort((a, b) => a - b);
 }

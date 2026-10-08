@@ -36,13 +36,13 @@ Interfaces: DrawInfo={kind:exhaustive|abort|nagashi,revealedHands:{seat,hand,wai
 
 ### Task 2: 听牌、原因、流满贯与桌面揭示
 
-Files: 新mahjong-draw-summary.tsx、settlement-presentation.ts、use-settlement-presentation.ts、mahjong-settlement-panel.tsx、mahjong-client.tsx、mahjong.css；新组件和真实浏览器测试。
+Files: 新mahjong-draw-summary.tsx、settlement-presentation.ts、use-settlement-presentation.ts、use-draw-result-lead.ts、mahjong-settlement-panel.tsx、mahjong-client.tsx、mahjong.css；新组件和真实浏览器测试（draw24 + ordinary win8）与手牌完整宽度回归。
 
 Interfaces: 消费Task1 DTO；draw页面确认1000ms+3000ms，揭示/面板过渡依据已保存的一手来源；scores沿现有时序。
 
-- [ ] 新组件先RED：荒牌听牌授权手牌／无收支、途中原因无听牌标签、流满贯0番符隐藏、个人翻页／自动确认与断线取消。
-- [ ] 实现原原创揭示／结果页，改终局文案为明确名次与比分，保留再开／解散；组件GREEN。
-- [ ] mounted真实RoomStore驱动Chromium/WebKit三/四人横屏、真实ACK、长姓名滚动/触达；提交。
+- [x] 新组件先RED：荒牌听牌授权手牌／无收支、途中原因无听牌标签、流满贯0番符隐藏、个人翻页／自动确认与断线取消。
+- [x] 实现原原创揭示／结果页，改终局文案为明确名次与比分，保留再开／解散；组件GREEN。
+- [x] mounted真实RoomStore驱动Chromium/WebKit三/四人横屏、真实ACK、长姓名滚动/触达；提交。
 
 ### Task 3: 联机回归、审查与发布
 

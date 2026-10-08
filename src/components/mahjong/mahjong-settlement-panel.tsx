@@ -1,31 +1,37 @@
 "use client";
 import type { CSSProperties } from "react";
 import { useSettlementPresentation } from "./use-settlement-presentation";
-import { detailValueAt } from "./settlement-presentation";
+import { detailValueAt, drawSummaryAt, NAGASHI_YAKU_MS, NAGASHI_TITLE_MS } from "./settlement-presentation";
+import { MahjongDrawSummary } from "./mahjong-draw-summary";
 import type { Choice, GameView, RoomView } from "@/modules/mahjong/types";
 import { winningHand, settlementTitle } from "./mahjong-winning-hand";
 import { TileFace, tileName } from "./mahjong-tile";
 import { MahjongMeld as MeldView } from "./mahjong-meld";
 const number = (value: number) => value.toLocaleString("en-US");
 
-export function MahjongSettlementPanel({ game, room, connected, busy, onChoice }: { game: GameView; room: RoomView; connected: boolean; busy: boolean; onChoice: (choice: Choice) => void }) {
+export function MahjongSettlementPanel({ game, room, connected, busy, onChoice, leadInMs = 0 }: { game: GameView; room: RoomView; connected: boolean; busy: boolean; onChoice: (choice: Choice) => void; leadInMs?: number }) {
   const settlement = game.settlement;
   const ack = game.choices.find(choice => choice.type === "ack");
   const flow = !game.ranking && settlement ? game.settlementFlow : undefined;
-  const presentation = useSettlementPresentation({ flow, settlement: game.ranking ? null : settlement, ack: game.ranking ? undefined : ack, connected, busy, onChoice });
+  const presentation = useSettlementPresentation({ flow, settlement: game.ranking ? null : settlement, ack: game.ranking ? undefined : ack, connected, busy, onChoice, leadInMs: flow?.stage === "draw" ? leadInMs : 0 });
   if (!settlement || game.ranking) return null;
   const scoresStage = flow?.stage === "scores";
   const detailStage = flow?.stage === "detail";
+  const drawStage = flow?.stage === "draw";
+  const nagashiDetail = detailStage && settlement.drawInfo?.kind === "nagashi";
+  const abort = drawStage && settlement.drawInfo?.kind === "abort";
+  if (drawStage && presentation.elapsed < drawSummaryAt(settlement)) return null;
   const hanText = String(settlement.han ?? "");
   const yakuYakumanCount = settlement.yaku.reduce((count, yaku) => count + ((String(yaku.han).match(/\*+/)?.[0].length || 0)), 0);
   const yakumanCount = Math.max((hanText.match(/\*+/)?.[0].length || 0), yakuYakumanCount, /役満|役满/.test(hanText) ? 1 : 0);
   const hanLabel = yakumanCount ? `${yakumanCount > 1 ? `${yakumanCount}倍` : ""}役满` : `${hanText || "—"} 翻`;
   const winning = winningHand(settlement);
   const winner = settlement.winnerSeat === undefined ? null : room.members.find((member) => member.seat === settlement.winnerSeat);
-  return <section className={`mahjong-settlement-panel${flow ? ` is-${flow.stage}` : ""}`} data-settlement-stage={flow?.stage} aria-label={scoresStage ? "本局收支" : detailStage ? "和牌详情" : "本局结算"}>
+  return <section className={`mahjong-settlement-panel${flow ? ` is-${flow.stage}` : ""}`} data-settlement-stage={flow?.stage} aria-label={scoresStage ? "本局收支" : nagashiDetail ? "流满贯详情" : detailStage ? "和牌详情" : drawStage ? abort ? "流局原因" : "听牌结果" : "本局结算"}>
     <div key={game.decisionId} className="mahjong-settlement-panel__content">
-      <header key={game.decisionId} className="mahjong-settlement-panel__heading"><p className="mahjong-kicker">{scoresStage ? "本局收支" : "本局结算"}</p>{detailStage ? <small className="mahjong-settlement-panel__page">第 {flow.detailIndex + 1} / 共 {flow.detailCount} 位</small> : null}<h2>{scoresStage ? "点数结算" : settlementTitle(settlement)}</h2>{!scoresStage && settlement.kind === "win" ? <strong className="mahjong-settlement-panel__winner">{winner?.displayName || `座位 ${(settlement.winnerSeat ?? 0) + 1}`} · {settlementTitle(settlement)}</strong> : null}<p>{scoresStage ? "本局各席收支" : settlement.kind === "win" ? `${hanLabel}${settlement.fu ? ` · ${settlement.fu} 符` : ""}` : settlement.name}</p>{!scoresStage && settlement.kind === "win" && settlement.points !== undefined ? <div className={`mahjong-settlement-panel__value${detailStage ? presentation.elapsed >= detailValueAt(settlement) ? " is-revealed" : " is-pending" : ""}`}><small>牌型点数</small><b>{number(settlement.points)} 点</b></div> : null}</header>
-      {!detailStage ? <div className={`mahjong-settlement-panel__delta${room.variant === "sanma" ? " is-sanma" : ""}`} aria-label="本次各席收支">{game.players.slice().sort((a,b) => a.seat - b.seat).map(player => {
+      <header key={game.decisionId} className="mahjong-settlement-panel__heading"><p className="mahjong-kicker">{scoresStage ? "本局收支" : "本局结算"}</p>{detailStage ? <small className="mahjong-settlement-panel__page">第 {flow.detailIndex + 1} / 共 {flow.detailCount} 位</small> : null}<h2>{scoresStage ? "点数结算" : nagashiDetail ? "流满贯" : drawStage ? abort ? "途中流局" : "荒牌流局" : settlementTitle(settlement)}</h2>{!scoresStage && (settlement.kind === "win" || nagashiDetail) ? <strong className="mahjong-settlement-panel__winner">{winner?.displayName || `座位 ${(settlement.winnerSeat ?? 0) + 1}`} {nagashiDetail ? "" : `· ${settlementTitle(settlement)}`}</strong> : null}<p>{scoresStage ? "本局各席收支" : nagashiDetail ? <span data-testid="nagashi-mangan-title" className={presentation.elapsed >= NAGASHI_TITLE_MS ? "is-revealed" : "is-pending"}>满贯</span> : drawStage ? abort ? "" : "听牌结果" : settlement.kind === "win" ? `${hanLabel}${settlement.fu ? ` · ${settlement.fu} 符` : ""}` : settlement.name}</p>{!scoresStage && (settlement.kind === "win" || nagashiDetail) && settlement.points !== undefined ? <div className={`mahjong-settlement-panel__value${detailStage ? presentation.elapsed >= detailValueAt(settlement) ? " is-revealed" : " is-pending" : ""}`}><small>牌型点数</small><b>{number(settlement.points)} 点</b></div> : null}</header>
+      {drawStage && settlement.drawInfo ? <MahjongDrawSummary game={game} room={room}/> : null}
+      {!detailStage && !drawStage ? <div className={`mahjong-settlement-panel__delta${room.variant === "sanma" ? " is-sanma" : ""}`} aria-label="本次各席收支">{game.players.slice().sort((a,b) => a.seat - b.seat).map(player => {
         const delta = (scoresStage ? flow.delta[player.seat] : settlement.delta[player.seat]) ?? 0;
         const before = scoresStage ? flow.oldScores[player.seat] : player.score;
         const after = scoresStage ? presentation.scores[player.seat] : player.score + delta;
@@ -39,6 +45,7 @@ export function MahjongSettlementPanel({ game, room, connected, busy, onChoice }
       {!flow ? <p className="mahjong-settlement-panel__explanation">全部席位确认后，本次收支才计入分数。{settlement.kind === "win" ? `牌型点数单独显示；实际收支包含本场 ${game.honba}、立直棒 ${game.riichiSticks}。` : "流局收支按各席结算。"}{room.variant === "sanma" && settlement.winMethod === "tsumo" ? "三麻采用自摸损，缺少第四家的付款。" : ""}</p> : null}
       {!scoresStage && (winning.closed.length || winning.melds.length) ? <div className="mahjong-winning-hand"><div><small>{winner?.displayName || "和牌"}的手牌</small>{winning.winningTile ? <small>和牌：{tileName(winning.winningTile)}</small> : null}</div><div className="mahjong-winning-hand__row"><div className="mahjong-winning-hand__closed" role="group" aria-label="闭手">{winning.closed.map((tile, index) => <TileFace value={tile} key={`${index}-${tile}`} />)}</div>{winning.winningTile ? <span className="mahjong-winning-hand__tile" data-testid="mahjong-winning-tile"><TileFace value={winning.winningTile}/></span> : null}{winning.melds.length ? <div className="mahjong-winning-hand__melds">{winning.melds.map((meld, index) => <MeldView meld={meld} key={`${index}-${meld}`}/>)}</div> : null}</div></div> : null}
       {!scoresStage && settlement.kind === "win" && settlement.uraIndicators.length ? <div className="mahjong-ura-indicators"><small>里宝牌指示</small><div>{settlement.uraIndicators.map((tile, index) => <TileFace value={tile} key={`${tile}-${index}`} />)}</div></div> : null}
+      {nagashiDetail ? <ul><li data-testid="nagashi-yaku" className={presentation.elapsed >= NAGASHI_YAKU_MS ? "is-revealed" : "is-pending"}><span>流满贯</span></li></ul> : null}
       {!scoresStage && settlement.yaku.length ? <ul>{settlement.yaku.map((yaku, index) => {
         const units = String(yaku.han).match(/\*+/)?.[0].length || 0;
         return <li key={`${game.decisionId}:${index}:${yaku.name}`} className={detailStage ? presentation.elapsed >= 300 + Math.min(index,14) * 180 ? "is-revealed" : "is-pending" : undefined} style={detailStage ? {"--reveal-index": Math.min(index,14)} as CSSProperties : undefined}><span>{yaku.name}</span><b>{units ? `${units > 1 ? `${units}倍` : ""}役满` : `${yaku.han} 翻`}</b></li>;

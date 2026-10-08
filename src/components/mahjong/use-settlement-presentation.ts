@@ -5,8 +5,9 @@ import { AUTO_CONFIRM_MS, confirmationAt, displayedScores, presentationBoundarie
 
 /** A server-relative age anchored to the monotonic device clock. Timers only
  * wake at reveal/score/confirmation boundaries; there is no permanent loop. */
-export function useSettlementPresentation({ flow, settlement, ack, connected, busy, onChoice }: {
+export function useSettlementPresentation({ flow, settlement, ack, connected, busy, onChoice, leadInMs = 0 }: {
   flow?: SettlementFlow; settlement: Settlement | null; ack?: Choice; connected: boolean; busy: boolean; onChoice: (choice: Choice) => void;
+  leadInMs?: number;
 }) {
   const key = flow && settlement ? `${flow.id}:${flow.stage}:${flow.detailIndex}` : "";
   const readyAt = flow && settlement ? confirmationAt(flow, settlement) : 0;
@@ -16,7 +17,7 @@ export function useSettlementPresentation({ flow, settlement, ack, connected, bu
   const pending = useRef({ key: "", waiting: false, sawBusy: false });
   const autoAttempt = useRef("");
   const [reducedMotion, setReducedMotion] = useState(false);
-  const elapsed = clock.key === key ? Math.max(clock.elapsed, flow?.elapsedMs ?? 0) : flow?.elapsedMs ?? 0;
+  const elapsed = Math.max(0, (clock.key === key ? Math.max(clock.elapsed, flow?.elapsedMs ?? 0) : flow?.elapsedMs ?? 0) - leadInMs);
 
   useEffect(() => {
     if (!window.matchMedia) return;
@@ -33,7 +34,7 @@ export function useSettlementPresentation({ flow, settlement, ack, connected, bu
     anchor.current = { key, elapsed: age, at: time };
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
-    const boundaries = presentationBoundaries(flow, settlement);
+    const boundaries = presentationBoundaries(flow, settlement).map(boundary => boundary + leadInMs);
     const update = () => {
       if (cancelled) return;
       const current = age + performance.now() - time;
@@ -46,7 +47,7 @@ export function useSettlementPresentation({ flow, settlement, ack, connected, bu
     // The phase and server-reported relative age are the synchronization inputs.
     // Recreated room/settlement objects must not restart the presentation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, flow?.elapsedMs, readyAt, connected]);
+  }, [key, flow?.elapsedMs, readyAt, connected, leadInMs]);
 
   useEffect(() => {
     if (pending.current.key !== key) {

@@ -55,6 +55,7 @@ for(const engine of [chromium,webkit]) {
   await detail.waitFor();
   assert.equal(await detail.locator('[data-settlement-seat]').count(),0);
   assert.equal(await detail.locator('.mahjong-winning-hand [data-tile-face]').count(),14);
+  assert.equal(await detail.locator('.mahjong-winning-hand__row').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,`${label}: the full winning hand must fit beside its winning tile`);
   await detail.locator(".mahjong-settlement-panel__content").evaluate(el => { el.scrollTop=el.scrollHeight; });
   await detail.getByRole('button',{name:/继续/}).click();
   await page.waitForFunction(()=>document.querySelector('.mahjong-settlement-panel__page')?.textContent?.includes('第 2'));

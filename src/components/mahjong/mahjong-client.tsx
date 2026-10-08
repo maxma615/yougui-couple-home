@@ -26,6 +26,10 @@ import { MahjongStandingTile } from "./mahjong-standing-tile";
 import { useDrawArrival } from "./use-draw-arrival";
 import { settlementTitle } from "./mahjong-winning-hand";
 import { MahjongSettlementPanel } from "./mahjong-settlement-panel";
+import { useDrawResultLead } from "./use-draw-result-lead";
+import { useSettlementPresentation } from "./use-settlement-presentation";
+import { drawRevealAt } from "./settlement-presentation";
+import { winningHand } from "./mahjong-winning-hand";
 import { MahjongFaceUpFlightTile } from "./mahjong-solid-flight-tile";
 
 const windNames = ["東", "南", "西", "北"];
@@ -405,6 +409,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const drawArrival = useDrawArrival(game, room.id, ownSeat, {connected, canAnimate: motionCanAnimate, heldDecisionId: nukiMotion.heldDecisionId});
   const discardMotion = useDiscardMotion({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
+  const drawLead = useDrawResultLead(game, discardMotion.flight);
+  const drawPresentation = useSettlementPresentation({flow: game?.settlementFlow?.stage === "draw" ? game.settlementFlow : undefined, settlement: game?.settlement ?? null, connected, busy, onChoice, leadInMs: drawLead});
+  const revealedHands = game?.settlement?.drawInfo && (game.settlementFlow?.stage !== "draw" || drawPresentation.elapsed >= drawRevealAt(game.settlement)) ? game.settlement.drawInfo.revealedHands : [];
   const handReflow = useHandReflow({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
   useEffect(() => {
     const table = tableRef.current;
@@ -593,7 +600,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside>
     {!connected ? <div className="mahjong-reconnect" role="status" aria-label="连接状态"><WifiOff size={15}/>正在重连…</div> : null}
 
-    {isFinished && game.ranking ? <section className="mahjong-ranking" aria-label="最终名次"><p className="mahjong-kicker">FINAL TABLE</p><h1>这一场，<em>落子有声。</em></h1><div>{[...game.ranking].sort((a, b) => a.rank - b.rank).map((row) => {
+    {isFinished && game.ranking ? <section className="mahjong-ranking" aria-label="最终名次"><p className="mahjong-kicker">FINAL TABLE</p><h1>最终<em>名次</em></h1><div>{[...game.ranking].sort((a, b) => a.rank - b.rank).map((row) => {
       const player = game.players.find((candidate) => candidate.seat === row.seat);
       const member = room.members.find((candidate) => candidate.seat === row.seat);
       return <div className="mahjong-ranking__row" key={row.seat}><span>0{row.rank}</span><strong>{member?.displayName || (player?.seat === ownSeat ? ownMember?.displayName || "你" : "牌友")}</strong><b>{row.score.toLocaleString()} 点</b></div>;
@@ -609,7 +616,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         {Array.from({ length: capacity - 1 }, (_, index) => index + 1).map(offset => {
           const player = byRelative(offset);
           const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
-          return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
+          return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel revealedHand={revealedHands.find(hand => hand.seat === player?.seat)?.hand} player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
         })}
         <div className="mahjong-table__own-public"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} includeIdentity={false}/></div>
         <div className="mahjong-table__center" aria-label="场况台">
@@ -657,7 +664,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       {game.settlement && !game.settlementFlow ? <div className="mahjong-settlement" role="status"><span>{settlementTitle(game.settlement)}</span>{game.settlement.yaku.slice(0, 3).map((yaku) => <i key={yaku.name}>{yaku.name}</i>)}</div> : null}
     </div> : null}
 
-    {game.settlement ? <MahjongSettlementPanel game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}
+    {game.settlement ? <MahjongSettlementPanel leadInMs={drawLead} game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}
     {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
     {inspectedSeat !== null ? <PublicMeldDialog player={game.players.find(p => p.seat === inspectedSeat)} member={room.members.find(m => m.seat === inspectedSeat)} onClose={() => setInspectedSeat(null)}/> : null}
     {publicCallMotion.flight ? <DiscardFlightLayer kind="call" flight={publicCallMotion.flight} onFinish={publicCallMotion.finishFlight}/> : null}
@@ -666,7 +673,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   </section>;
 }
 
-type PlayerPanelProps = { player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void; includeIdentity?: boolean };
+type PlayerPanelProps = { revealedHand?: string; player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void; includeIdentity?: boolean };
 
 function PlayerIdentity({ player, member, ownSeat, offset, capacity, onInspect }: PlayerPanelProps) {
   if (!player) return null;
@@ -679,12 +686,12 @@ function PlayerIdentity({ player, member, ownSeat, offset, capacity, onInspect }
   </>;
 }
 
-function PlayerPanel({ player, member, ownSeat, active, offset, capacity, onInspect, includeIdentity = true }: PlayerPanelProps) {
+function PlayerPanel({ revealedHand, player, member, ownSeat, active, offset, capacity, onInspect, includeIdentity = true }: PlayerPanelProps) {
   if (!player) return null;
   return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
     {includeIdentity ? <PlayerIdentity player={player} member={member} ownSeat={ownSeat} active={active} offset={offset} capacity={capacity} onInspect={onInspect}/> : null}
     {offset !== 0 ? <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
-      {Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
+      {revealedHand ? <div className="mahjong-draw-rack" data-draw-reveal-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的公开手牌`}>{winningHand({kind:"draw", name:"", hand:revealedHand,yaku:[],delta:[],uraIndicators:[]}).closed.map((tile,index)=><span key={`${index}-${tile}`} className="mahjong-draw-rack__tile"><MahjongFaceUpFlightTile value={tile}/></span>)}</div> : Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
         const drawn = player.hasDrawnTile === true && index === Math.min(player.handCount, 14) - 1;
         return <MahjongStandingTile key={index} drawn={drawn}/>;
       }) }
