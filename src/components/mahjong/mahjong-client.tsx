@@ -413,6 +413,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const [inspectedSeat, setInspectedSeat] = useState<number | null>(null);
   const [riichiMode, setRiichiMode] = useState(false);
   const [pendingCallType, setPendingCallType] = useState<Choice["type"] | null>(null);
+  const pendingCallTrigger = useRef<HTMLButtonElement>(null);
   const [selectedHandTile, setSelectedHandTile] = useState<{ tileId: string; choiceId: string } | null>(null);
   const [hoveredChoiceId, setHoveredChoiceId] = useState<string | null>(null);
   const [showCurrentWaits, setShowCurrentWaits] = useState(false);
@@ -727,9 +728,10 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         className={`mahjong-button ${type === "ron" ? "mahjong-button--win" : type === "pass" ? "mahjong-button--quiet" : "mahjong-button--action"}`}
         disabled={busy || !connected} data-choice-id={choices.length === 1 ? choices[0].id : undefined}
         data-choice-type={type} aria-label={choiceNames[type]} aria-haspopup={choices.length > 1 ? "dialog" : undefined}
-        onClick={() => {
+        onClick={event => {
           if (!connected || busy) return;
           publicCallMotion.cancel();
+          pendingCallTrigger.current = event.currentTarget;
           choices.length > 1 ? setPendingCallType(type) : onChoice(choices[0]);
         }}>
         <span className="mahjong-call-label">{choiceNames[type]}{choices.length > 1 ? <small>选择组合 · {choices.length}</small> : null}</span>
@@ -740,7 +742,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     </div> : null}
 
     {game.settlement ? <MahjongSettlementPanel leadInMs={drawLead} game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}
-    {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
+    {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog returnFocus={pendingCallTrigger.current} type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
     {inspectedSeat !== null ? <PublicMeldDialog player={game.players.find(p => p.seat === inspectedSeat)} member={room.members.find(m => m.seat === inspectedSeat)} onClose={() => setInspectedSeat(null)}/> : null}
     {publicCallMotion.flight ? <DiscardFlightLayer kind="call" flight={publicCallMotion.flight} onFinish={finishCallAudio}/> : null}
     {nukiMotion.flight ? <DiscardFlightLayer kind="nuki" flight={nukiMotion.flight} onFinish={finishNukiAudio}/> : null}
@@ -790,13 +792,20 @@ export function PublicMeldDialog({player, member, onClose}: {player?: PublicPlay
   </dialog>;
 }
 
-function CallChoiceDialog({ type, choices, busy, connected, onClose, onChoice }: { type: Choice["type"]; choices: Choice[]; busy: boolean; connected: boolean; onClose: () => void; onChoice: (choice: Choice) => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
+function CallChoiceDialog({ returnFocus, type, choices, busy, connected, onClose, onChoice }: { returnFocus: HTMLButtonElement | null; type: Choice["type"]; choices: Choice[]; busy: boolean; connected: boolean; onClose: () => void; onChoice: (choice: Choice) => void }) {
+  const picker = useRef<HTMLElement>(null);
   const title = `选择${choiceNames[type]}牌`;
-  useEffect(() => { dialog.current?.showModal?.(); }, []);
-  return <dialog ref={dialog} className="mahjong-confirm mahjong-call-dialog" aria-label={title} onCancel={event => {event.preventDefault(); onClose();}}>
-    <button type="button" className="mahjong-icon-button mahjong-public-melds__close" aria-label="关闭选牌" onClick={onClose}><X size={18}/></button>
-    <p className="mahjong-kicker">YOUR CALL</p><h2>{title}</h2>
+  useEffect(() => {
+    const previous = returnFocus ?? document.activeElement;
+    const panel = picker.current;
+    panel?.querySelector<HTMLButtonElement>('button[data-choice-id]:not(:disabled)')?.focus();
+    return () => {
+      if ((panel?.contains(document.activeElement) || document.activeElement === document.body)
+        && previous instanceof HTMLElement && previous.isConnected && !previous.matches(':disabled')) previous.focus();
+    };
+  }, [returnFocus]);
+  return <section ref={picker} role="dialog" aria-modal="false" className="mahjong-call-dialog" aria-label={title} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); } }}>
+    <div className="mahjong-call-dialog__header"><h2>{title}</h2><button type="button" className="mahjong-call-dialog__back" aria-label="关闭选牌" onClick={onClose}>返回</button></div>
     <div className="mahjong-call-options">{choices.map(choice => <button key={choice.id} type="button"
       className="mahjong-button mahjong-button--action" disabled={busy || !connected}
       data-choice-id={choice.id} data-choice-type={type}
@@ -804,7 +813,7 @@ function CallChoiceDialog({ type, choices, busy, connected, onClose, onChoice }:
       onClick={() => connected && !busy && onChoice(choice)}>
       <span className="mahjong-call-label">{choiceNames[type]}</span><MahjongCallOption choice={choice}/>
     </button>)}</div>
-  </dialog>;
+  </section>;
 }
 
 function indicatorBonus(value: string, variant: GameVariant) {

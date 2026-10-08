@@ -475,3 +475,20 @@ it('clears uncommitted riichi mode across disconnect even if the native decision
  expect(screen.getByRole('button',{name:'立直'}).getAttribute('aria-pressed')).toBe('false');
  expect(document.querySelectorAll('.mahjong-hand [data-choice-type="riichi"]')).toHaveLength(0);expect(onChoice).not.toHaveBeenCalled();
 });
+
+it('keeps alternative calls on the table and returns focus without submitting when Escape is pressed', () => {
+ Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function(this:HTMLDialogElement){this.open=true;}});
+ const view=fixtureGame().view(0);
+ view.choices=[{id:'chi:p123-',type:'chi',value:'p123-'},{id:'chi:p234-',type:'chi',value:'p234-'},{id:'pass',type:'pass'}];
+ const onChoice=show(view),trigger=screen.getByRole('button',{name:'吃'});
+ trigger.focus();trigger.blur();fireEvent.click(trigger);
+ const picker=screen.getByRole('dialog',{name:'选择吃牌',hidden:true});
+ expect(picker.tagName).toBe('SECTION');
+ expect(picker.getAttribute('aria-modal')).toBe('false');
+ expect(picker.textContent).not.toContain('YOUR CALL');
+ expect(picker.contains(document.activeElement)).toBe(true);
+ fireEvent.keyDown(document.activeElement!,{key:'Escape'});
+ expect(screen.queryByRole('dialog',{name:'选择吃牌',hidden:true})).toBeNull();
+ expect(document.activeElement).toBe(trigger);
+ expect(onChoice).not.toHaveBeenCalled();
+});

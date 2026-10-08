@@ -77,6 +77,18 @@ for(const engine of [chromium,webkit]){
     }else{
      await page.getByRole('button',{name:'吃',exact:true})[hasTouch?'tap':'click']();
      const dialog=page.getByRole('dialog',{name:'选择吃牌'});
+     const detail=await dialog.evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      return {tag:el.tagName,modal:el.getAttribute('aria-modal'),x:r.x,y:r.y,width:r.width,height:r.height,inViewport:r.x>=0&&r.y>=0&&r.right<=innerWidth&&r.bottom<=innerHeight,focus:el.contains(document.activeElement),options:[...el.querySelectorAll<HTMLElement>('[data-choice-id]')].map(n=>{const b=n.getBoundingClientRect();return{width:b.width,height:b.height,hit:document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)?.closest('[data-choice-id]')?.getAttribute('data-choice-id'),id:n.dataset.choiceId};})};
+     });
+     assert.equal(detail.tag,'SECTION');assert.equal(detail.modal,'false');assert(detail.inViewport);assert(detail.focus);assert(Math.abs(detail.x+detail.width/2-viewport.width/2)<=1,'detail centered on table');
+     for(const o of detail.options){assert(o.width>=44&&o.height>=44);assert.equal(o.hit,o.id);}
+     assert.equal(await page.locator('dialog:modal').count(),0);
+     await page.screenshot({path:output+'/'+label.replace(/[^a-z0-9-]/gi,'-')+'-inline-call.png'});
+     if(hasTouch)await dialog.getByRole('button',{name:'关闭选牌'}).tap();else await page.keyboard.press('Escape');
+     assert.equal(await dialog.count(),0);assert.deepEqual(await page.evaluate(()=>(window as any).choices),[]);
+     if(!hasTouch)assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('data-choice-type')),'chi','Escape returns focus to entry');
+     await page.getByRole('button',{name:'吃',exact:true})[hasTouch?'tap':'click']();
      await dialog.locator('[data-choice-id="chi:p123-"]')[hasTouch?'tap':'click']();
      assert.deepEqual(await page.evaluate(()=>(window as any).choices),[game.choices.find(c=>c.id==='chi:p123-')]);
     }

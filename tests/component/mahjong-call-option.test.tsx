@@ -35,7 +35,7 @@ it('preserves both red and ordinary IDs in the entry and each dialog option',()=
   const entry=container.querySelector<HTMLButtonElement>('.mahjong-action-dock [data-choice-type="pon"]')!;
   expect(entry.querySelectorAll('[data-tile-face]')).toHaveLength(6);
   fireEvent.click(entry); expect(onChoice).not.toHaveBeenCalled();
-  const options=container.querySelectorAll<HTMLButtonElement>('dialog [data-choice-id]');
+  const options=container.querySelectorAll<HTMLButtonElement>('[role="dialog"] [data-choice-id]');
   expect([...options].map(b=>b.dataset.choiceId)).toEqual(choices.map(c=>c.id));
   expect(options[1].querySelectorAll('[data-tile-face="p0"]')).toHaveLength(1);
   expect(options[1].getAttribute('aria-label')).toContain('赤');
@@ -51,7 +51,7 @@ it('removes a pending dialog when the decision changes',()=>{
   const choices:Choice[]=[{id:'pon:p555+',type:'pon',value:'p555+'},{id:'pon:p505+',type:'pon',value:'p505+'}];
   const {container,props,rerender,onChoice}=setup(choices);
   fireEvent.click(container.querySelector('.mahjong-action-dock [data-choice-type="pon"]')!);
-  expect(container.querySelector('dialog')).not.toBeNull();
+  expect(container.querySelector('[role="dialog"]')).not.toBeNull();
   rerender(<GameRoom {...props} room={{...props.room,game:{...props.room.game!,decisionId:'next',choices:[]}}}/>);
-  expect(container.querySelector('dialog')).toBeNull(); expect(onChoice).not.toHaveBeenCalled();
+  expect(container.querySelector('[role="dialog"]')).toBeNull(); expect(onChoice).not.toHaveBeenCalled();
 });

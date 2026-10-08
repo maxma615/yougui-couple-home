@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import type { MahjongResponse } from "@/modules/mahjong/types";
 
 const mocks = vi.hoisted(() => ({ api: vi.fn(), io: vi.fn(), session: { session: { user: { id: "human", role: "member" } }, loading: false, error: null, refreshSession: vi.fn() } }));
@@ -41,7 +41,7 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
-async function start(state = table("a", 8)) { server = state; render(<MahjongClient/>); if (state.room?.status==='playing') await screen.findByTestId('mahjong-board'); else if (state.room) await screen.findByText(state.room.code); else await screen.findByRole("button", { name: "创建东风牌桌" }); }
+async function start(state = table("a", 8)) { server = state; render(<MahjongClient/>); if (state.room?.status==='playing') await screen.findByTestId('mahjong-board'); else if (state.room) await screen.findByText(state.room.code); else await screen.findByRole("button", { name: "创建东风牌桌" }); await waitFor(() => expect(sockets.length).toBeGreaterThan(0)); }
 function holdRefresh() { const held = deferred(); nextGet = held; fireEvent(window, new Event("online")); return held; }
 async function deliver(held: ReturnType<typeof deferred>, state: MahjongResponse) { await act(async () => held.resolve(state)); }
 async function socketState(state: MahjongResponse, socket = sockets.at(-1)!) { server = state; await act(async () => { if(!socket.connected)socket.deliver("connect"); socket.deliver("mahjong:state", state); }); }

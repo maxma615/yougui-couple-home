@@ -46,3 +46,21 @@
 .mahjong-automatic button[aria-pressed="true"]{background:#ac8b3633;color:#ffe7a2}
 .mahjong-automatic button[aria-pressed="true"] span{color:#ffe7a2}
 @media(max-height:500px){.mahjong-automatic summary{padding:10px 8px;font-size:11px}}
+
+
+/* Meld alternatives expand on the table, without a modal backdrop. */
+.mahjong-game > .mahjong-call-dialog {
+ position: absolute; z-index: 10; left: 50%; right: auto; transform: translateX(-50%);
+ bottom: calc(18dvh + 10px); width: max-content; max-width: calc(100% - 24px);
+ max-height: min(50dvh, 280px); overflow: auto; margin: 0; padding: 8px 12px 12px;
+ border: 1px solid #b9a175; border-radius: 5px; color: #f5e9cf;
+ background: linear-gradient(135deg, #20333cf2, #111e2af5);
+ box-shadow: 0 4px 16px #07111988;
+}
+.mahjong-call-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.mahjong-call-dialog__header h2 { margin: 0; font: 20px "Yougui Mahjong Brush", serif; }
+.mahjong-call-dialog__back { min-width: 44px; min-height: 44px; border: 0; padding: 5px 8px; background: transparent; color: #e7d2a7; cursor: pointer; }
+.mahjong-call-dialog > .mahjong-call-options { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 2px; max-height: none; overflow: visible; }
+.mahjong-game > .mahjong-call-dialog .mahjong-call-options > button { min-height: 58px; gap: 8px; padding: 5px 8px; }
+.mahjong-game:not(.is-finished):has(> .mahjong-call-dialog) > .mahjong-action-dock { visibility: hidden; pointer-events: none; }
+.mahjong-call-dialog button:focus-visible { outline: 2px solid #ffe0a0; outline-offset: 2px; }
