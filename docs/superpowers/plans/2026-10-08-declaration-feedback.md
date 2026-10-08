@@ -11,9 +11,11 @@ Spec: docs/superpowers/specs/2026-10-08-declaration-feedback.md
 Task1 evidence: `.local/audit/declaration-feedback-20261008/native-red-r02.log` (4 intended missing-field failures / 4 draw negative passes), `native-green-r01.log` (44/44 declaration/sequence/draw/abort tests), `full-r01.log` (726/726 across 74 files), `type-r01.log` (exit0). Native legal single ron, double ron and tsumo are exercised in both variants; modifying a returned declaration does not affect any viewer, private detail navigation preserves the public list, and final all-seat ACK still releases the sequence. No production changes yet.
 
 ## Task2 同步声明与提示声
-- [ ] 严格公开事件规划，立直弃牌与新结算声明时钟/身份证明 RED；不通过泛化 feedback 推断。
-- [ ] 同步多荣桌边声明、立直/自摸提示；复用静音和音频生命周期，无旧帧补播。
-- [ ] 原创短声音波形与实际浏览器时序/取消/输入/ACK 验证。
+- [x] 严格公开事件规划，立直弃牌与新结算声明时钟/身份证明 RED；不通过泛化 feedback 推断。
+- [x] 同步多荣桌边声明、立直/自摸提示；复用静音和音频生命周期，无旧帧补播。
+- [x] 原创短声音波形与实际浏览器时序/取消/输入/ACK 验证。
+
+Task2 evidence in `.local/audit/declaration-feedback-20261008/`: planner RED r02 four positive failures, GREEN r01 20 tests and chankan-r01 21 tests; UI RED r02 two failures/GREEN r01 five; audio RED r01 four failures/GREEN r02 38 declaration/player regression tests; intro RED r01/GREEN r01 35 component tests. `full-r02.log` 763/763 in 78 files, type-r02/build-r01/secrets-r01 exit0. Browser r05 covers 12 actual GameRoom scenes in Chromium/WebKit, both variants and three declarations, plus 20 actual pending multi-ron interruptions. Wave-browser-r01 renders 14 actual offline waveforms including original three new motifs; call-regression-r03 passes all 36 native call scenes with actual page CSS import order. Historical cached reference's showRong/showZimo starts text at300ms (200ms entry) and expires1200ms, with ron cues300+30*i; adopted original UI/tone implementation, not vendor graphics or recordings. Win detail0 has1200ms declaration lead-in before its ordinary result presentation and confirmation clock; later detail pages keep their existing clocks. Stage3 review/Linux/publish remain pending; runtime still a258986.
 
 ## Task3 验收与发布
 - [ ] 完整 tests/type/build/secrets、旧声明/流局/声音/副露回归；一次整阶段审查与单次必要修复。

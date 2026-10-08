@@ -13,13 +13,15 @@ export function MahjongSettlementPanel({ game, room, connected, busy, onChoice, 
   const settlement = game.settlement;
   const ack = game.choices.find(choice => choice.type === "ack");
   const flow = !game.ranking && settlement ? game.settlementFlow : undefined;
-  const presentation = useSettlementPresentation({ flow, settlement: game.ranking ? null : settlement, ack: game.ranking ? undefined : ack, connected, busy, onChoice, leadInMs: flow?.stage === "draw" ? leadInMs : 0 });
+  const winIntro=settlement?.kind==='win'&&flow?.stage==='detail'&&flow.detailIndex===0&&Boolean(flow.winDeclarations?.length)?1200:0;
+  const presentation = useSettlementPresentation({ flow, settlement: game.ranking ? null : settlement, ack: game.ranking ? undefined : ack, connected, busy, onChoice, leadInMs: flow?.stage === "draw" ? leadInMs : winIntro });
   const phaseKey=flow ? `${flow.id}:${flow.stage}:${flow.detailIndex}` : "legacy-settlement";
   const [maximum,setMaximum]=useState({key:phaseKey,elapsed:presentation.elapsed});
   const age=maximum.key===phaseKey ? Math.max(maximum.elapsed,presentation.elapsed) : presentation.elapsed;
   useEffect(()=>setMaximum({key:phaseKey,elapsed:age}),[phaseKey,age]);
   const mountedFade=useRef<{key:string;delay:number}|null>(null);
   if (!settlement || game.ranking) {mountedFade.current=null;return null;}
+  if(winIntro&&presentation.rawElapsed<winIntro){mountedFade.current=null;return null;}
   const scoresStage = flow?.stage === "scores";
   const detailStage = flow?.stage === "detail";
   const drawStage = flow?.stage === "draw";

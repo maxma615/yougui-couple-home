@@ -25,6 +25,7 @@ import { useTableAudio } from "./use-table-audio";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
 import { MahjongAbortAnnouncements } from "./mahjong-abort-announcements";
+import { MahjongDeclarations } from "./mahjong-declarations";
 import { MahjongCallAnnouncement } from "./mahjong-call-announcement";
 import { MahjongStandingTile } from "./mahjong-standing-tile";
 import { useDrawArrival } from "./use-draw-arrival";
@@ -612,9 +613,10 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     {isFinished && game.ranking ? <MahjongFinalRanking ranking={game.ranking} flow={game.rankingFlow} members={room.members} ownSeat={ownSeat} host={host} connected={connected} busy={busy} onRematch={onRematch} onFinish={onFinish}/> : null}
 
     <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
-      {feedback ? feedback.actionLabel && ["call", "riichi", "nuki", "win"].includes(feedback.kind)
+      {feedback && feedback.kind!=="riichi" && !(feedback.kind==="win"&&game.settlementFlow?.winDeclarations?.length) ? feedback.actionLabel && ["call", "riichi", "nuki", "win"].includes(feedback.kind)
         ? <MahjongCallAnnouncement key={feedback.key} feedback={feedback} members={room.members} ownSeat={ownSeat}/>
         : <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
+      <MahjongDeclarations room={room} connected={connected} canAnimate={motionCanAnimate} ownSeat={ownSeat}/>
       {game.settlement?.drawInfo?.kind === "abort" ? <MahjongAbortAnnouncements settlement={game.settlement} flow={game.settlementFlow} elapsed={drawPresentation.elapsed} members={room.members} ownSeat={ownSeat} capacity={capacity} reducedMotion={drawPresentation.reducedMotion}/> : null}
       <div className="mahjong-table__surface" data-testid="mahjong-table-surface">
         <div className="mahjong-table__grain" aria-hidden="true"/>

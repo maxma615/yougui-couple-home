@@ -17,7 +17,8 @@ export function useSettlementPresentation({ flow, settlement, ack, connected, bu
   const pending = useRef({ key: "", waiting: false, sawBusy: false });
   const autoAttempt = useRef("");
   const [reducedMotion, setReducedMotion] = useState(false);
-  const elapsed = Math.max(0, (clock.key === key ? Math.max(clock.elapsed, flow?.elapsedMs ?? 0) : flow?.elapsedMs ?? 0) - leadInMs);
+  const rawElapsed = Math.max(0, clock.key === key ? Math.max(clock.elapsed, flow?.elapsedMs ?? 0) : flow?.elapsedMs ?? 0);
+  const elapsed = Math.max(0, rawElapsed - leadInMs);
 
   useEffect(() => {
     if (!window.matchMedia) return;
@@ -34,7 +35,7 @@ export function useSettlementPresentation({ flow, settlement, ack, connected, bu
     anchor.current = { key, elapsed: age, at: time };
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
-    const boundaries = presentationBoundaries(flow, settlement).map(boundary => boundary + leadInMs);
+    const boundaries = [...new Set([leadInMs,...presentationBoundaries(flow, settlement).map(boundary => boundary + leadInMs)])].sort((a,b)=>a-b);
     const update = () => {
       if (cancelled) return;
       const current = age + performance.now() - time;
@@ -73,7 +74,7 @@ export function useSettlementPresentation({ flow, settlement, ack, connected, bu
     submit();
   });
 
-  return { elapsed, reducedMotion, submit,
+  return { elapsed, rawElapsed, reducedMotion, submit,
     canConfirm: !!ack && connected && !busy && elapsed >= readyAt && (!key || submitted !== key),
     countdown: Math.max(0, Math.ceil((readyAt + AUTO_CONFIRM_MS - elapsed) / 1000)),
     ready: elapsed >= readyAt,

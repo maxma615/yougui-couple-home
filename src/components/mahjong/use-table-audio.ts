@@ -3,8 +3,9 @@ import {useCallback,useEffect,useRef,useState,type RefObject} from 'react';
 import type {RoomView} from '@/modules/mahjong/types';
 import {TableAudioPlayer} from './table-audio';
 import {tableSoundTransition,type PendingKakanSound,type TableSoundEvent} from './table-sounds';
+import {acceptedDeclarationSounds} from './declaration-sounds';
 
-type Pending={cue:TableSoundEvent;parent?:string;epoch:number};
+type Pending={cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number};
 const storageKey='yougui.mahjong.sound';
 const scope=(r:RoomView)=>JSON.stringify([r.id,r.variant,r.mySeat,r.game?.gameInstanceId,r.game?.handId]);
 
@@ -13,10 +14,12 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
  const player=useRef<TableAudioPlayer|null>(null),previous=useRef<{room:RoomView;connected:boolean}|null>(null);
  const pending=useRef(new Map<string,Pending>()),frames=useRef(new Set<number>()),epoch=useRef(0);
  const pendingKan=useRef<PendingKakanSound|null>(null);
+ const timers=useRef(new Set<ReturnType<typeof setTimeout>>());
  const scheduleRef=useRef<(id:string)=>void>(()=>{});
  const clear=useCallback(()=>{
   epoch.current++;pending.current.clear();pendingKan.current=null;
   for(const id of frames.current)cancelAnimationFrame(id);frames.current.clear();
+  for(const timer of timers.current)clearTimeout(timer);timers.current.clear();
  },[]);
  const invalidate=useCallback(()=>{clear();previous.current=null;player.current?.cancel();},[clear]);
  const land=useCallback((id:string)=>{
@@ -37,6 +40,14 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    frames.current.delete(frame);
    const entry=pending.current.get(id),root=rootRef.current;
    if(!entry||entry.parent||entry.epoch!==epoch.current||!root)return;
+   if(entry.declarationEnd!==undefined){
+    if(performance.now()>=entry.declarationEnd){pending.current.delete(id);return;}
+    const marker=[...root.querySelectorAll<HTMLElement>('[data-declaration-event]')].find(node=>node.dataset.declarationEvent===id);
+    // React may commit the visual on the next paint. Never sound an absent
+    // marker and never wait past this declaration's finite presentation window.
+    if(!marker){scheduleRef.current(id);return;}
+    land(id);return;
+   }
    // Flight completion is reported by the actual layer, not a guessed delay.
    // Flights use a body portal; match only this proven room/event identity.
    const flight=[...document.querySelectorAll<HTMLElement>('[data-motion-event]')].find(node=>node.dataset.motionEvent===id);
@@ -102,9 +113,16 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   const old=previous.current;previous.current={room,connected};
   if(old&&scope(old.room)!==scope(room)){clear();player.current?.cancel();}
   if(!connected||document.visibilityState==='hidden'){clear();player.current?.pause();return;}
+  if(!canAnimate){clear();player.current?.cancel();return;}
   if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room)){pendingKan.current=null;return;}
   const transition=tableSoundTransition(old.room,room,pendingKan.current);pendingKan.current=transition.pending;
   const cues=transition.cues;
+  for(const cue of acceptedDeclarationSounds(old.room,room)){
+   const at=performance.now()-cue.elapsedMs,end=at+(cue.kind==='riichi'?1000:1200);
+   pending.current.set(cue.id,{cue,epoch:epoch.current,declarationEnd:end});
+   const timer=setTimeout(()=>{timers.current.delete(timer);if(pending.current.has(cue.id))schedule(cue.id);},Math.max(0,cue.atMs-cue.elapsedMs));
+   timers.current.add(timer);
+  }
   for(const cue of cues){
    const parent=cue.kind==='draw'&&cues[0]?.kind!=='draw'?cues[0].id:undefined;
    pending.current.set(cue.id,{cue,parent,epoch:epoch.current});

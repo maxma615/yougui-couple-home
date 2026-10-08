@@ -1,11 +1,25 @@
 import type {TableSoundEvent} from './table-sounds';
 
 type SoundKind=TableSoundEvent['kind'];
-const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19};
+const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38};
 
 /** Original short resin/cloth transients, generated locally without samples. */
 export function makeTileSoundBuffer(context:BaseAudioContext,kind:SoundKind):AudioBuffer{
  const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*durations[kind]),context.sampleRate);
+ if(kind==='riichi'||kind==='ron'||kind==='tsumo'){
+  // Original resonant declaration motifs. These are cues, not character voice.
+  const samples=buffer.getChannelData(0),notes=kind==='riichi'?[660,990]:kind==='ron'?[440,660,880]:[523.25,783.99,1046.5];
+  for(let i=0;i<samples.length;i++){
+   const t=i/context.sampleRate;let value=0;
+   for(let note=0;note<notes.length;note++){
+    const age=t-note*.045;if(age<0)continue;
+    const envelope=Math.min(1,age/.004)*Math.exp(-age/.05);
+    value+=envelope*(.24*Math.sin(2*Math.PI*notes[note]*age)+.06*Math.sin(2*Math.PI*notes[note]*2*age));
+   }
+   samples[i]=value*Math.min(1,(samples.length-i)/context.sampleRate/.012);
+  }
+  return buffer;
+ }
  const samples=buffer.getChannelData(0),strikes=kind==='call'?[0,.027,.054]:[0];
  let random=0x6d2b79f5,filtered=0;
  for(let i=0;i<samples.length;i++){

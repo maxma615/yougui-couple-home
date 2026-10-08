@@ -60,7 +60,7 @@ function special(kind:"nuki"|"riichi"|"tsumo"){
 }
 const fixtures=[fixture("chi"),fixture("pon"),fixture("kan"),special("nuki"),special("riichi"),special("tsumo")];
 const bundle=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.callApi={render:(room,connected=true,canAnimate=true)=>flushSync(()=>root.render(React.createElement('main',{className:'mahjong-page'},React.createElement('div',{className:'mahjong-shell'},React.createElement(GameRoom,{room,connected,motionCanAnimate:canAnimate,ownSeat:0,host:true,busy:false,onChoice:()=>{},onFinish:()=>{},onLeave:()=>{},onRematch:()=>{}})))))};`,resolveDir:process.cwd(),loader:"tsx"},bundle:true,platform:"browser",format:"iife",write:false,jsx:"automatic",define:{"process.env.NODE_ENV":'"development"'}});
-const css=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css","mahjong-camera.css","mahjong-call-announcement.css"].filter(f=>existsSync(`src/app/mahjong/${f}`)).map(f=>readFileSync(`src/app/mahjong/${f}`,"utf8")).join("\n");
+const css=[...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import "\.\/([^"]+\.css)";/g)].map(m=>readFileSync(`src/app/mahjong/${m[1]}`,'utf8')).join('\n');
 mkdirSync(".local/audit",{recursive:true});
 const results:unknown[]=[];
 for(const engine of [chromium,webkit]){
@@ -80,6 +80,26 @@ for(const engine of [chromium,webkit]){
       for(const f of fixtures){
         await render(f.after,true,false);assert.equal(await page.getByRole("status",{name:"牌桌动作"}).count(),0,"cold snapshot must not replay a call");
         await render(f.before,true,false);await render(f.after);
+        if(f.kind==="riichi"){
+          const declaration=page.locator('[data-declaration-seat="0"]');
+          await declaration.waitFor();
+          assert.equal(await declaration.getAttribute('aria-label'),'你 · 立直');
+          assert.equal(await page.locator('.mahjong-call-announcement.is-riichi').count(),0,'desk declaration replaces the duplicate generic cut-in');
+          const metric=await declaration.evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,pointer:getComputedStyle(el).pointerEvents};});
+          assert(metric.x>=0&&metric.y>=0&&metric.x+metric.w<=size.width+.5&&metric.y+metric.h<=size.height+.5);
+          assert.equal(metric.pointer,'none');
+          await render(f.after);assert.equal(await declaration.count(),1,'duplicate state does not restart declaration');
+          await page.screenshot({path:`.local/audit/call-announcement-${engine.name()}-${f.kind}-${size.width}.png`});
+          await page.waitForTimeout(1050);assert.equal(await declaration.count(),0);
+          await render(f.before,true,false);await render(f.after,false,true);assert.equal(await declaration.count(),0);
+          await render(f.after,true,false);await render(f.after);await page.waitForTimeout(350);assert.equal(await declaration.count(),0);
+          await page.emulateMedia({reducedMotion:'reduce'});await render(f.before,true,false);await render(f.after);await declaration.waitFor();
+          assert.equal(await declaration.locator('b').evaluate(el=>getComputedStyle(el).animationName),'none');
+          await page.emulateMedia({reducedMotion:'no-preference'});
+          results.push({browser:engine.name(),kind:f.kind,viewport:size,...metric});
+          console.log(`PASS ${engine.name()} ${f.kind} ${size.width}: live desk declaration, geometry, duplicate/disconnect/reconnect/reduced-motion`);
+          continue;
+        }
         const cut=page.locator(".mahjong-call-announcement");
         assert.equal(await cut.count(),1,"confirmed legal calls need a prominent portrait-and-label cut-in instead of the old small pill");
         assert.equal(await cut.locator(".mahjong-call-announcement__label").innerText(),f.label);

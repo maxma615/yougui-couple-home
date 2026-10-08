@@ -5,7 +5,7 @@ import {build} from 'esbuild';
 import {chromium,webkit} from '@playwright/test';
 const out=`.local/audit/table-audio-wave-${Date.now()}`;mkdirSync(out,{recursive:true});
 const code=`import {makeTileSoundBuffer,TableAudioPlayer} from './src/components/mahjong/table-audio';
-window.wave=async kind=>{const c=new OfflineAudioContext(1,16800,48000),s=c.createBufferSource(),gain=c.createGain();gain.gain.value=.32;s.buffer=makeTileSoundBuffer(c,kind);s.connect(gain);gain.connect(c.destination);s.start();return Array.from((await c.startRendering()).getChannelData(0));};
+window.wave=async kind=>{const c=new OfflineAudioContext(1,28800,48000),s=c.createBufferSource(),gain=c.createGain();gain.gain.value=.32;s.buffer=makeTileSoundBuffer(c,kind);s.connect(gain);gain.connect(c.destination);s.start();return Array.from((await c.startRendering()).getChannelData(0));};
 window.player=new TableAudioPlayer(()=>{window.audioContext=new AudioContext();return window.audioContext;});
 window.unlocked=false;document.querySelector('button').onclick=async()=>window.unlocked=await window.player.unlock();`;
 const bundle=await build({stdin:{contents:code,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'browser',write:false,format:'iife'});
@@ -14,11 +14,11 @@ function wav(samples:number[]){const data=Buffer.alloc(44+samples.length*2);data
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true});
  try{const page=await browser.newPage();await page.setContent('<button>开启声音</button>');await page.addScriptTag({content:bundle.outputFiles[0].text});
-  for(const kind of ['draw','discard','call','nuki']){
+  for(const kind of ['draw','discard','call','nuki','riichi','ron','tsumo']){
    const samples=await page.evaluate(k=>(window as any).wave(k),kind) as number[];
-   assert.equal(samples.length,16800);assert(samples.every(Number.isFinite));
+   assert.equal(samples.length,28800);assert(samples.every(Number.isFinite));
    const peak=Math.max(...samples.map(Math.abs)),rms=Math.sqrt(samples.reduce((a,b)=>a+b*b,0)/samples.length),mean=samples.reduce((a,b)=>a+b,0)/samples.length;
-   assert(peak>.03&&peak<.3,`${engine.name()} ${kind}: safe nonzero peak ${peak}`);assert(rms>.002&&rms<.08);assert(Math.abs(mean)<.002);assert(samples.slice(12000).every(x=>x===0),'finite silence after transient');
+   assert(peak>.03&&peak<.3,`${engine.name()} ${kind}: safe nonzero peak ${peak}`);assert(rms>.002&&rms<.08);assert(Math.abs(mean)<.002);assert(samples.slice(24000).every(x=>x===0),'finite silence after transient');
    const bytes=wav(samples),path=`${out}/${engine.name()}-${kind}.wav`;writeFileSync(path,bytes);results.push({engine:engine.name(),kind,peak,rms,mean,path,sha256:createHash('sha256').update(bytes).digest('hex')});
    console.log(`PASS ${engine.name()} ${kind}: actual OfflineAudioContext waveform peak=${peak.toFixed(4)} rms=${rms.toFixed(4)}`);
   }
