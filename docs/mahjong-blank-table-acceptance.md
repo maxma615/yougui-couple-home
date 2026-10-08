@@ -21,7 +21,7 @@
 
 根最终复核`.local/audit/blank-table-final-review-r01.json`非独立，未发现未解决Critical/Important；既有拔北和入手hook与HEAD字节相同。无需规则/协议/权限/数据迁移或新的服务器算法。
 
-## 当前交付范围
+## 双击初版交付范围
 
 运行版本2bcc07601b31c130f2e415a51d22aa7a9773b458 / Build _i9aj6L_IVuNMOBo2EqSP已发布到https://8.133.186.15/mahjong。代码提交已推送GitHub main和工作分支；本发布记录也立即提交推送。
 
@@ -34,7 +34,7 @@
 
 网络失败曾让双击快捷操作在同一决定永久保持consumed：手动点牌恢复后，重新双击仍无回调。控制器与正式Root分别取得真实RED（blank-recovery-red-r01.log、blank-recovery-root-red-r01.log）。新增显式恢复代次，仅在respond失败后、成功GET被原有响应排序接受、该对象仍是当前状态、房间/游戏/手局/席位/决定相同且原Choice仍有效时递增。恢复清空旧手势与consumed，必须重新双击；忙碌解除本身、GET失败、过时GET、已移除选项不解锁，也不自动补发。新游戏仍沿原scope正常初始化，不把新游戏当旧决定重试。
 
-正式Root组件覆盖失败POST后成功GET、GET也失败、选项消失、新游戏以及GET晚于更新Socket五种分支；控制器证明单纯busy解除不解锁、明确恢复不重放旧输入。本轮测试使用模拟HTTP/Socket与原生物理引擎初始化视图，不能代替实际HTTP网络、生产账号WSS或真实Android。当前线上仍2bcc076；新增恢复逻辑需后续真实网络及Linux发布验证，完整对齐目标保持active。
+正式Root组件覆盖失败POST后成功GET、GET也失败、选项消失、新游戏以及GET晚于更新Socket五种分支；控制器证明单纯busy解除不解锁、明确恢复不重放旧输入。本轮测试使用模拟HTTP/Socket与原生物理引擎初始化视图，不能代替实际HTTP网络、生产账号WSS或真实Android。本段为发布前候选记录；真实网络及Linux发布已完成，最终状态见文末，完整对齐目标保持active。
 
 
 最终代码完整978项/92文件、类型检查、生产构建及374文件凭据扫描实际exit0，证据blank-recovery-full-r02.log、blank-recovery-type-r02.log、blank-recovery-build-r01.log、blank-recovery-secrets-r01.log。中间类型检查发现nullable room，补充显式非空检查后重跑通过；中间测试误把新游戏初始化当旧决定去重，修正测试预期（新游戏本就应允许明确操作），没有改产品scope。
@@ -50,4 +50,15 @@
 
 首个脚本因浏览器对断开连接用相同nonce重传而失败；原简化服务误将传输重试当新操作。替换为正式RoomStore（通过正常create/join/ready/start注入物理引擎），相同nonce只查询现状、不再次执行。第二个脚本误把pass后新摸牌决定也算旧操作，修正测试为每个原生决定最多一次，并核对第二次确为新决定及当前摸牌Choice。两份失败证据blank-recovery-network-r01.log/r02.log保留，产品代码未因测试假设更改。最终blank-recovery-network-r03.log及.local/audit/blank-recovery-network-1791496342222/proof.json，结束后源摘要全核对一致。
 
-当前受限Linux选择在本机同一单worker/threads/isolate配置下545项/35文件通过，类型检查通过，根非独立复核于.local/audit/recovery-final/review.json。仍不是ECS的Linux终态证据；账号会话由测试HTTP端提供，不能证明生产账号权限/TLS/WSS或真实Android。新增网络验收立即提交推送，线上仍2bcc076，候选待发布。
+当前受限Linux选择在本机同一单worker/threads/isolate配置下545项/35文件通过，类型检查通过，根非独立复核于.local/audit/recovery-final/review.json。上述选择结果仅是本机证据，ECS实际终态见文末；账号会话由测试HTTP端提供，不能证明生产账号权限/TLS/WSS或真实Android。网络验收提交已推送，发布最终状态见下方。
+
+
+## 恢复版本正式发布（2026-10-09）
+
+运行3205c63c181a44b32426194fb12b9e9377cbad5f / Build wxz_uK5KxqUXj9IPPPaNw已上线https://8.133.186.15/mahjong。镜像sha256:71ec3aa59c08272842b920ab1832625f51f91b4f5bd0a6da139a279f32d37710，发布manifest摘要4bc3b76dfe31e31bb4239f82df34d2f2857d23204c428431e6f35c7b42be8134。664份源码与449份构建逐文件一致，继承已验证父依赖层，未改相机、规则、持久化或凭据配置。
+
+首轮Linux545/35测试本身通过（238.21s），但容器退出收尾触及整条任务240s监督上限，实际exit124；该轮保留为失败，未拿计数通过放行。只读检查确认原PID已停止、容器已移除后，以同一镜像、0.5CPU/384MiB、单worker/threads/isolate和原120s测试/hook时限重新检查；只把整条任务监督上限设为360s。第二轮545/35全通过（233.80s），任务实际exit0，终态来源late-response-3205c63-r11-linux-status.json，未把运行状态或观察超时当成功。首次临时终态复核对Docker错误文本大小写的假设失败也保留，实际只读State检查证实移除后才启动新任务。
+
+固定发布器屏障内排空请求并确认无活动真人牌局后切换，镜像健康通过、入口恢复，发布进程实际exit0。13个远端阶段终态核对通过（采用第二轮Linux），默认可信TLS公网健康200及133份资源摘要一致，12表发布前后摘要相同（9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41）。应用1CPU/768MiB、清理器实例和镜像不变；禁备份标记及masked/inactive策略保持，未建备份或下载真实用户资料。完整闭环证据.local/ecs-deploy/recovery-published-closeout-r01.json。
+
+代码及每次完成的验收提交均已推送GitHub main与工作分支，发布记录也立即提交推送。本次证明快捷操作失败恢复的本地真实HTTP/Socket和ECS运行发布；真实Android、生产账号WSS故障交叉和完整当前厂商画面/语音/全部交互仍未全验收，原完整对齐目标保持active。
