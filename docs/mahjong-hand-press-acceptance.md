@@ -1,4 +1,4 @@
-# 按下抬牌与释放确认（2026-10-09，本地候选）
+# 按下抬牌与释放确认（2026-10-09，已发布）
 
 对照已缓存官方v0.11.252客户端的ViewPlayer_Me.onMouseDown/onMouseUp：按下时立即预选抬牌，同时保存按下前是否已选择该实体；没有拖拽时，只有当时已经选中的牌才在释放后提交。拖回手牌区取消此次拖拽与选择。只参考交互行为，没有复制厂商实现或素材。
 
@@ -16,4 +16,16 @@
 - 最终`.local/audit/seat-drag-hand-press-final-1791501230827/proof.json`：明确选择的24个拖牌场景全部通过，包含有效落点、拖回、指针取消、断线，两个浏览器与三个横屏尺寸。不是完整相机/座位验收。
 - `.local/audit/press-final/linux-local.json`：当前受限Linux选择在本机571项/36文件通过，不能替代ECS候选镜像运行。根审查非独立，最终源码摘要与浏览器证明一致。
 
-本轮候选完成后立即commit/push至用户GitHub；当前线上仍9c01164。候选的同镜像ECS Linux、发布和公网核对仍待进行；真实Android、正式账号WSS故障与完整当前厂商音画协议体验未全部验收，原始目标保持active。
+以上是本地候选阶段的验收范围，实际ECS发布如下。真实Android、正式账号WSS故障与完整当前厂商音画协议体验未全部验收，原始目标保持active。
+
+
+## ECS发布
+
+运行源码 `7771d9eda7931c5037ab29a5fc8042fde84678be`，Build `ze3lIFpGDnR7sC-32RmnW`，镜像 `sha256:25b015480c24193b1105a44bd5afffd72d155f6f76602ca46bc829671cc631b6`，已发布至 https://8.133.186.15/mahjong 。冻结manifest为 `a389a56b8e8cd2a12a4c81709d55aed8c9500d0d2ca1bfd16db7daffb2b71a9f`，670源码/449构建文件逐文件核对一致。
+
+- 同一镜像受限Linux571项/36文件通过，任务PID1538687实际exit0；半核CPU/384MiB、单worker threads/isolate、120s测试时限与360s整条任务监督。仅轮询同一任务，没有因观察超时重启。
+- 发布屏障内权威确认无活动真人牌局，进程PID1540677实际exit0，新版健康后入口已恢复。
+- 默认可信TLS公网健康200及133资源哈希通过，没有绕过证书验证。
+- 12表发布前后摘要均为 `9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`；账号、成员和照片保持。清理器身份/镜像、应用1CPU/768MiB及无OOM验证通过；禁备份标记和masked/inactive策略保持，没有备份或下载真实资料。
+
+十三阶段终态及公网证据归档于 `.local/ecs-deploy/press-published-closeout-r01.json`；同镜像最终检查绑定源码/Build/镜像/manifest、测试和数据摘要。线上运行上述源码提交，发布记录单独立即提交推送main和工作分支。完整当前厂商体验、生产认证WSS故障矩阵和真实Android仍待验，整体目标active。
