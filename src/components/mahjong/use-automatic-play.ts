@@ -10,6 +10,7 @@ export function useAutomaticPlay({room,ownSeat,connected,busy,onChoice}:{room:Ro
  const [visibleEpoch,setVisibleEpoch]=useState(0);
  const latest=useRef({room,connected,busy,onChoice});latest.current={room,connected,busy,onChoice};
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null), consumed=useRef<string|null>(null);
+ useEffect(()=>{setState(old=>old.scope===scope?old:{scope,options:{...automaticOff}});consumed.current=null;},[scope]);
  const decision=JSON.stringify([scope,room.game?.decisionId]);
  const candidate=room.status==='playing'&&room.game?automaticChoice(room.game,options):null;
  const clear=useCallback(()=>{if(timer.current!==null)clearTimeout(timer.current);timer.current=null;},[]);

@@ -28,7 +28,7 @@ it('requires connected baseline then resumes a fresh decision after reconnect',(
  const t=setup();act(()=>t.result.current.toggle('win'));t.rerender({...t.initial,connected:false});act(()=>vi.advanceTimersByTime(1000));expect(t.onChoice).not.toHaveBeenCalled();t.rerender(t.initial);act(()=>vi.advanceTimersByTime(800));expect(t.onChoice).toHaveBeenCalledOnce();
 });
 it('scope resets preferences while a new hand retains them',()=>{
- const t=setup();act(()=>t.result.current.toggle('noCalls'));t.rerender({...t.initial,room:{...room,game:{...room.game!,handId:2}}});expect(t.result.current.options.noCalls).toBe(true);t.rerender({...t.initial,ownSeat:1});expect(t.result.current.options.noCalls).toBe(false);
+ const t=setup();act(()=>t.result.current.toggle('noCalls'));t.rerender({...t.initial,room:{...room,game:{...room.game!,handId:2}}});expect(t.result.current.options.noCalls).toBe(true);t.rerender({...t.initial,ownSeat:1});expect(t.result.current.options.noCalls).toBe(false);t.rerender(t.initial);expect(t.result.current.options.noCalls).toBe(false);
 });
 
 it('restarts a fresh win delay after returning to the foreground, without replaying an already sent decision',()=>{
