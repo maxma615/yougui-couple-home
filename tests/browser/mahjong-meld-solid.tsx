@@ -103,7 +103,8 @@ const bundle = await build({
   bundle: true, platform: "browser", format: "iife", write: false, jsx: "automatic",
   define: { "process.env.NODE_ENV": '"development"' },
 });
-const cssFiles = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css", "mahjong-call-announcement.css", "mahjong-standing-tile.css"];
+const cssFiles = [...readFileSync("src/app/mahjong/page.tsx", "utf8")
+  .matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)].map(match => match[1]);
 const css = cssFiles.map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
 writeFileSync(`${out}/bundle.js`, bundle.outputFiles[0].text);
 writeFileSync(`${out}/source-manifest.json`, JSON.stringify({
@@ -239,6 +240,10 @@ for (const engine of captureMode ? [webkit] : [chromium, webkit]) {
               return { problems, projections, layers, backs: element.querySelectorAll(".mahjong-meld__back").length,
                 faces: [...element.querySelectorAll<HTMLElement>(".mahjong-meld__face")].map(face => face.dataset.tileFace) };
             });
+            if (geometry.problems.length) {
+              await page.screenshot({ path: `${out}/failure-${engine.name()}-${fixture.variant}-${fixture.kind}-${viewer}-${size.width}.png` });
+              writeFileSync(`${out}/failure.json`, JSON.stringify({ variant: fixture.variant, kind: fixture.kind, viewer, size, sourceChoice: fixture.sourceChoice, geometry }, null, 2));
+            }
             assert.deepEqual(geometry.problems, [], `${engine.name()} ${fixture.variant}/${fixture.kind} viewer ${viewer} ${size.width}: physical faces project, stay inside the table, and own their hit target`);
             for (const projection of geometry.projections) {
               assert.ok(projection.depth > 0, `${fixture.kind}: public table depth is 0.4 × tile height`);

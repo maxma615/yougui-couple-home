@@ -163,6 +163,12 @@
   bottom: max(calc(14dvh + 10px), calc(max(2dvh, env(safe-area-inset-bottom)) + 6px + min(4.8dvw, 13dvh, 64px) * 1.46 * 1.31 + 8px));
 }
 
+/* Public melds, including kakan's second row, occupy the near right rail.
+   Reserve a separate action lane only while those physical tiles are present. */
+.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds) .mahjong-action-dock {
+  bottom: max(calc(30dvh + 10px), calc(max(2dvh, env(safe-area-inset-bottom)) + 6px + min(4.8dvw, 13dvh, 64px) * 1.46 * 1.31 + 8px));
+}
+
 /* A kan adds a physical tile to the side row. Reserve a standing tile's full
    height and a small gap below the indicators on short landscape tables. */
 @media (max-height: 600px) and (orientation: landscape) {
