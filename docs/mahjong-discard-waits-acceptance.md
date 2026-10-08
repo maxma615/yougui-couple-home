@@ -63,3 +63,13 @@ Chromium/WebKit × 三四麻 × 667×375/1440×810 × 触控/鼠标 × 一气通
 发布器确认没有活动真人桌后切换、实际exit0并恢复入口屏障。公网默认可信TLS健康200、133资源摘要一致；最终appHealthy/publisherFinished为true。12表指纹保持 `9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`；原照片清理器身份、1CPU/768MiB、禁备份状态保持。没有创建/下载备份或在线构造测试桌。Workbench上传实际exit0但stdout为空，未把空输出当JSON成功证据；远端完整归档SHA和展开后的源码/构建SHA实际通过，上传没有重试。13个终态阶段及公网记录 `.local/ecs-deploy/wait-entry-published-closeout-r01.json`。
 
 发布记录立即提交并普通快进推送main/麻将分支；主目录仅同步所属文档，HEAD/索引/其余文件保持。真实Android、完整符翻/情境预估、当前厂商逐帧全部体验与私有牌山未验收，整体目标active。
+
+## 按住查看与无役显示对齐（2026-10-09，本地候选）
+
+再次检查已缓存旧官方客户端 `UI_TingPai`（decoded SHA `5308fe6d3ab8bb8b0c8ab283e75176f839de9723d67179d00abeb15e6a39ff4f`、偏移7038223–7048355附近）。其按钮mousedown显示、mouseup/mouseout隐藏；普通一翻模式显示无役时隐藏container_left，而且不显示符翻预测。这改变先前“必须补普通待牌符翻卡”的实现方向：不自行加入普通卡中不存在的面板；原始完整对齐目标保持。证据索引 `.local/audit/wait-hold-reference-r01.json`。这是旧官方实现证据，未当作当前Unity全部行为证明。
+
+当前13张听牌入口改为按住显示、释放隐藏。鼠标/触控、空格/Enter均支持；移出、指针取消/失去捕获、失焦、页面隐藏、视口/方向/全屏变化清理。触控用实际指针捕获接住释放，不触发出牌；键盘重复不会重新打开已中断的预览。无役待牌隐藏张数，振听仍独立显示；有役继续显示公开余量。原选牌/悬停及服务端合法操作不变。
+
+有效RED3failed/4passed（真实npm exit1，r02日志），实现后25定向、876项/87文件完整、类型、生产构建与374构建文件秘密扫描全部exit0。`.local/audit/wait-hold-local-gates-r01.json`。原生三四麻守恒136/108墙、正式容器/CSS/本地字体牌面；Chromium/WebKit ×667×375/1440×810 ×触控/鼠标 ×三种牌型共48场景exit0。触控场景通过浏览器原生touchscreen.tap，pointerdown/up微任务检查分别为held=true/false且卡片出现/消失；鼠标原生down/up，触控环境另用键盘按住取图，均无额外命令。标签/数量抑制、入口命中、鼠标悬停/选择与二次实际弃牌检查保留。96截图和manifest/summary位于 `.local/audit/discard-waits-browser-1791476696668`，主任务实际查看短横屏无役图，根审查非独立。
+
+画面对比还保留已知WebKit软件截图透视倾斜现象；Chromium同状态为对称梯形。本轮不以待牌检查宣称牌桌透视全部验收，继续复核WebKit实际渲染。单一拟切听牌的14张按住入口、高价值手牌反馈、当前厂商版本、真实Android与完整私有规则/牌墙仍待对齐；整体目标active。候选每次commit立即普通快进推送两分支，后续还需固定Linux与ECS发布；线上此时仍c816fdd。
