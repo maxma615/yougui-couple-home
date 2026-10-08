@@ -794,3 +794,8 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
  .mahjong-game.is-finished .mahjong-ranking { animation: none; }
  .mahjong-ranking .mahjong-ranking__row, .mahjong-ranking .mahjong-ranking__row.is-visible { transform: none; transition: none; }
 }
+
+/* Keep the always-available terminal escape and fullscreen controls touchable. */
+.mahjong-game.is-finished .mahjong-game__topline { min-height: 44px; height: auto; }
+.mahjong-game.is-finished .mahjong-game__exit { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+.mahjong-game.is-finished .mahjong-screen-button { min-width: 44px; min-height: 44px; }

@@ -10,6 +10,9 @@ export function MahjongFinalRanking({ranking, flow, members, ownSeat, host, conn
   // Older snapshots remain usable without manufacturing a new server clock.
   const serverAge = flow?.elapsedMs ?? rankingReadyAt(ranking.length);
   const [clock, setClock] = useState({key, age: serverAge});
+  const [fade, setFade] = useState({key, age: serverAge});
+  const fadeAge = fade.key === key ? Math.max(fade.age, serverAge) : serverAge;
+  useEffect(() => {setFade({key, age:fadeAge});}, [key, fadeAge]);
   const anchor = useRef<{key:string; age:number; at:number} | null>(null);
   const age = clock.key === key ? Math.max(clock.age, serverAge) : serverAge;
   const readyAt = rankingReadyAt(ranking.length);
@@ -31,7 +34,7 @@ export function MahjongFinalRanking({ranking, flow, members, ownSeat, host, conn
     return () => {cancelled = true; clearTimeout(timer);};
   }, [key, serverAge, ranking.length]);
   const ready = age >= readyAt;
-  return <section className="mahjong-ranking" aria-label="最终名次" data-ranking-id={key} style={{"--ranking-start-age":`${-Math.min(serverAge,1000)}ms`} as CSSProperties}>
+  return <section key={key} className="mahjong-ranking" aria-label="最终名次" data-ranking-id={key} style={{"--ranking-start-age":`${-Math.min(fadeAge,1000)}ms`} as CSSProperties}>
     <header className="mahjong-ranking__heading"><p className="mahjong-kicker">FINAL TABLE</p><h1>最终<em>名次</em></h1></header>
     <ol className="mahjong-ranking__list">{[...ranking].sort((a,b)=>a.rank-b.rank).map((row,index)=>{
       const visible = age >= rankingRowAt(index);

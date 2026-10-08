@@ -39,3 +39,12 @@ it("finished reconnect blocks rematch offline or busy and nonhost has no rematch
 it("unmount cancels pending presentation timers",()=>{
  const {unmount}=render(<MahjongFinalRanking {...setup(4)}/>);expect(vi.getTimerCount()).toBe(1);unmount();expect(vi.getTimerCount()).toBe(0);
 });
+
+it("same-match stale ages cannot rewind the CSS fade origin",()=>{
+ const props=setup(3,900);const {container,rerender}=render(<MahjongFinalRanking {...props}/>);
+ const delay=()=> (container.querySelector('.mahjong-ranking') as HTMLElement).style.getPropertyValue('--ranking-start-age');
+ expect(delay()).toBe('-900ms');tick(300);
+ rerender(<MahjongFinalRanking {...props} flow={{id:'match-a',elapsedMs:0}}/>);expect(delay()).toBe('-900ms');
+ rerender(<MahjongFinalRanking {...props} flow={{id:'match-a',elapsedMs:6000}}/>);expect(delay()).toBe('-1000ms');
+ rerender(<MahjongFinalRanking {...props} flow={{id:'match-b',elapsedMs:0}}/>);expect(delay()).toBe('0ms');
+});

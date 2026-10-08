@@ -8,7 +8,7 @@ import {drawEngine} from "../fixtures/mahjong-draw-game";
 import type {MahjongCommand} from "../../src/modules/mahjong/types";
 const out=`.local/audit/final-ranking-browser-${Date.now()}`;mkdirSync(out,{recursive:true});
 const css=readFileSync('src/app/mahjong/mahjong.css','utf8');
-const harness=`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.renderRanking=p=>flushSync(()=>root.render(<div className="mahjong-page"><GameRoom room={p.room} ownSeat={p.ownSeat} host={p.host} busy={p.busy} connected={p.connected} onChoice={()=>{}} onLeave={()=>{}} onRematch={()=>window.rematches++} onFinish={()=>{}}/></div>));window.rematches=0;`;
+const harness=`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.renderRanking=p=>flushSync(()=>root.render(<div className="mahjong-page"><GameRoom room={p.room} ownSeat={p.ownSeat} host={p.host} busy={p.busy} connected={p.connected} onChoice={()=>{}} onLeave={()=>{}} onRematch={()=>window.rematches++} onFinish={()=>window.finishes++}/></div>));window.rematches=0;window.finishes=0;`;
 const bundle=await build({stdin:{contents:harness,loader:'tsx',resolveDir:process.cwd()},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',tsconfig:'tsconfig.json'});
 function final(variant:'sanma'|'yonma'){
  const count=variant==='sanma'?3:4;let now=1000;
@@ -34,6 +34,8 @@ for(const engine of [chromium,webkit]){const browser=await engine.launch();try{
    await page.addScriptTag({content:`globalThis.process={env:{NODE_ENV:"development"}};globalThis.__name=(t,v)=>Object.defineProperty(t,"name",{value:v,configurable:true});${bundle.outputFiles[0].text}`});const props=final(variant);
    await page.evaluate(p=>(window as any).renderRanking(p),props);
    assert.equal(await page.locator('[data-ranking-visible="true"]').count(),0);
+   const exit=page.getByRole('button',{name:'结束并解散牌桌'});const exitBox=await exit.boundingBox();assert.ok(exitBox&&exitBox.width>=44&&exitBox.height>=44,JSON.stringify({exitBox,viewport}));
+   await exit.click();assert.equal(await page.evaluate(()=>(window as any).finishes),1);
    await page.waitForFunction(()=>document.querySelector('[data-ranking-visible="true"]'));
    assert.equal(await page.getByRole('button',{name:'再开一场'}).count(),0);
    await page.getByRole('button',{name:'再开一场'}).waitFor();
