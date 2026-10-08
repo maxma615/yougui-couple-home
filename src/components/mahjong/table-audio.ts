@@ -1,4 +1,5 @@
 import type {TableSoundEvent} from './table-sounds';
+import type {DeclarationVoiceKind,VoiceBufferLoader} from './voice-samples';
 
 type SoundKind=TableSoundEvent['kind'];
 const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38,yaku:.09,'hand-value':.24,'score-roll':.99,'rank-first':.26,'rank-row':.12};
@@ -76,7 +77,22 @@ export class TableAudioPlayer{
  private seen=new Set<string>();
  private buffers=new Map<SoundKind,AudioBuffer>();
  private active=new Set<AudioBufferSourceNode>();
- constructor(private create:()=>AudioContext){}
+ private voiceBuffers=new Map<DeclarationVoiceKind,AudioBuffer>();
+ private loadingVoices:Promise<void>|null=null;
+ private voiceAbort=new AbortController();
+ constructor(private create:()=>AudioContext,private loadVoices?:VoiceBufferLoader){}
+ private preloadVoices(){
+  const context=this.context;
+  if(!context||!this.loadVoices||this.loadingVoices||this.disposed)return;
+  this.loadingVoices=Promise.resolve().then(()=>this.loadVoices!(context,this.voiceAbort.signal)).then(buffers=>{
+   if(this.disposed||this.context!==context)return;
+   for(const kind of ['riichi','ron','tsumo'] as const){
+    const buffer=buffers[kind];
+    if(buffer&&Number.isFinite(buffer.duration)&&buffer.duration>=.1&&buffer.duration<=1.5)this.voiceBuffers.set(kind,buffer);
+   }
+  }).catch(()=>{this.loadingVoices=null;});
+ }
+
  async unlock():Promise<boolean>{
   if(this.disposed||!this.enabled)return false;
   const generation=this.generation;
@@ -88,7 +104,7 @@ export class TableAudioPlayer{
    const context=this.context;
    await context.resume();
    if(this.disposed||!this.enabled||generation!==this.generation)return false;
-   this.ready=context.state==='running';return this.ready;
+   this.ready=context.state==='running';if(this.ready)this.preloadVoices();return this.ready;
   }catch{return false;}
  }
  play(cue:TableSoundEvent,offsetSeconds=0):boolean{
@@ -98,11 +114,13 @@ export class TableAudioPlayer{
   const context=this.context;
   if(this.disposed||!this.enabled||!this.ready||!context||context.state!=='running'||!this.master)return false;
   try{
-   let buffer=this.buffers.get(cue.kind);
+   const voice=this.voiceBuffers.get(cue.kind as DeclarationVoiceKind);
+   let buffer=voice??this.buffers.get(cue.kind);
    if(!buffer){buffer=makeTileSoundBuffer(context,cue.kind);this.buffers.set(cue.kind,buffer);}
+
    // Resume a late score-roll callback at its current visual position. Do not
    // restart the full roll after the visible count has almost finished.
-   if(!Number.isFinite(offsetSeconds)||offsetSeconds<0||offsetSeconds>=durations[cue.kind])return false;
+   if(!Number.isFinite(offsetSeconds)||offsetSeconds<0||offsetSeconds>=(voice?voice.duration:durations[cue.kind]))return false;
    if(this.active.size>=8)this.release(this.active.values().next().value!,true);
    const source=context.createBufferSource();source.buffer=buffer;source.connect(this.master);
    this.active.add(source);source.onended=()=>this.release(source,false);
@@ -123,7 +141,7 @@ export class TableAudioPlayer{
  }
  async dispose(){
   if(this.disposed)return;
-  this.disposed=true;this.cancel();this.ready=false;this.master?.disconnect();this.buffers.clear();
+  this.disposed=true;this.cancel();this.ready=false;this.master?.disconnect();this.buffers.clear();this.voiceAbort.abort();this.voiceBuffers.clear();
   // WebKit may commit a pending suspension after close and resurrect its state.
   // Finish the existing suspension before closing the context permanently.
   await this.suspension;

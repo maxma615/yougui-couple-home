@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState,type RefObject} from 'react';
 import type {RoomView} from '@/modules/mahjong/types';
 import {TableAudioPlayer} from './table-audio';
+import {loadDeclarationVoices} from './voice-samples';
 import {tableSoundTransition,type PendingKakanSound,type TableSoundEvent} from './table-sounds';
 import {acceptedDeclarationSounds} from './declaration-sounds';
 import {acceptedRankingSounds} from './ranking-sounds';
@@ -104,7 +105,7 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   const instance=new TableAudioPlayer(()=>{
    const Constructor=window.AudioContext??(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
    if(!Constructor)throw Error('WebAudio unavailable');return new Constructor();
-  });
+  },loadDeclarationVoices);
   player.current=instance;
   let stored=true;try{stored=window.localStorage.getItem(storageKey)!=='off';}catch{/* Local settings may be unavailable. */}
   enabledRef.current=stored;setEnabled(stored);instance.setEnabled(stored);

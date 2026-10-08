@@ -1,0 +1,81 @@
+{
+  "repo": "hexgrad/Kokoro-82M",
+  "revision": "f3ff3571791e39611d31c381e3a41a3af07b4987",
+  "license": "Apache-2.0",
+  "voice": "jf_alpha",
+  "kokoro": "0.9.4",
+  "sampleRate": 24000,
+  "speed": 1.15,
+  "files": {
+    "config.json": "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f",
+    "kokoro-v1_0.pth": "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4",
+    "voices/jf_alpha.pt": "1bf4c9dc69e45ee46183b071f4db766349aac5592acbcfeaf051018048a5d787",
+    "README.md": "91dcabced89db6f109b8786642f50402d3ee87450e8189589b6f85520e7f4d78",
+    "VOICES.md": "ec7e4941ad7e194af61e3455928528a9ff5360c7c505e412efab27d6a69ea106"
+  },
+  "samples": [
+    {
+      "kind": "riichi",
+      "text": "リーチ！",
+      "phonemes": [
+        "ɾʲiːʨi!"
+      ],
+      "file": "riichi.wav",
+      "sampleRate": 24000,
+      "channels": 1,
+      "bytes": 33576,
+      "seconds": 0.6985833333333333,
+      "sha256": "0ddf2ad5c006d22f65961a8a0c5682ae1a432618529811610c9081bdb24991e5",
+      "rawSha256": "00e6ecb9f024389917797dbc8125de9b7fdacd59b2e5133a408adace6f44c434",
+      "trimFrames": [
+        5354,
+        22120
+      ],
+      "normalizedPeak": 0.65,
+      "edgeFadeMs": 5
+    },
+    {
+      "kind": "ron",
+      "text": "ロン！",
+      "phonemes": [
+        "ɾoɴ!"
+      ],
+      "file": "ron.wav",
+      "sampleRate": 24000,
+      "channels": 1,
+      "bytes": 26250,
+      "seconds": 0.5459583333333333,
+      "sha256": "9f6826d06dd4e76e104027629d07370636324b36aaa6c4449aeb259a5c4d132b",
+      "rawSha256": "09767efc2291e1530acd1f261f7f9ad5898de76b3c465f93b2952af6f62e2af6",
+      "trimFrames": [
+        5430,
+        18533
+      ],
+      "normalizedPeak": 0.65,
+      "edgeFadeMs": 5
+    },
+    {
+      "kind": "tsumo",
+      "text": "ツモ！",
+      "phonemes": [
+        "ʦɨmo!"
+      ],
+      "file": "tsumo.wav",
+      "sampleRate": 24000,
+      "channels": 1,
+      "bytes": 27916,
+      "seconds": 0.5806666666666667,
+      "sha256": "27ebb1242d6bcbc25a828d9b89a496453b9e1815dbcda76c061b09c3f1014228",
+      "rawSha256": "51f1e9a504e94a17bf1b4e5c8514778217a82be3f623122859f293b766e7f3e3",
+      "trimFrames": [
+        5063,
+        18999
+      ],
+      "normalizedPeak": 0.65,
+      "edgeFadeMs": 5
+    }
+  ],
+  "productionInference": false,
+  "generatedLocally": true,
+  "vendorAssetsUsed": false
+}
