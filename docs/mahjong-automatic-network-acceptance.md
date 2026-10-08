@@ -39,3 +39,12 @@ GameRoom现在把自动操作的就绪条件同时接到既有useNukiMotion.held
 - 12张业务/迁移表发布前后摘要一致`9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`，用户7/空间3/成员5/照片29/迁移7；照片清理器CID及镜像保持。禁备份标记、timer masked/inactive、service inactive和三个不存在的备份路径保持，没有创建备份或下载真实资料。
 
 发布闭环`.local/ecs-deploy/presentation-published-closeout-r01.json`绑定13个终结成功阶段、公网133资源与同一冻结清单`af1296830d45390ac6772dbef4c9b675139a74984a0a7d032b4a23b7336dc0f9`。发布记录立即提交推送GitHub两分支。公网资源身份/健康验收不能替代正式生产账号/WSS端到端自动操作或Android硬件验收，原完整体验目标继续active。
+
+
+## 手动优先与消息次序完整交叉（2026-10-09）
+
+扩展同一正式Root/会话/API、本地真实HTTP/Socket和物理规则引擎脚本，将两种消息次序分别交叉到每个浏览器、三四麻、尺寸和传输；不再仅按视口选一种次序。新增两种手动优先场景：开启自动和牌后，真实点手牌，或聚焦实体牌后按ArrowRight，等待900ms确认零POST及零fetch发送记录，再点击合法自摸，原生接受且只提交一次。没有模拟计时器、force点击、扩大超时、替换网络请求或修改产品控制器。
+
+最终Chromium/WebKit × 三/四麻 × 667×375/1440×810 × WebSocket/强制轮询 × Socket先发/HTTP先回，共240个唯一组合场景，实际退出0。其中64个手动取消场景均保留自摸按钮可用；总计240个原生接受POST，逐场景nonce/decision唯一、最多一笔在途。连续拔北每次发送前held/arriving均false，三张北公开显示和计数守恒；不鸣牌仍不跳过荣和，特殊自家选择零提交。重复快照与200ms错序响应均未造成二次指令。全部源摘要在结束时及根复核时再次匹配。
+
+最终证据`.local/audit/automatic-network-1791490917561/proof.json`，SHA256 `a749c9655fc5c078b6bc28c26f6cc9862e4f773980c50f8409e72f87b4b87db3`；完整输出`automatic-network-manual-cross-r01.log`实际exit0。类型检查及diff检查exit0，根复核`automatic-network-manual-cross-review-r01.json`非独立。此次仅改变浏览器验收脚本/记录，不改变运行源码，无需重新构建或部署；线上仍fef6e66。本地合成member会话、稳定Next导航桩及HTTP端点的范围不变；真实生产账号/WSS、Android硬件与完整当前厂商体验不能由这240场景代替，原目标active。
