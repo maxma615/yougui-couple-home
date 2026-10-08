@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {currentWaits,discardWaits} from '@/components/mahjong/discard-waits';
+import {currentWaits,discardWaits,singleDiscardWaits} from '@/components/mahjong/discard-waits';
 import type {GameView} from '@/modules/mahjong/types';
 const shapes=(waits:ReturnType<typeof discardWaits>)=>waits.map(({tile,remaining})=>({tile,remaining}));
 const tiles=(s:string)=>[...s.matchAll(/([mpsz])(\d+)/g)].flatMap(m=>[...m[2]].map(n=>m[1]+n));
@@ -34,4 +34,17 @@ it('current wait entry is absent for fourteen tiles, non-tenpai and finished han
  expect(currentWaits(view(),0,'yonma')).toEqual([]);
  const g=view('p147s258m369z1234');expect(currentWaits(g,0,'yonma')).toEqual([]);
  const ready=view('p123456789s123z1');ready.settlement={kind:'draw',name:'荒牌',yaku:[],delta:[0,0,0,0],uraIndicators:[]};expect(currentWaits(ready,0,'yonma')).toEqual([]);
+});
+
+it('finds the single tenpai discard among a full set of offered cuts without mutating the view',()=>{
+ const g=view('p123456789s12z117');g.drawnTile='z7';g.choices=g.hand.map((tile,i)=>({id:'c'+i,type:'discard',value:tile+(i===13?'_':'')}));const before=structuredClone(g);
+ expect(singleDiscardWaits(g,0,'yonma')).toEqual(discardWaits(g,0,'yonma','c13'));expect(singleDiscardWaits(g,0,'yonma')[0]).toMatchObject({tile:'s3',remaining:4,ronYaku:true,furiten:false});expect(g).toEqual(before);
+});
+it('counts duplicate physical tile choices once and keeps red five distinct from ordinary five',()=>{
+ const g=view();g.choices=[{id:'hand',type:'discard',value:'z1'},{id:'drawn',type:'discard',value:'z1_'}];expect(singleDiscardWaits(g,0,'yonma')).toHaveLength(1);
+ const red=view('p123456789s123p05');red.choices=[{id:'red',type:'discard',value:'p0'},{id:'normal',type:'discard',value:'p5'}];expect(singleDiscardWaits(red,0,'yonma')).toEqual([]);
+});
+it('omits the peek for multiple tenpai cuts or none, and follows authorized riichi choices only',()=>{
+ const g=view('p123456789s123z12');g.choices=[{id:'east',type:'discard',value:'z1'},{id:'south',type:'discard',value:'z2'},{id:'r',type:'riichi',value:'z2'}];expect(singleDiscardWaits(g,0,'yonma')).toEqual([]);expect(singleDiscardWaits(g,0,'yonma','riichi')[0]).toMatchObject({tile:'z1',ronYaku:true});
+ g.choices=[{id:'pass',type:'pass'}];expect(singleDiscardWaits(g,0,'yonma')).toEqual([]);g.choices=[{id:'absent',type:'discard',value:'z7'}];expect(singleDiscardWaits(g,0,'yonma')).toEqual([]);
 });

@@ -13,6 +13,22 @@ export function discardWaits(game:GameView,seat:number,variant:GameVariant,choic
  physical.splice(index,1);
  return analyzeWaits(game,seat,variant,physical,choice.value,choice.type==='riichi');
 }
+/** A peek is unambiguous only when one physical tile type can be discarded
+ * to stay tenpai. Duplicate hand/drawn choices for the same tile count once. */
+export function singleDiscardWaits(game:GameView,seat:number,variant:GameVariant,mode:'discard'|'riichi'='discard'):DiscardWait[]{
+ const seen=new Set<string>();let single:DiscardWait[]=[];
+ for(const choice of game.choices){
+  if(choice.type!==mode||!choice.value)continue;
+  const tile=choice.value.slice(0,2);
+  if(seen.has(tile))continue;
+  seen.add(tile);
+  const waits=discardWaits(game,seat,variant,choice.id);
+  if(!waits.length)continue;
+  if(single.length)return [];
+  single=waits;
+ }
+ return single;
+}
 /** Waits for the current effective thirteen-tile hand, including an existing
  * missed-ron block. No hypothetical discard is made and no command is sent. */
 export function currentWaits(game:GameView,seat:number,variant:GameVariant):DiscardWait[]{

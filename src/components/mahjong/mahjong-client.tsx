@@ -2,7 +2,7 @@
 
 import {useMahjongActionPlacement} from "./use-action-placement";
 import {WaitPeekButton} from "./wait-peek-button";
-import {currentWaits,discardWaits} from "./discard-waits";
+import {currentWaits,discardWaits,singleDiscardWaits} from "./discard-waits";
 import { MahjongFinalRanking } from "./mahjong-final-ranking";
 
 import { MahjongCallOption } from "./mahjong-call-option";
@@ -412,6 +412,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const [hoveredChoiceId, setHoveredChoiceId] = useState<string | null>(null);
   const [showCurrentWaits, setShowCurrentWaits] = useState(false);
   const currentHandWaits = useMemo(() => game ? currentWaits(game, ownSeat, room.variant) : [], [game, ownSeat, room.variant]);
+  const singleDiscardPeek = useMemo(() => game ? singleDiscardWaits(game,ownSeat,room.variant,riichiMode ? "riichi" : "discard") : [], [game,ownSeat,room.variant,riichiMode]);
   const waitCache = useMemo(() => new Map<string, ReturnType<typeof discardWaits>>(), [game, ownSeat, room.variant]);
   useEffect(() => { setHoveredChoiceId(null); setShowCurrentWaits(false); }, [game?.decisionId, room.id, ownSeat, riichiMode, connected, busy]);
   const [dragPreview, setDragPreview] = useState<{ tileId: string; x: number; y: number } | null>(null);
@@ -638,7 +639,8 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     waitCache.set(previewChoiceId, discardWaits(game,ownSeat,room.variant,previewChoiceId));
   }
   const canPreview = connected && !busy && !choiceSubmitted && !isFinished && !game.settlement;
-  const selectedWaits = canPreview ? previewChoiceId && allowedChoices.some(choice=>choice.id===previewChoiceId) ? waitCache.get(previewChoiceId) ?? [] : showCurrentWaits ? currentHandWaits : [] : [];
+  const peekWaits = currentHandWaits.length ? currentHandWaits : singleDiscardPeek;
+  const selectedWaits = canPreview ? showCurrentWaits ? peekWaits : previewChoiceId && allowedChoices.some(choice=>choice.id===previewChoiceId) ? waitCache.get(previewChoiceId) ?? [] : [] : [];
 
   const ownMember = room.members.find((member) => member.seat === ownSeat);
 
@@ -651,7 +653,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     }
   };
   return <section ref={audioRootRef} onPointerDownCapture={cancelNukiInput} onClickCapture={cancelNukiInput} onKeyDownCapture={cancelNukiInput} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
-    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions">{canPreview && currentHandWaits.length > 0 ? <WaitPeekButton held={showCurrentWaits} onHold={setShowCurrentWaits}/> : null}<button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
+    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions">{canPreview && peekWaits.length > 0 ? <WaitPeekButton held={showCurrentWaits} onHold={setShowCurrentWaits}/> : null}<button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
 
     {tableScreen.hint ? <div className="mahjong-screen-hint" role="status" aria-label="屏幕方向提示" title={tableScreen.hint}>请旋转手机</div> : null}
     <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside>

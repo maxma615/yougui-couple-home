@@ -60,3 +60,18 @@ it('press release, cancellation, leaving, blur and viewport changes dismiss curr
  for(const name of ['resize','orientationchange','blur','pagehide']){fireEvent.keyDown(button,{key:'Enter'});expect(screen.getByRole('status',{name:'待牌预览'})).toBeTruthy();fireEvent(window,new Event(name));expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();}
  fireEvent.keyDown(button,{key:'Enter'});fireEvent.blur(button);expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();fireEvent.click(button);expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();expect(onChoice).not.toHaveBeenCalled();
 });
+
+it('a single tenpai discard exposes the hold entry before any tile selection',()=>{
+ const r=room(),onChoice=vi.fn();r.game!.hand=['p1','p2','p3','p4','p5','p6','p7','p8','p9','s1','s2','z1','z1','z7'];r.game!.drawnTile='z7';r.game!.choices=r.game!.hand.map((tile,i)=>({id:'cut:'+i,type:'discard',value:tile+(i===13?'_':'')}));
+ render(<GameRoom room={r} ownSeat={0} connected motionCanAnimate={false} host busy={false} onChoice={onChoice} onRematch={()=>{}} onFinish={()=>{}} onLeave={()=>{}}/>);
+ expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();const peek=screen.getByRole('button',{name:'查看待牌'});fireEvent.keyDown(peek,{key:' '});expect(screen.getByRole('status',{name:'待牌预览'}).textContent).toContain('4 张');expect(screen.getAllByRole('button',{pressed:true})).toEqual([peek]);expect(onChoice).not.toHaveBeenCalled();fireEvent.keyUp(peek,{key:' '});expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();
+});
+it('multiple tenpai discards have no ambiguous hold entry',()=>{
+ const r=room();r.game!.hand=['p1','p2','p3','p4','p5','p6','p7','p8','p9','s1','s2','s3','z1','z2'];r.game!.drawnTile='z2';r.game!.choices=r.game!.hand.map((tile,i)=>({id:'cut:'+i,type:'discard',value:tile+(i===13?'_':'')}));
+ render(<GameRoom room={r} ownSeat={0} connected motionCanAnimate={false} host busy={false} onChoice={()=>{}} onRematch={()=>{}} onFinish={()=>{}} onLeave={()=>{}}/>);expect(screen.queryByRole('button',{name:'查看待牌'})).toBeNull();
+});
+it('the single discard hold entry follows the current riichi mode and never submits a declaration',()=>{
+ const r=room(),onChoice=vi.fn();r.game!.hand=['p1','p2','p3','p4','p5','p6','p7','p8','p9','s1','s2','z1','z1','z7'];r.game!.drawnTile='z7';r.game!.choices=[{id:'cut',type:'discard',value:'z7_'},{id:'r',type:'riichi',value:'z7_'}];
+ render(<GameRoom room={r} ownSeat={0} connected motionCanAnimate={false} host busy={false} onChoice={onChoice} onRematch={()=>{}} onFinish={()=>{}} onLeave={()=>{}}/>);
+ fireEvent.click(screen.getByRole('button',{name:'立直'}));const peek=screen.getByRole('button',{name:'查看待牌'});fireEvent.keyDown(peek,{key:'Enter'});expect(screen.getByRole('status',{name:'待牌预览'})).toBeTruthy();fireEvent.keyUp(peek,{key:'Enter'});expect(onChoice).not.toHaveBeenCalled();expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();
+});
