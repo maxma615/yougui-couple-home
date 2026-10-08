@@ -17,7 +17,7 @@
 ### Task2 实际声音与生命周期
 - [x] 先写解锁／静音／后台／断线／去重／源释放RED；实现原创WebAudio声源与控制器。
 - [x] 绑定实际物理动画完成及无动画的权威状态，补牌不提前响；加入44px静音控件。
-- [ ] 实际OfflineAudioContext波形及两个浏览器播放／时序／解锁／中断GREEN。
+- [x] 实际OfflineAudioContext波形及两个浏览器播放／时序／解锁／中断GREEN。
 
 ### Task3 完整验收发布
 - [ ] 完整tests/type/build/secrets和联机／浏览器回归；一次独立整分支审查与必要修复。
