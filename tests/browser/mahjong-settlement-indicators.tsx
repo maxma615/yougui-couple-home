@@ -41,7 +41,7 @@ const out=`.local/audit/settlement-indicators-native-${Date.now()}`;mkdirSync(ou
 const bundle=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.paint=r=>flushSync(()=>root.render(<main className="mahjong-page"><GameRoom room={r} ownSeat={0} connected busy={false} host motionCanAnimate={false} onChoice={()=>{}} onLeave={()=>{}} onFinish={()=>{}} onRematch={()=>{}}/></main>));`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,platform:'browser',format:'iife',write:false,jsx:'automatic'});
 const css=[...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import "\.\/([^"]+\.css)";/g)].map(m=>readFileSync(`src/app/mahjong/${m[1]}`,'utf8')).join('\n');
 const results=[];
-for(const engine of [chromium,webkit]){const browser=await engine.launch();try{for(const variant of ['sanma','yonma'] as const)for(const width of [667,1440])for(const scenario of ['riichi','kan'] as const){
+for(const engine of [chromium,webkit]){const browser=await engine.launch();try{for(const variant of ['sanma','yonma'] as const)for(const width of [667,1440])for(const scenario of ['riichi','kan','ron'] as const){
  const n=variant==='sanma'?3:4;
  let g:SettlementSequenceGame;
  if(scenario==='riichi'){
@@ -50,6 +50,10 @@ for(const engine of [chromium,webkit]){const browser=await engine.launch();try{f
   act(g,0,'discard:z6_');pass(g,n);act(g,1,'riichi:z7_');pass(g,n);
   assert.equal(g.view(1).players[1].riichi,true);
   for(let i=2;i<draws.length-1;i++){const seat=g.view(0).turnSeat;act(g,seat,'discard:'+g.view(seat).drawnTile+'_');pass(g,n)}act(g,1,'tsumo');
+ }else if(scenario==='ron'){
+  g=new SettlementSequenceGame(make(variant,{1:'p123456789s123z2'},['z2']) as RiichiGame|SanmaGame,n);
+  act(g,0,'discard:z2_');act(g,1,'ron');pass(g,n);
+  assert.equal(g.view(0).settlement!.winMethod,'ron');
  }else{
   g=new SettlementSequenceGame(make(variant,{0:'p1111s123456z222'},['p9'],'p9') as RiichiGame|SanmaGame,n);
   act(g,0,'kan:p1111');pass(g,n);assert.equal(g.view(0).doraIndicators.length,2);act(g,0,'tsumo');
@@ -58,16 +62,23 @@ for(const engine of [chromium,webkit]){const browser=await engine.launch();try{f
  assert.equal(game.settlementFlow!.stage,'detail');
  const r:RoomView={id:'native-indicators',code:'ABCDEFGH',variant,mode:'east',status:'playing',version:1,mySeat:0,hostUserId:'0',game,members:Array.from({length:n},(_,seat)=>({userId:String(seat),displayName:`玩家${seat}`,seat,kind:'human',ready:true,connected:true}))};
  const page=await browser.newPage({viewport:{width,height:width===667?375:810}});
+ await page.route('https://mahjong.local/fonts/**',route=>route.fulfill({contentType:'font/woff2',body:readFileSync('public'+new URL(route.request().url()).pathname)}));
  await page.route('https://mahjong.local/images/**',route=>{const p=new URL(route.request().url()).pathname;return route.fulfill({contentType:p.endsWith('.svg')?'image/svg+xml':'image/webp',body:readFileSync('public'+p)})});
  await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0}*{box-sizing:border-box}${css}</style><div id="root"></div>`);
  await page.addScriptTag({content:`globalThis.process={env:{NODE_ENV:"development"}};globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v});${bundle.outputFiles[0].text}`});
  await page.evaluate(r=>(window as any).paint(r),r);
  const panel=page.getByRole('region',{name:'和牌详情'});await panel.waitFor();
+ assert.equal(await page.evaluate(async()=>(await document.fonts.load('32px \"Yougui Mahjong Brush\"','自摸荣和')).length),1,'brush font decoded');
+ const titleStyle=await panel.locator('h2').evaluate(el=>{const s=getComputedStyle(el),b=el.getBoundingClientRect();return{family:s.fontFamily,weight:s.fontWeight,size:parseFloat(s.fontSize),stroke:parseFloat(s.webkitTextStrokeWidth),width:b.width,height:b.height,text:el.textContent};});
+ assert.match(titleStyle.family,/Yougui Mahjong Brush/,'winning title uses the same brush family as table declarations');
+ assert.equal(titleStyle.weight,'400');assert.ok(titleStyle.size>=22&&titleStyle.stroke>0&&titleStyle.width>0&&titleStyle.height>0);
+ await page.waitForFunction(()=>getComputedStyle(document.querySelector('.mahjong-settlement-panel__heading')!).opacity==='1');
+ await panel.locator('.mahjong-settlement-panel__heading').screenshot({path:`${out}/${engine.name()}-${variant}-${width}-${scenario}-heading.png`});
  for(const [name,values] of [['宝牌指示牌',game.doraIndicators],['里宝牌指示牌',game.settlement!.uraIndicators]] as const){const row=panel.getByRole('group',{name,exact:true});assert.deepEqual(await row.locator('[data-tile-face]').evaluateAll(els=>els.map(el=>el.getAttribute('data-tile-face'))),values);assert.equal(await row.locator('.mahjong-indicator-back').count(),5-values.length);assert.ok(await row.evaluate(el=>el.scrollWidth<=el.clientWidth+1));}
  const red=panel.getByRole('group',{name:'宝牌指示牌',exact:true}).locator('[data-tile-face="p0"]');
  assert.equal(await red.count(),1);assert.ok(await red.evaluate(el=>el.classList.contains('is-red')));assert.equal(await red.locator('img').getAttribute('src'),'/images/mahjong-tiles/regular/Pin5-Dora.svg');
  await panel.locator('.mahjong-result-indicators').scrollIntoViewIfNeeded();await page.waitForFunction(()=>[...document.querySelectorAll('.mahjong-result-indicators img')].every(i=>(i as HTMLImageElement).complete&&(i as HTMLImageElement).naturalWidth>0));
  const label=`${engine.name()}-${variant}-${width}-${scenario}`;await panel.locator('.mahjong-result-indicators').screenshot({path:`${out}/${label}.png`});
- results.push({label,dora:game.doraIndicators,ura:game.settlement!.uraIndicators,scenario});await page.close();console.log('PASS '+label);
+ results.push({label,dora:game.doraIndicators,ura:game.settlement!.uraIndicators,scenario,titleStyle});await page.close();console.log('PASS '+label);
  }}finally{await browser.close()}}
-writeFileSync(`${out}/results.json`,JSON.stringify(results,null,2));console.log(`PASS ${results.length} native accepted-riichi/kan sequences: ${out}`);
+writeFileSync(`${out}/results.json`,JSON.stringify(results,null,2));console.log(`PASS ${results.length} native accepted-riichi/kan/ron sequences: ${out}`);

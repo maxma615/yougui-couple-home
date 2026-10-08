@@ -46,12 +46,16 @@ for(const engine of [chromium,webkit]) {
    acknowledgements.push({phase:previous.settlementFlow!.stage,index:previous.settlementFlow!.detailIndex,at:previous.settlementFlow!.elapsedMs,choiceId:input.choiceId});
    return view();
   });
+  await page.route('https://mahjong.local/fonts/**',route=>route.fulfill({contentType:'font/woff2',body:readFileSync('public'+new URL(route.request().url()).pathname)}));
   await page.route('https://mahjong.local/images/**',async route=>{const pathname=new URL(route.request().url()).pathname;await route.fulfill({status:200,contentType:pathname.endsWith('.svg')?'image/svg+xml':'image/webp',body:readFileSync(`public${pathname}`)});});
   await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*:before,*:after{box-sizing:border-box}${css}</style><div id="root"></div>`);
   await page.addScriptTag({content:`globalThis.process={env:{NODE_ENV:"development"}};globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v,configurable:true});\n${bundle.outputFiles[0].text}`});
   await page.evaluate(r=>(window as any).resultProbe.render(r),view());
   const detail=page.getByRole('region',{name:'和牌详情'});
   await detail.waitFor();
+  assert.equal(await page.evaluate(async()=>(await document.fonts.load('32px "Yougui Mahjong Brush"','荣和自摸')).length),1);
+  assert.match(await detail.locator('h2').evaluate(el=>getComputedStyle(el).fontFamily),/Yougui Mahjong Brush/);
+
   const publicIndicators=detail.getByRole('group',{name:'宝牌指示牌',exact:true});
   const privateIndicators=detail.getByRole('group',{name:'里宝牌指示牌',exact:true});
   assert.deepEqual(await publicIndicators.locator('[data-tile-face]').evaluateAll(els=>els.map(el=>el.getAttribute('data-tile-face'))),view().game!.doraIndicators);

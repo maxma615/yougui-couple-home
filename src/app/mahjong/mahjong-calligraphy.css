@@ -38,3 +38,18 @@
 }
 
 .mahjong-game .mahjong-player__riichi { font-size: 16px; }
+
+/* The hand result keeps the same brush identity as its on-table declaration.
+   Yaku, fu/han, names and score transfers stay in the readable body face. */
+.mahjong-game .mahjong-settlement-panel__heading .mahjong-settlement-panel__win-title {
+  font-family: "Yougui Mahjong Brush", serif;
+  font-weight: 400;
+  font-style: normal;
+  font-synthesis: none;
+  font-size: clamp(22px, 6cqh, 32px);
+  letter-spacing: -.035em;
+  color: #fff0c9;
+  -webkit-text-stroke: 1px #322114;
+  paint-order: stroke fill;
+  text-shadow: 1px 2px 0 #091723, 0 0 8px #efb86b60;
+}
