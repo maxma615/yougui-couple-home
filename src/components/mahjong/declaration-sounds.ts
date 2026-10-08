@@ -16,7 +16,7 @@ export function acceptedDeclarationSounds(before:RoomView|null,after:RoomView):D
  if(game.settlement?.kind==='win'){
   const declarations=flow?.winDeclarations;
   if(!flow||!flow.id||flow.stage!=='detail'||flow.detailIndex!==0||!Number.isFinite(flow.elapsedMs)||flow.elapsedMs<0||flow.elapsedMs>=1200
-   ||game.phase!=='hule'||!['zimo','gangzimo','nukizimo','dapai','gang'].includes(old.phase)
+   ||game.phase!=='hule'||!['zimo','gangzimo','nukizimo','dapai','gang','nuki'].includes(old.phase)||(old.phase==='nuki'&&after.variant!=='sanma')
    ||!declarations?.length||declarations.length!==flow.detailCount||declarations.length>=count
    ||new Set(declarations.map(d=>d.seat)).size!==declarations.length
    ||declarations.some(d=>!Number.isInteger(d.seat)||d.seat<0||d.seat>=count||(d.winMethod!=='ron'&&d.winMethod!=='tsumo'))
@@ -24,7 +24,7 @@ export function acceptedDeclarationSounds(before:RoomView|null,after:RoomView):D
    ||declarations[0].seat!==game.settlement.winnerSeat||declarations[0].winMethod!==game.settlement.winMethod
    ||!same(publicState(before),publicState(after)))return [];
   if(declarations.some(d=>d.winMethod==='tsumo'&&(!['zimo','gangzimo','nukizimo'].includes(old.phase)||d.seat!==old.turnSeat))
-   ||declarations.some(d=>d.winMethod==='ron'&&(!['dapai','gang'].includes(old.phase)||d.seat===old.turnSeat)))return [];
+   ||declarations.some(d=>d.winMethod==='ron'&&(!['dapai','gang','nuki'].includes(old.phase)||d.seat===old.turnSeat)))return [];
   return declarations.map((d,index)=>({id:JSON.stringify(['declaration',after.id,game.gameInstanceId,game.handId,flow.id,d.winMethod,d.seat]),kind:d.winMethod,seat:d.seat,atMs:300+(d.winMethod==='ron'?index*30:0),elapsedMs:flow.elapsedMs}));
  }
  if(game.settlement||flow)return [];

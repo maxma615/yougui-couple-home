@@ -3,6 +3,7 @@ import {acceptedDeclarationSounds} from '@/components/mahjong/declaration-sounds
 import {SettlementSequenceGame} from '@/modules/mahjong/settlement-sequence';
 import {physicalEngine} from '../fixtures/mahjong-settlement-game';
 import {kakanSoundFixture} from '../fixtures/mahjong-audio-game';
+import {nukiRonPair} from '../fixtures/mahjong-declaration-game';
 import type {GameVariant, MahjongGame, RoomView, Choice} from '@/modules/mahjong/types';
 
 const room = (game:MahjongGame, variant:GameVariant, version:number):RoomView => ({id:'declaration-room',code:'ABCDEFGH',hostUserId:'0',variant,mode:'east',status:'playing',version,mySeat:0,game:game.view(0),members:[]});
@@ -19,6 +20,15 @@ function pair(variant:GameVariant, kind:'ron'|'tsumo'|'riichi') {
  return {before,after:room(game,variant,11),game};
 }
 describe('strict public declaration sounds',()=>{
+ it.each(['normal','double','kokushi'] as const)('announces a legal native %s north-extraction robbery',kind=>{
+  const {before,after}=nukiRonPair(kind);expect(before.game!.phase).toBe('nuki');expect(after.game!.phase).toBe('hule');
+  expect(acceptedDeclarationSounds(before,after)).toMatchObject(kind==='double'?[{kind:'ron',seat:1},{kind:'ron',seat:2}]:[{kind:'ron',seat:1}]);
+  expect(acceptedDeclarationSounds(null,after)).toEqual([]);
+  const gap=structuredClone(after);gap.version+=1;expect(acceptedDeclarationSounds(before,gap)).toEqual([]);
+  const yonmaBefore=structuredClone(before),yonmaAfter=structuredClone(after);
+  for(const r of [yonmaBefore,yonmaAfter]){r.variant='yonma';r.game!.players.push({...r.game!.players[2],seat:3});}
+  expect(acceptedDeclarationSounds(yonmaBefore,yonmaAfter)).toEqual([]);
+ });
  it('announces native chankan winners from the continuously observed added-kan reaction',()=>{
   const game=new SettlementSequenceGame(kakanSoundFixture('double'),4);
   const v=game.view(1),kan=v.choices.find(c=>c.type==='kan'&&!!c.value?.match(/^[mpsz]\d{3}[+\-=]\d$/));expect(kan).toBeDefined();game.respond(1,v.decisionId,kan!.id);

@@ -15,3 +15,12 @@ export function declarationPair(variant:GameVariant,kind:'ron'|'tsumo'|'riichi')
  const before=declarationRoom(game,variant,10);declarationChoose(game,kind==='ron'?2:0,kind);
  return {before,after:declarationRoom(game,variant,11),game};
 }
+export function nukiRonPair(kind:'normal'|'double'|'kokushi'='normal'){
+ const hands:Record<number,string>=kind==='double'?{0:'m119p222s444z1144',1:'p123456789s123z4',2:'p456789s456z3334'}:
+  {0:'m19p222s444z11444',1:kind==='kokushi'?'m19p19s19z1234567':'p123456789s123z4'};
+ const game=new SettlementSequenceGame(physicalEngine('sanma',hands,'s8'),3);
+ declarationChoose(game,0,'nuki');
+ if(kind==='double')declarationChoose(game,1,'ron');
+ const before=declarationRoom(game,'sanma',10);declarationChoose(game,kind==='double'?2:1,'ron');
+ return {before,after:declarationRoom(game,'sanma',11),game};
+}

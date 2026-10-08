@@ -5,7 +5,7 @@ import {TableAudioPlayer} from './table-audio';
 import {tableSoundTransition,type PendingKakanSound,type TableSoundEvent} from './table-sounds';
 import {acceptedDeclarationSounds} from './declaration-sounds';
 
-type Pending={cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number};
+type Pending={cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number;declarationGroup?:string;declarationOffset?:number;notBefore?:number};
 const storageKey='yougui.mahjong.sound';
 const scope=(r:RoomView)=>JSON.stringify([r.id,r.variant,r.mySeat,r.game?.gameInstanceId,r.game?.handId]);
 
@@ -27,6 +27,13 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   if(!entry||entry.parent||entry.epoch!==epoch.current)return;
   pending.current.delete(id);
   if(enabledRef.current&&document.visibilityState!=='hidden')player.current?.play(entry.cue);
+  if(entry.declarationGroup&&entry.declarationOffset!==undefined){
+   // A stalled main thread can release multiple due callbacks in one paint.
+   // Keep later voices/cues separated from the actual first audible step.
+   const now=performance.now();
+   for(const value of pending.current.values())if(value.declarationGroup===entry.declarationGroup&&value.declarationOffset!==undefined&&value.declarationOffset>entry.declarationOffset)
+    value.notBefore=Math.max(value.notBefore??0,now+value.declarationOffset-entry.declarationOffset);
+  }
   for(const [child,value] of pending.current)if(value.parent===id){
    value.parent=undefined;
    // Completion promises may run before this frame's RAF callbacks. Cross a
@@ -42,6 +49,7 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    if(!entry||entry.parent||entry.epoch!==epoch.current||!root)return;
    if(entry.declarationEnd!==undefined){
     if(performance.now()>=entry.declarationEnd){pending.current.delete(id);return;}
+    if(entry.notBefore!==undefined&&performance.now()<entry.notBefore){scheduleRef.current(id);return;}
     const marker=[...root.querySelectorAll<HTMLElement>('[data-declaration-event]')].find(node=>node.dataset.declarationEvent===id);
     // React may commit the visual on the next paint. Never sound an absent
     // marker and never wait past this declaration's finite presentation window.
@@ -117,9 +125,10 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room)){pendingKan.current=null;return;}
   const transition=tableSoundTransition(old.room,room,pendingKan.current);pendingKan.current=transition.pending;
   const cues=transition.cues;
-  for(const cue of acceptedDeclarationSounds(old.room,room)){
+  const declarations=acceptedDeclarationSounds(old.room,room),declarationGroup=JSON.stringify(declarations.map(c=>c.id));
+  for(const cue of declarations){
    const at=performance.now()-cue.elapsedMs,end=at+(cue.kind==='riichi'?1000:1200);
-   pending.current.set(cue.id,{cue,epoch:epoch.current,declarationEnd:end});
+   pending.current.set(cue.id,{cue,epoch:epoch.current,declarationEnd:end,declarationGroup,declarationOffset:cue.atMs,notBefore:at+cue.atMs});
    const timer=setTimeout(()=>{timers.current.delete(timer);if(pending.current.has(cue.id))schedule(cue.id);},Math.max(0,cue.atMs-cue.elapsedMs));
    timers.current.add(timer);
   }

@@ -23,6 +23,41 @@ function show(room = result("scores")) {
   const rendered = render(<MahjongSettlementPanel {...props}/>);
   return { ...rendered, props, onChoice, rerenderProps: (overrides: Partial<typeof props>) => rendered.rerender(<MahjongSettlementPanel {...props} {...overrides}/>) };
 }
+function declaredResult(count:3|4=3){
+ const r=result('detail',count);r.game!.settlementFlow!.winDeclarations=[{seat:1,winMethod:'ron'},{seat:2,winMethod:'ron'}];return r;
+}
+it.each([3,4] as const)('delays first declared winner manual confirmation to2460ms at %i seats',count=>{
+ const {onChoice}=show(declaredResult(count));expect(screen.queryByRole('region',{name:'和牌详情'})).toBeNull();
+ tick(1199);expect(screen.queryByRole('button',{name:/继续/})).toBeNull();tick(1);
+ const button=screen.getByRole('button',{name:/继续/}) as HTMLButtonElement;expect(button.disabled).toBe(true);
+ fireEvent.click(button);expect(onChoice).not.toHaveBeenCalled();tick(1259);expect(button.disabled).toBe(true);
+ tick(1);expect(button.disabled).toBe(false);fireEvent.click(button);fireEvent.click(button);expect(onChoice).toHaveBeenCalledExactlyOnceWith({id:'ack',type:'ack'});
+ tick(10000);expect(onChoice).toHaveBeenCalledTimes(1);
+});
+it.each([3,4] as const)('auto confirms first declared winner at5460ms once despite same-page updates at %i seats',count=>{
+ const {onChoice,props,rerenderProps}=show(declaredResult(count));tick(1000);
+ const refreshed=structuredClone(props.game);refreshed.settlementFlow!.elapsedMs=1000;rerenderProps({game:refreshed});
+ tick(4459);expect(onChoice).not.toHaveBeenCalled();tick(1);expect(onChoice).toHaveBeenCalledExactlyOnceWith({id:'ack',type:'ack'});
+ const repeated=structuredClone(refreshed);repeated.settlementFlow!.elapsedMs=5460;rerenderProps({game:repeated});tick(10000);expect(onChoice).toHaveBeenCalledTimes(1);
+});
+it('uses1260/4260ms for the second declared winner and cancels the first page clock',()=>{
+ const {onChoice,props,rerenderProps}=show(declaredResult());tick(1000);
+ const next=structuredClone(props.game);next.decisionId='result:detail:1';next.settlementFlow!.detailIndex=1;next.settlement!.winnerSeat=2;next.choices=[{id:'ack-second',type:'ack'}];
+ rerenderProps({game:next});const button=screen.getByRole('button',{name:/继续/}) as HTMLButtonElement;
+ tick(1259);expect(button.disabled).toBe(true);tick(1);expect(button.disabled).toBe(false);
+ tick(2999);expect(onChoice).not.toHaveBeenCalled();tick(1);expect(onChoice).toHaveBeenCalledExactlyOnceWith({id:'ack-second',type:'ack'});
+ tick(10000);expect(onChoice).toHaveBeenCalledTimes(1);
+});
+it('does not send an old declared-page ACK across disconnect and a new detail page',()=>{
+ const {onChoice,props,rerenderProps}=show(declaredResult());tick(3500);rerenderProps({connected:false});tick(2500);expect(onChoice).not.toHaveBeenCalled();
+ const next=structuredClone(props.game);next.decisionId='result:detail:1';next.settlementFlow!.detailIndex=1;next.settlement!.winnerSeat=2;next.choices=[{id:'ack-second',type:'ack'}];
+ rerenderProps({game:next,connected:false});tick(1000);expect(onChoice).not.toHaveBeenCalled();
+ rerenderProps({game:next,connected:true});tick(3259);expect(onChoice).not.toHaveBeenCalled();tick(1);
+ expect(onChoice).toHaveBeenCalledExactlyOnceWith({id:'ack-second',type:'ack'});
+});
+it('unmount cancels the first declared winner auto ACK',()=>{
+ const {onChoice,unmount}=show(declaredResult());tick(5459);expect(onChoice).not.toHaveBeenCalled();unmount();tick(10000);expect(onChoice).not.toHaveBeenCalled();
+});
 it.each([3,4] as const)("separates winner detail from aggregate transfers at %i seats", count => {
   const r = result("detail",count), {rerenderProps} = show(r);
   const detail = screen.getByRole("region",{name:"和牌详情"});
