@@ -48,8 +48,10 @@ Interfaces: 消费Task1 DTO；draw页面确认1000ms+3000ms，揭示/面板过�
 
 Files: 认证Socket／真实BotRunner测试、验收与fidelity文档、ignored候选／发布证据。
 
-- [ ] 真实3/4人认证联机与人机、重连／越权／私有牌／解散验证；完整tests/type/build/secrets。
-- [ ] 独立whole-branch review，实际RED→GREEN修复影响用户的发现。
-- [ ] 冻结新artifact，重新核验3539a6c父版本或实际已授权新父版本；Linux固定imageID、NODE_ENV=test候选验证。
-- [ ] 固定no-backup发布器、权威无真人牌局屏障后上线；公网TLS/资源、12表只读摘要、清理器／资源／策略核验；owned守卫同步。
-- [ ] 记录真实验收边界，目标保持active；后续完整终局／评分已知差异／真实安卓继续。
+- [x] 真实3/4人认证联机与人机、重连／越权／私有牌／解散验证；完整tests/type/build/secrets。
+- [x] 独立whole-branch review，实际RED→GREEN修复影响用户的发现。
+- [x] 冻结新artifact，重新核验3539a6c父版本或实际已授权新父版本；Linux固定imageID、NODE_ENV=test候选验证。
+- [x] 固定no-backup发布器、权威无真人牌局屏障后上线；公网TLS/资源、12表只读摘要、清理器／资源／策略核验；owned守卫同步。
+- [x] 记录真实验收边界，目标保持active；后续完整终局／评分已知差异／真实安卓继续。
+
+实际运行源码6c7dc333，585项本地、49项固定Linux、24+8 mounted场景及2个真实交叠飞牌场景通过；发布、数据／资源／禁备份和owned同步已实际核验。详见 [本阶段验收](../../mahjong-draw-sequence-acceptance.md)。这些勾选只完成本阶段，未完成整个持续目标。
