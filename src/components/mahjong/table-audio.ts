@@ -1,0 +1,98 @@
+import type {TableSoundEvent} from './table-sounds';
+
+type SoundKind=TableSoundEvent['kind'];
+const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19};
+
+/** Original short resin/cloth transients, generated locally without samples. */
+export function makeTileSoundBuffer(context:BaseAudioContext,kind:SoundKind):AudioBuffer{
+ const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*durations[kind]),context.sampleRate);
+ const samples=buffer.getChannelData(0),strikes=kind==='call'?[0,.027,.054]:[0];
+ let random=0x6d2b79f5,filtered=0;
+ for(let i=0;i<samples.length;i++){
+  random^=random<<13;random^=random>>>17;random^=random<<5;
+  const noise=(random>>>0)/0xffffffff*2-1;
+  filtered+=.3*(noise-filtered);
+  const t=i/context.sampleRate;
+  let value=0;
+  for(const start of strikes){
+   const age=t-start;if(age<0)continue;
+   const attack=Math.min(1,age/.0015),decay=Math.exp(-age/(kind==='draw'?.014:.022));
+   const body=.2*Math.sin(age*2*Math.PI*710)+.1*Math.sin(age*2*Math.PI*1430);
+   value+=attack*decay*(body+filtered*(kind==='draw'?.6:.38));
+  }
+  // Leave a smooth final 8ms tail and ample headroom for overlapping tiles.
+  const tail=Math.min(1,(samples.length-i)/context.sampleRate/.008);
+  samples[i]=Math.max(-.75,Math.min(.75,value*tail));
+ }
+ return buffer;
+}
+
+/** A locked or paused cue is consumed, never queued for later permission. */
+export class TableAudioPlayer{
+ private context:AudioContext|null=null;
+ private master:GainNode|null=null;
+ private ready=false;
+ private enabled=true;
+ private disposed=false;
+ private generation=0;
+ private suspension:Promise<void>=Promise.resolve();
+ private seen=new Set<string>();
+ private buffers=new Map<SoundKind,AudioBuffer>();
+ private active=new Set<AudioBufferSourceNode>();
+ constructor(private create:()=>AudioContext){}
+ async unlock():Promise<boolean>{
+  if(this.disposed||!this.enabled)return false;
+  const generation=this.generation;
+  try{
+   if(!this.context){
+    this.context=this.create();this.master=this.context.createGain();
+    this.master.gain.value=.32;this.master.connect(this.context.destination);
+   }
+   const context=this.context;
+   await context.resume();
+   if(this.disposed||!this.enabled||generation!==this.generation)return false;
+   this.ready=context.state==='running';return this.ready;
+  }catch{return false;}
+ }
+ play(cue:TableSoundEvent):boolean{
+  if(this.seen.has(cue.id))return false;
+  this.seen.add(cue.id);
+  while(this.seen.size>512)this.seen.delete(this.seen.values().next().value!);
+  const context=this.context;
+  if(this.disposed||!this.enabled||!this.ready||!context||context.state!=='running'||!this.master)return false;
+  try{
+   let buffer=this.buffers.get(cue.kind);
+   if(!buffer){buffer=makeTileSoundBuffer(context,cue.kind);this.buffers.set(cue.kind,buffer);}
+   if(this.active.size>=8)this.release(this.active.values().next().value!,true);
+   const source=context.createBufferSource();source.buffer=buffer;source.connect(this.master);
+   this.active.add(source);source.onended=()=>this.release(source,false);
+   try{source.start();return true;}catch{this.release(source,true);return false;}
+  }catch{return false;}
+ }
+ setEnabled(enabled:boolean){
+  if(this.enabled===enabled)return;
+  this.enabled=enabled;this.pause();
+ }
+ cancel(){
+  this.generation++;
+  for(const source of [...this.active])this.release(source,true);
+ }
+ pause(){
+  this.cancel();this.ready=false;
+  if(this.context&&this.context.state!=='closed')this.suspension=this.context.suspend().catch(()=>{});
+ }
+ async dispose(){
+  if(this.disposed)return;
+  this.disposed=true;this.cancel();this.ready=false;this.master?.disconnect();this.buffers.clear();
+  // WebKit may commit a pending suspension after close and resurrect its state.
+  // Finish the existing suspension before closing the context permanently.
+  await this.suspension;
+  if(this.context)await this.context.close().catch(()=>{});
+ }
+ private release(source:AudioBufferSourceNode,stop:boolean){
+  if(!this.active.delete(source))return;
+  source.onended=null;
+  if(stop)try{source.stop();}catch{/* A source may already have finished. */}
+  source.disconnect();
+ }
+}

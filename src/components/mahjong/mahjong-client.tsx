@@ -7,7 +7,7 @@ import { MahjongCallOption } from "./mahjong-call-option";
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, Expand, LoaderCircle, Radio, RefreshCw, Sparkles, Swords, Smartphone, Wifi, WifiOff, X } from "lucide-react";
+import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, Expand, LoaderCircle, Radio, RefreshCw, Sparkles, Swords, Smartphone, Volume2, VolumeX, Wifi, WifiOff, X } from "lucide-react";
 
 import { apiRequest, errorMessage } from "@/components/api-client";
 import { SessionProvider, useSession } from "@/hooks/use-session";
@@ -21,6 +21,7 @@ import { MahjongRules } from "./mahjong-rules";
 import { TileFace, tileKey, tileName } from "./mahjong-tile";
 import { MahjongRiver as River } from "./mahjong-river";
 import { MahjongMeld as MeldView } from "./mahjong-meld";
+import { useTableAudio } from "./use-table-audio";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
 import { MahjongAbortAnnouncements } from "./mahjong-abort-announcements";
@@ -408,10 +409,15 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const [overDiscardTarget, setOverDiscardTarget] = useState(false);
   const [choiceSubmitted, setChoiceSubmitted] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
+  const audioRootRef = useRef<HTMLElement>(null);
+  const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef});
   const nukiMotion = useNukiMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const drawArrival = useDrawArrival(game, room.id, ownSeat, {connected, canAnimate: motionCanAnimate, heldDecisionId: nukiMotion.heldDecisionId});
   const discardMotion = useDiscardMotion({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
+  const finishDiscardAudio = useCallback((id:string)=>{audio.land(id);discardMotion.finishFlight(id);},[audio.land,discardMotion.finishFlight]);
+  const finishCallAudio = useCallback((id:string)=>{audio.land(id);publicCallMotion.finishFlight(id);},[audio.land,publicCallMotion.finishFlight]);
+  const finishNukiAudio = useCallback((id:string)=>{audio.land(id);nukiMotion.finishFlight(id);},[audio.land,nukiMotion.finishFlight]);
   const drawLead = useDrawResultLead(game, discardMotion.flight);
   const drawPresentation = useSettlementPresentation({flow: game?.settlementFlow?.stage === "draw" ? game.settlementFlow : undefined, settlement: game?.settlement ?? null, connected, busy, onChoice, leadInMs: drawLead});
   const revealedHands = game?.settlement?.drawInfo && (game.settlementFlow?.stage !== "draw" || drawPresentation.elapsed >= drawRevealAt(game.settlement)) ? game.settlement.drawInfo.revealedHands : [];
@@ -596,8 +602,8 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       handReflow.cancel();
     }
   };
-  return <section onPointerDownCapture={cancelNukiInput} onClickCapture={cancelNukiInput} onKeyDownCapture={cancelNukiInput} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
-    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions"><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
+  return <section ref={audioRootRef} onPointerDownCapture={cancelNukiInput} onClickCapture={cancelNukiInput} onKeyDownCapture={cancelNukiInput} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
+    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions"><button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
 
     {tableScreen.hint ? <div className="mahjong-screen-hint" role="status" aria-label="屏幕方向提示" title={tableScreen.hint}>请旋转手机</div> : null}
     <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside>
@@ -667,9 +673,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     {game.settlement ? <MahjongSettlementPanel leadInMs={drawLead} game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}
     {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
     {inspectedSeat !== null ? <PublicMeldDialog player={game.players.find(p => p.seat === inspectedSeat)} member={room.members.find(m => m.seat === inspectedSeat)} onClose={() => setInspectedSeat(null)}/> : null}
-    {publicCallMotion.flight ? <DiscardFlightLayer kind="call" flight={publicCallMotion.flight} onFinish={publicCallMotion.finishFlight}/> : null}
-    {nukiMotion.flight ? <DiscardFlightLayer kind="nuki" flight={nukiMotion.flight} onFinish={nukiMotion.finishFlight}/> : null}
-    {discardMotion.flight ? <DiscardFlightLayer flight={discardMotion.flight} onFinish={discardMotion.finishFlight}/> : null}
+    {publicCallMotion.flight ? <DiscardFlightLayer kind="call" flight={publicCallMotion.flight} onFinish={finishCallAudio}/> : null}
+    {nukiMotion.flight ? <DiscardFlightLayer kind="nuki" flight={nukiMotion.flight} onFinish={finishNukiAudio}/> : null}
+    {discardMotion.flight ? <DiscardFlightLayer flight={discardMotion.flight} onFinish={finishDiscardAudio}/> : null}
   </section>;
 }
 

@@ -1,0 +1,112 @@
+"use client";
+import {useCallback,useEffect,useRef,useState,type RefObject} from 'react';
+import type {RoomView} from '@/modules/mahjong/types';
+import {TableAudioPlayer} from './table-audio';
+import {acceptedTableSounds,type TableSoundEvent} from './table-sounds';
+
+type Pending={cue:TableSoundEvent;parent?:string;epoch:number};
+const storageKey='yougui.mahjong.sound';
+const scope=(r:RoomView)=>JSON.stringify([r.id,r.variant,r.mySeat,r.game?.gameInstanceId,r.game?.handId]);
+
+export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView;connected:boolean;canAnimate:boolean;rootRef:RefObject<HTMLElement|null>}){
+ const [enabled,setEnabled]=useState(true),enabledRef=useRef(true);
+ const player=useRef<TableAudioPlayer|null>(null),previous=useRef<{room:RoomView;connected:boolean}|null>(null);
+ const pending=useRef(new Map<string,Pending>()),frames=useRef(new Set<number>()),epoch=useRef(0);
+ const scheduleRef=useRef<(id:string)=>void>(()=>{});
+ const clear=useCallback(()=>{
+  epoch.current++;pending.current.clear();
+  for(const id of frames.current)cancelAnimationFrame(id);frames.current.clear();
+ },[]);
+ const land=useCallback((id:string)=>{
+  const entry=pending.current.get(id);
+  if(!entry||entry.parent||entry.epoch!==epoch.current)return;
+  pending.current.delete(id);
+  if(enabledRef.current&&document.visibilityState!=='hidden')player.current?.play(entry.cue);
+  for(const [child,value] of pending.current)if(value.parent===id){
+   value.parent=undefined;
+   // Completion promises may run before this frame's RAF callbacks. Cross a
+   // paint boundary so the replacement is a separate presentation step.
+   const frame=requestAnimationFrame(()=>{frames.current.delete(frame);if(pending.current.get(child)===value&&value.epoch===epoch.current)scheduleRef.current(child);});
+   frames.current.add(frame);
+  }
+ },[]);
+ const schedule=useCallback((id:string)=>{
+  const frame=requestAnimationFrame(()=>{
+   frames.current.delete(frame);
+   const entry=pending.current.get(id),root=rootRef.current;
+   if(!entry||entry.parent||entry.epoch!==epoch.current||!root)return;
+   // Flight completion is reported by the actual layer, not a guessed delay.
+   // Flights use a body portal; match only this proven room/event identity.
+   const flight=[...document.querySelectorAll<HTMLElement>('[data-motion-event]')].find(node=>node.dataset.motionEvent===id);
+   if(flight){
+    const moves=flight.getAnimations?.()??[];
+    if(moves.length)Promise.all(moves.map(a=>a.finished)).then(()=>land(id)).catch(()=>{if(pending.current.get(id)===entry){pending.current.delete(id);for(const [child,value] of pending.current)if(value.parent===id)pending.current.delete(child);}});
+    return;
+   }
+   const animations:Animation[]=[];
+   if(entry.cue.kind==='nuki'){
+    for(const node of root.querySelectorAll<HTMLElement>('[data-nuki-seat]'))animations.push(...(node.getAnimations?.({subtree:true})??[]).filter(a=>a.id===`mahjong-nuki-arrival:${id}`));
+   }else if(entry.cue.kind==='draw'){
+    // Extraction completion can precede React committing the replacement rack.
+    // Wait for the actual held tile to be released before inspecting its arrival.
+    if(root.querySelector('.mahjong-drawn-wrap.is-nuki-held')){scheduleRef.current(id);return;}
+    for(const node of root.querySelectorAll<HTMLElement>('button.mahjong-tile.is-draw-arriving'))animations.push(...(node.getAnimations?.()??[]).filter(a=>a.playState!=='finished'));
+   }
+   if(!animations.length){land(id);return;}
+   Promise.all(animations.map(a=>a.finished)).then(()=>{
+    if(pending.current.get(id)===entry&&entry.epoch===epoch.current)land(id);
+   }).catch(()=>{
+    if(pending.current.get(id)===entry){
+     const current=previous.current?.room,game=current?.game;
+     const isSettledDraw=entry.cue.kind==='draw'&&entry.epoch===epoch.current&&root.isConnected
+      &&!root.querySelector('button.mahjong-tile.is-draw-arriving')&&game&&current
+      &&id===JSON.stringify(['draw',current.id,game.gameInstanceId,game.handId,game.decisionId,game.turnSeat]);
+     if(isSettledDraw)land(id);else{pending.current.delete(id);for(const [child,value] of pending.current)if(value.parent===id)pending.current.delete(child);}
+    }
+   });
+  });
+  frames.current.add(frame);
+ },[rootRef,land]);
+ scheduleRef.current=schedule;
+ useEffect(()=>{
+  const instance=new TableAudioPlayer(()=>{
+   const Constructor=window.AudioContext??(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
+   if(!Constructor)throw Error('WebAudio unavailable');return new Constructor();
+  });
+  player.current=instance;
+  let stored=true;try{stored=window.localStorage.getItem(storageKey)!=='off';}catch{/* Local settings may be unavailable. */}
+  enabledRef.current=stored;setEnabled(stored);instance.setEnabled(stored);
+  const gesture=(event:Event)=>{
+   if(event.isTrusted&&enabledRef.current&&document.visibilityState!=='hidden'
+    &&event.target instanceof Node&&rootRef.current?.contains(event.target))void instance.unlock();
+  };
+  const visibility=()=>{clear();previous.current=null;if(document.visibilityState==='hidden')instance.pause();};
+  const geometry=()=>{clear();previous.current=null;instance.cancel();};
+  const events=['resize','orientationchange','fullscreenchange','webkitfullscreenchange'];events.forEach(name=>window.addEventListener(name,geometry));
+  document.addEventListener('pointerdown',gesture,true);document.addEventListener('keydown',gesture,true);
+  document.addEventListener('visibilitychange',visibility);
+  return()=>{
+   clear();previous.current=null;instance.dispose();if(player.current===instance)player.current=null;
+   events.forEach(name=>window.removeEventListener(name,geometry));
+   document.removeEventListener('pointerdown',gesture,true);document.removeEventListener('keydown',gesture,true);document.removeEventListener('visibilitychange',visibility);
+  };
+ },[rootRef,clear]);
+ const toggle=useCallback(()=>{
+  const next=!enabledRef.current;enabledRef.current=next;setEnabled(next);clear();player.current?.setEnabled(next);
+  try{window.localStorage.setItem(storageKey,next?'on':'off');}catch{/* Muting still works without persistent settings. */}
+  if(next&&document.visibilityState!=='hidden')void player.current?.unlock();
+ },[clear]);
+ useEffect(()=>{
+  const old=previous.current;previous.current={room,connected};
+  if(old&&scope(old.room)!==scope(room)){clear();player.current?.cancel();}
+  if(!connected||document.visibilityState==='hidden'){clear();player.current?.pause();return;}
+  if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room))return;
+  const cues=acceptedTableSounds(old.room,room);
+  for(const cue of cues){
+   const parent=cue.kind==='draw'&&cues[0]?.kind!=='draw'?cues[0].id:undefined;
+   pending.current.set(cue.id,{cue,parent,epoch:epoch.current});
+   if(!parent)schedule(cue.id);
+  }
+ },[room,connected,canAnimate,clear,schedule]);
+ return {enabled,toggle,land};
+}
