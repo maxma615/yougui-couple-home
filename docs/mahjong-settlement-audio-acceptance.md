@@ -21,3 +21,13 @@
 证据保留在应用 `.local/audit/`，不提交构建产物、运行数据或环境凭据：`settlement-sound-candidate-r02.log`（增加双荣用例之前68项通过）、`settlement-sound-full-r02.log`（最终824项通过）、`settlement-sound-types-r02.log`、`settlement-sound-build-r01.log`、`settlement-sound-secrets-r02.log`。完整首次 r01 有6个备份恢复用例因工作树缺少 `pg_dump` 路径失败；添加现有本机 PostgreSQL 工具路径后完整 r02通过，没有删例或改恢复实现。
 
 本次代码为已验证的本地候选，将正常提交并推送自己的 GitHub 仓库。当前实际线上仍为 `8dd5182` / Build `pdkOlgPZWiQsgE294wFXe`；本轮没有重新发布服务器，完整雀魂体验目标仍在进行。
+
+## 真实浏览器音频补验（同日）
+
+已完成 **30/30 正式 GameRoom 音频场景**：Chromium/WebKit、三麻/四麻、真实物理引擎自摸/双荣，667和1440横屏，以及844横屏静音、断线、GET、旋转、卸载、晚加入和减少动态效果。使用自然设备时钟和真实 AudioContext；对应揭示 DOM 出现才启动真实音频源，双荣逐页实际合法 ACK、总收支只播放一次，刷新不重复，卸载后真实上下文关闭。没有把浏览器播放器或时间替换为桩。样本是测试牌局快照的正常推送和原生响应桥，不是已登录远端 WSS 或真实手机验收。
+
+**20/20 真实 OfflineAudioContext 波形**通过，包括原有七种桌上音效及三种结算短音；每种在两引擎中有非零振幅、安全峰值、有限尾部静音。信任点击实际解锁、重复/静音拒绝和真实上下文关闭通过。波形试听不等于手机扬声器或厂商声音相等。
+
+目标 Linux 的确切20文件选择先在本地运行，**307/307**通过。服务器只读核对仍是8dd5182：619源文件、449构建文件全摘要通过，运行镜像、清理器与禁备份状态正确，未切换线上。
+
+证据：`.local/audit/settlement-audio-browser-1791469631684/{manifest,summary}.json`、`settlement-audio-runtime-r03.log`（实际退出0）、`table-audio-wave-1791469577784/summary.json`、`settlement-audio-wave-r01.log`（实际退出0）、`settlement-audio-final/linux-selection-local-r01.{log,json}`，以及 `.local/ecs-deploy/late-response-remote-captures/late-response-settlement-audio-parent-r01.json`。保留脚本r01的JSX括号错误、r02缺少浏览器process环境定义失败；修正脚本整理后相同完整30例r03通过，没有减少用例或改产品来适配测试。下一步冻结、隔离Linux和保护发布，整体目标仍未完成。
