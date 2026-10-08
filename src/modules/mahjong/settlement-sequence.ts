@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "@/lib/errors";
-import type { GameView, MahjongGame, Settlement, SettlementFlow } from "./types";
+import type { GameView, MahjongGame, PublicWinDeclaration, Settlement, SettlementFlow } from "./types";
 
 type Page = { stage: SettlementFlow["stage"]; settlement: Settlement; detailIndex: number };
 
@@ -14,6 +14,7 @@ type Sequence = {
   indices: number[];
   startedAt: number[];
   confirmed: Set<number>;
+  winDeclarations?: PublicWinDeclaration[];
 };
 
 /** Native engines calculate their usual payments. This adapter keeps the next
@@ -60,6 +61,14 @@ export class SettlementSequenceGame implements MahjongGame {
     }
     const delta = this.seats().map(seat => details.reduce((sum, detail) => sum + detail.delta[seat], 0));
     const pages: Page[] = [];
+    // All native winners have already declared at this boundary. Expose only
+    // their public declarations, independently of each viewer's detail cursor.
+    const winDeclarations: PublicWinDeclaration[] | undefined = first.settlement.kind === "win" ? details.map(detail => {
+      const seat = detail.winnerSeat, winMethod = detail.winMethod;
+      if (seat === undefined || !Number.isInteger(seat) || seat < 0 || seat >= this.seatCount || (winMethod !== "ron" && winMethod !== "tsumo")) throw Error("Invalid native winning declaration");
+      return {seat, winMethod};
+    }) : undefined;
+    if (winDeclarations && (new Set(winDeclarations.map(d => d.seat)).size !== winDeclarations.length || (winDeclarations.length > 1 && winDeclarations.some(d => d.winMethod !== "ron")))) throw Error("Inconsistent native winning declarations");
     let detailCount = details.length;
     if (first.settlement.kind === "win") details.forEach((settlement, detailIndex) => pages.push({stage: "detail", settlement, detailIndex}));
     else {
@@ -75,7 +84,7 @@ export class SettlementSequenceGame implements MahjongGame {
     if (first.settlement.kind === "win" || first.settlement.drawInfo?.kind !== "abort") {
       pages.push({stage: "scores", detailIndex: detailCount, settlement: {...details[details.length - 1], delta}});
     }
-    this.sequence = { id: randomUUID(), snapshots, pages, detailCount, oldScores, delta, indices: this.seats().map(() => 0), startedAt: this.seats().map(() => this.now()), confirmed: new Set() };
+    this.sequence = { id: randomUUID(), snapshots, pages, detailCount, oldScores, delta, winDeclarations, indices: this.seats().map(() => 0), startedAt: this.seats().map(() => this.now()), confirmed: new Set() };
   }
 
   respond(seat: number, decisionId: string, choiceId: string) {
@@ -116,6 +125,7 @@ export class SettlementSequenceGame implements MahjongGame {
       id: sequence.id, stage: page.stage, detailIndex: page.detailIndex, detailCount: sequence.detailCount,
       elapsedMs: Math.max(0, this.now() - sequence.startedAt[seat]), oldScores: sequence.oldScores.slice(), delta: sequence.delta.slice(),
       newScores: sequence.oldScores.map((score, seat) => score + sequence.delta[seat]),
+      ...(sequence.winDeclarations ? {winDeclarations: sequence.winDeclarations.map(declaration => ({...declaration}))} : {}),
     };
     return view;
   }
