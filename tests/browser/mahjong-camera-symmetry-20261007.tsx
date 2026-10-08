@@ -4,11 +4,9 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { build } from "esbuild";
 import { chromium, webkit } from "@playwright/test";
 import sharp from "sharp";
-import { GameRoom } from "../../src/components/mahjong/mahjong-client";
 import { RiichiGame } from "../../src/modules/mahjong/engine";
 import { northReplacementFixture } from "../fixtures/mahjong-view-game";
 import { projectedSampleScript } from "./projected-samples";
@@ -16,6 +14,23 @@ import type { RoomView } from "../../src/modules/mahjong/types";
 
 const css = [...readFileSync("src/app/mahjong/page.tsx", "utf8").matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)]
   .map(match => readFileSync(`src/app/mahjong/${match[1]}`, "utf8")).join("\n");
+const bundle = await build({ stdin: { contents: `
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { flushSync } from 'react-dom';
+  import { GameRoom } from './src/components/mahjong/mahjong-client';
+  const root = createRoot(document.getElementById('root'));
+  window.cameraChoices = [];
+  window.showCameraRoom = room => flushSync(() => root.render(
+    React.createElement('main', {className:'mahjong-page'},
+      React.createElement('div', {className:'mahjong-shell'},
+        React.createElement(GameRoom, {room, ownSeat:room.mySeat, host:true,
+          busy:false, connected:true, motionCanAnimate:false,
+          onChoice:choice => window.cameraChoices.push(choice),
+          onFinish:()=>{}, onLeave:()=>{}, onRematch:()=>{}})))));
+`, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, write: false,
+  platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"development"' } });
 const output = `.local/audit/mahjong-camera-symmetry-${new Date().toISOString().replace(/[-:.TZ]/g, "")}`;
 mkdirSync(output, { recursive: false });
 const colours = [[250, 30, 190], [20, 230, 230], [20, 40, 250], [70, 250, 35]];
@@ -45,17 +60,21 @@ for (const engine of [chromium, webkit]) {
       const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1,
         ...(engine === webkit ? { recordVideo: { dir: `${output}/video`, size: { width: size.width + size.width % 2, height: size.height + size.height % 2 } } } : {}) });
       const page = await context.newPage();
+      const pageErrors: string[] = [];
+      page.on("pageerror", error => pageErrors.push(error.message));
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.route("https://mahjong.local/images/**", async route => {
         const pathname = new URL(route.request().url()).pathname;
         await route.fulfill({ status: 200, contentType: pathname.endsWith(".svg") ? "image/svg+xml" : "image/webp", body: readFileSync(`public${pathname}`) });
       });
       await page.route("https://mahjong.local/fonts/**", route => route.fulfill({contentType:"font/woff2",body:readFileSync("public"+new URL(route.request().url()).pathname)}));
-      const noop = () => {};
-      const html = renderToStaticMarkup(<GameRoom room={room} ownSeat={room.mySeat!} host busy={false} connected onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
-      await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
+      await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><div id="root"></div>`);
+      await page.addScriptTag({ content: `globalThis.__name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});globalThis.process={env:{NODE_ENV:'development'}};\n${bundle.outputFiles[0].text}` });
+      assert.deepEqual(pageErrors, [], `${label}: browser bundle must initialize`);
+      await page.evaluate(room => (window as any).showCameraRoom(room), room);
       if (process.env.CAMERA_PROBE_CSS) await page.addStyleTag({ content: process.env.CAMERA_PROBE_CSS });
       await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
+      await page.evaluate(() => document.fonts.ready);
       await page.addScriptTag({ content: `globalThis.__name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n${projectedSampleScript}` });
       assert.equal(await page.locator(".mahjong-table__own-public [data-seat]").getAttribute("data-seat"),String(room.mySeat));
       assert.equal(await page.getByTestId("mahjong-hand").locator("[data-tile-face]").count(),room.game!.hand.length);
@@ -101,6 +120,8 @@ for (const engine of [chromium, webkit]) {
       await page.waitForTimeout(500);
       const stem = `${output}/${engine.name()}-${room.variant}-seat${room.mySeat}-${size.width}`;
       const snapshot = await page.screenshot({ path: `${stem}-snapshot.png` });
+      assert.deepEqual(pageErrors, [], `${label}: mounted component must not throw`);
+      assert.deepEqual(await page.evaluate(() => (window as any).cameraChoices), [], `${label}: rendering must not submit a choice`);
       const video = page.video();
       await context.close();
       let shot = snapshot, videoPath: string | null = null;
@@ -150,12 +171,12 @@ for (const engine of [chromium, webkit]) {
         if([...rack.rearResiduals,...rack.frontResiduals].some(d=>d>.6))issues.push(`seat${rack.seat} ${rack.position} feet miss floor: ${JSON.stringify([rack.rearResiduals,rack.frontResiduals])}`);
       }
       for (const sample of samples) if (!sample.centreMatches || sample.count < 50 || sample.centroidError > (video ? 2 : 1.5) || (!video && sample.error > 10)) issues.push(`patch${sample.index}: DOM centre ${sample.x},${sample.y} paints ${sample.actual} instead of ${sample.expected}; component=${sample.count}, centroid error=${sample.centroidError.toFixed(3)}px`);
-      results.push({ label, size, capture: video ? "Screencast compositor video frame" : "Page screenshot", videoPath, ...measured, samples, issues });
+      results.push({ label, size, rendering: "React createRoot mounted GameRoom", pageErrors, capture: video ? "Screencast compositor video frame" : "Page screenshot", videoPath, ...measured, samples, issues });
       if (issues.length) { failures.push(`${label}: ${issues.join("; ")}`); console.log(`FAIL ${failures.at(-1)}`); }
       else console.log(`PASS ${label}: rack floor/seam alignment, projective depth and 4 DOM/paint centre samples agree`);
     }
   } finally { await browser.close(); }
 }
-writeFileSync(`${output}/summary.json`, JSON.stringify({ probeCss: process.env.CAMERA_PROBE_CSS ?? null, baseHead: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), testSha256: createHash("sha256").update(readFileSync("tests/browser/mahjong-camera-symmetry-20261007.tsx")).digest("hex"), cssSha256: createHash("sha256").update(css).digest("hex"), results, failures }, null, 2)+"\n");
+writeFileSync(`${output}/summary.json`, JSON.stringify({ probeCss: process.env.CAMERA_PROBE_CSS ?? null, baseHead: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), rendering: "React createRoot mounted GameRoom", bundleSha256: createHash("sha256").update(bundle.outputFiles[0].text).digest("hex"), clientSha256: createHash("sha256").update(readFileSync("src/components/mahjong/mahjong-client.tsx")).digest("hex"), testSha256: createHash("sha256").update(readFileSync("tests/browser/mahjong-camera-symmetry-20261007.tsx")).digest("hex"), cssSha256: createHash("sha256").update(css).digest("hex"), results, failures }, null, 2)+"\n");
 assert.deepEqual(failures, [], "projected DOM geometry must be symmetric, fit the viewport, and agree with composited pixels in both engines");
 console.log(`PASS ${results.length} real-engine scenes from every seat with ${results.length*4} paint checks; full tabletop fits symmetrically in ${output}`);
