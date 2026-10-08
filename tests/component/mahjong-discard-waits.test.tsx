@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {afterEach,expect,it,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen} from '@testing-library/react';
+import {act,cleanup,fireEvent,render,screen} from '@testing-library/react';
 import {GameRoom} from '@/components/mahjong/mahjong-client';
 import type {GameView,RoomView} from '@/modules/mahjong/types';
 afterEach(cleanup);
@@ -74,4 +74,16 @@ it('the single discard hold entry follows the current riichi mode and never subm
  const r=room(),onChoice=vi.fn();r.game!.hand=['p1','p2','p3','p4','p5','p6','p7','p8','p9','s1','s2','z1','z1','z7'];r.game!.drawnTile='z7';r.game!.choices=[{id:'cut',type:'discard',value:'z7_'},{id:'r',type:'riichi',value:'z7_'}];
  render(<GameRoom room={r} ownSeat={0} connected motionCanAnimate={false} host busy={false} onChoice={onChoice} onRematch={()=>{}} onFinish={()=>{}} onLeave={()=>{}}/>);
  fireEvent.click(screen.getByRole('button',{name:'立直'}));const peek=screen.getByRole('button',{name:'查看待牌'});fireEvent.keyDown(peek,{key:'Enter'});expect(screen.getByRole('status',{name:'待牌预览'})).toBeTruthy();fireEvent.keyUp(peek,{key:'Enter'});expect(onChoice).not.toHaveBeenCalled();expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();
+});
+
+
+it('desktop dwell preselects a physical tile so the next click submits its native choice',()=>{
+ vi.useFakeTimers();
+ try {
+  const onChoice=vi.fn();render(<GameRoom room={room()} ownSeat={0} connected motionCanAnimate={false} host busy={false} onChoice={onChoice} onRematch={()=>{}} onFinish={()=>{}} onLeave={()=>{}}/>);
+  const button=screen.getAllByRole('button',{name:'切出 东风'}).find(b=>!(b as HTMLButtonElement).disabled)!;
+  const enter=new Event('pointerover',{bubbles:true});Object.defineProperty(enter,'pointerType',{value:'mouse'});fireEvent(button,enter);
+  act(()=>vi.advanceTimersByTime(11));expect(button.getAttribute('aria-pressed')).toBe('true');expect(onChoice).not.toHaveBeenCalled();
+  fireEvent.click(button,{detail:1});expect(onChoice).toHaveBeenCalledOnce();expect(onChoice.mock.calls[0][0]).toEqual({id:'cut',type:'discard',value:'z1_'});
+ } finally {vi.useRealTimers();}
 });
