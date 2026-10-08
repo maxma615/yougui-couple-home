@@ -21,3 +21,11 @@
 The actual r04 run completed with 120 PASS / 0 FAIL: `.local/audit/drag-environment-20261008/browser-full-r04.log`, `.local/audit/seat-drag-environment-final-1791444183542/proof.json`. The single reviewer found no Critical/Important cancellation-effect issue. The root fix pass makes opponent hit setup use native integer pointer coordinates, asserts selection clearing and capture release before pointer-up, and constrains all North local matrix components. Type checking after those changes and after the camera harness change exited 0. This is local evidence, not a new production release.
 
 The user reports a parallelogram table. The camera harness now reads the actual page CSS imports. Twelve Chromium/WebKit sanma/yonma viewport scenes and 48 composited paint samples passed: `.local/audit/mahjong-camera-symmetry-20261008072654668/summary.json`. Chromium screenshots and WebKit screencast frames show a symmetric trapezoid. The WebKit Page screenshot path instead paints a skewed parallelogram and flattened standing tiles; this is reproduced locally but is not yet evidence of the user's actual browser or screen. No product camera fix is claimed. The parent-perspective probe failed and must not be applied. The translateZ(0) parent probe retained correct compositor frames but did not fix Page screenshot rendering. Both probes are test instrumentation only. The user's browser/device evidence is pending; do not deploy a speculative camera change or describe a screenshot-only rendering defect as a confirmed end-user runtime cause.
+
+## 2026-10-08 发布验证
+
+实际上线源 d8173733b402cbd418a175e40dd3a927bf11fa00 / Build omo_wr9qr5dVYXw96KCbz / 镜像 sha256:a542c7a5c715af384ba3b29dce74c5e82cd88571725310362dd9ed795952a218。COPY-only候选592源码和449构建文件逐项摘要通过，无服务器npm/Next构建。Linux第一次16文件263断言通过，但120秒执行上限导致真实退出124，发布门不通过；失败记录完整保留。确认终止且容器已移除后，以相同镜像、0.5 CPU/384 MiB、无网络、只读容器重跑，时限180秒，r08状态证明263/263且任务正常退出0。不能将第一次断言通过冒充完整成功。
+
+发布器实际exit0且保护门恢复；权威无真人牌局检查通过。公网默认TLS health200，130资源SHA一致；上线592/449文件及manifest摘要一致，12业务表摘要发布前后为9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41。清理器CID/镜像与禁备份状态保持，未备份或下载用户资料。主目录7所属文件保护同步通过，598文件基线的其它字节/状态及HEAD/index/next-env保持。发布证据见[发布测量](measurements/mahjong-drag-environment-published-2026-10-08.json)。
+
+本次修复显示几何变化时旧拖牌误提交风险。未修改相机，未宣称用户设备平行四边形问题已经修复，真实Android旋转触摸和厂商全体验仍未证明。连续目标保持active。

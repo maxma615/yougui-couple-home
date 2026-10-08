@@ -1,0 +1,24 @@
+{
+  "sourceRevision": "d8173733b402cbd418a175e40dd3a927bf11fa00",
+  "buildId": "omo_wr9qr5dVYXw96KCbz",
+  "imageId": "sha256:a542c7a5c715af384ba3b29dce74c5e82cd88571725310362dd9ed795952a218",
+  "sourceFiles": 592,
+  "nextFiles": 449,
+  "linuxTests": 263,
+  "localTests": 780,
+  "browserDragScenes": 120,
+  "cameraScenes": 12,
+  "cameraPaintChecks": 48,
+  "publicAssets": 130,
+  "fullGoalComplete": false,
+  "cameraUserRuntimeCauseConfirmed": false,
+  "evidenceSha256": {
+    "drag-environment-d817373-r01-public-proof.json": "095d794c4b1be2fb2f3ea17a17fc691012bb07661ab3eff08818842e681040d8",
+    "drag-environment-d817373-r01-owned-sync-proof.json": "d2830f18a003209a23251fbd17e1b5f0324c6c967b1518f8b0c6b7414f145ea2",
+    "drag-environment-d817373-r08-linux-status.json": "0ab5886a62f75a7965d40760d0e1c2504f397c5d93fe029e92bc09375f509fce",
+    "drag-environment-d817373-r02-publish-status.json": "f928aca87b1dd2913b12a0fb6436f97f12d0348185436e90359abd151766a1c6",
+    "drag-environment-d817373-r01-live-check.json": "d9bb7b1b415aa53914160a0e66fc79dd905e5166d49775590cd4012f3b41a5e9",
+    "drag-environment-d817373-r01-final-health.json": "2f1a58645a02115185c73c47ed5898be0cc4c2174ddd2f397528c56b0db7ea3e",
+    "drag-environment-d817373-r01-published-preflight.json": "25c738171447dc0da5e41fa8f942a6036aafd29f657d054e112744dbc10b91a0"
+  }
+}
