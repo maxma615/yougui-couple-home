@@ -15,6 +15,7 @@ const screenDescriptors = [
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   for (const {target, key, descriptor} of screenDescriptors) {
     if (descriptor) Object.defineProperty(target, key, descriptor);
     else Reflect.deleteProperty(target, key);
@@ -42,7 +43,8 @@ it("requests fullscreen before landscape lock and releases only the screen it ac
   Object.defineProperty(document, "fullscreenElement", { configurable: true, value: null });
 });
 
-it("keeps a useful rotation hint when fullscreen is unavailable, without sending a game command", async () => {
+it("keeps a useful rotation hint in portrait when fullscreen is unavailable, without sending a game command", async () => {
+  vi.stubGlobal("matchMedia", vi.fn(() => Object.assign(new EventTarget(), {matches:false})));
   const onChoice = show(fixtureGame().view(0));
   fireEvent.click(screen.getByRole("button", { name: "全屏横屏" }));
   await waitFor(() => expect(screen.getByRole("status", { name: "屏幕方向提示" }).textContent).toContain("旋转手机"));
