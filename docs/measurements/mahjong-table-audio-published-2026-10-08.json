@@ -1,0 +1,118 @@
+{
+  "sourceRevision": "a2589864d7a768b19095c9adf7f4932914cb70ef",
+  "buildId": "lMl4wz5EWBvGEUPhOBr1B",
+  "imageId": "sha256:a835f64ee7d58c3797521832040a3ae21203f7dafe3c9f0e6eee7fd17e88c863",
+  "release": "a258986",
+  "manifestSha256": "32167dbd1fd6883dbb8492548569f1561d4978abc0a31a3380f64b8307dfb77a",
+  "sourceFiles": 573,
+  "nextFiles": 449,
+  "checks": {
+    "localTests": 718,
+    "localTestFiles": 73,
+    "audioBrowserScenes": 42,
+    "publicCallBrowserScenes": 84,
+    "waveforms": 8,
+    "abortScenes": 38,
+    "drawScenes": 24,
+    "discardLeadScenes": 4,
+    "animationClocks": 8,
+    "linuxTests": 154,
+    "linuxFiles": 8,
+    "publicAssets": 130,
+    "healthStatus": 200,
+    "tlsVerified": true
+  },
+  "remoteProofs": {
+    "build-status": {
+      "sha256": "f26950adc2df89027f9d6a244924aa9597baee26651712f9fc817cf387517f7a",
+      "commandSha256": "53f22af364021116f502b523ed9512c99de4ec82d91ccf484577a7ab29e658e3"
+    },
+    "candidate": {
+      "sha256": "05ba733574e6178e015da121d1f586f5dff17ca76ac517ab10bf2f0e39db8fce",
+      "commandSha256": "f5284233674759aa8bb29fec5d77b4f99cc95d837c270dbede27fe8694018dd9"
+    },
+    "linux-status": {
+      "sha256": "69d27603af1ab4ccc8930a4740336ec47f7acb5bed1c761a2341766b313d7a21",
+      "commandSha256": "7b4d72380859e7da3e5e57edcb9bfec7c81b75d4ba95bfa502ec3b6b4f44de11"
+    },
+    "staging": {
+      "sha256": "a7fba819f5e77c5cbdd7495d87d87866bbb012e6d44393dbeab6b26788f2bb99",
+      "commandSha256": "cd7338ef433612bfc01725aca69aae0289f59eeee10d60fc2cb870fe1c87b579"
+    },
+    "readiness": {
+      "sha256": "224df3adbec355ae3be1865cf35565e0147c90e0c64054a23f3a09b449a0dcfb",
+      "commandSha256": "f7b759a229f4bab2255d45e60f49880672f9923dfebd25ac094ec381a1166276"
+    },
+    "publish": {
+      "sha256": "647e5b5f63b9a126747c80e5efbe624137f15b2b8c7ca48f48e23893060ac5d8",
+      "commandSha256": "4f3e8f49e103a8905adc3e7c4b1dd328dc85da4228bda87730479cfdbbbf70be"
+    },
+    "publish-status": {
+      "sha256": "5dd7a8a2cdc8379d200f2517e10641d6453cab1a9314fef2ec1a74b5dccdefee",
+      "commandSha256": "f840459278afd5e8283db1d5d6aba67f56f619411d0864cf62679a5d458047ff"
+    },
+    "live-check": {
+      "sha256": "2c34be7c25f55c0784d51715908cfc4d1811467255bb4460bf9ebb76c1b6b5cd",
+      "commandSha256": "485a2e52dd6708baa6434c6de589a740cc6a435a56911b80b6c8562ec531deb6"
+    },
+    "final-health": {
+      "sha256": "82f801ec390cee2638999464205e194d93fd448063dc022381cc2bd7d0b7f7c5",
+      "commandSha256": "0b1e51048d8c46d55c5c6d226e5d363b969326616af0447fce531ad41cf922d6"
+    },
+    "published-preflight": {
+      "sha256": "05a1bacdb3310804850c4e5aa03f8f3a6a23cdb8067d2240ec64e4bad273e1ef",
+      "commandSha256": "6738ce8b0d4ee006fa3d354d90ab2f88f159e165d501caff6c81621ce016a012"
+    }
+  },
+  "publicProofSha256": "0f31c20d2714ad5ca7da3aa3874f64c337f23961f5aff56926725508752f8ce9",
+  "liveVerification": {
+    "schemaVersion": 1,
+    "release": "a258986",
+    "sourceRevision": "a2589864d7a768b19095c9adf7f4932914cb70ef",
+    "buildId": "lMl4wz5EWBvGEUPhOBr1B",
+    "imageId": "sha256:a835f64ee7d58c3797521832040a3ae21203f7dafe3c9f0e6eee7fd17e88c863",
+    "sourceFiles": 573,
+    "nextFiles": 449,
+    "manifestSha256": "32167dbd1fd6883dbb8492548569f1561d4978abc0a31a3380f64b8307dfb77a",
+    "allHashesMatch": true,
+    "allTableDigestsUnchanged": true,
+    "tableCount": 12,
+    "beforeTableDigestsSha256": "62822111fb43742ac11d3a6ce9174bff9a9d644af57378749c0a8eccffce90ef",
+    "afterTableDigestsSha256": "62822111fb43742ac11d3a6ce9174bff9a9d644af57378749c0a8eccffce90ef",
+    "tableFingerprintHelperSha256": "6ec11f779d989371f319c9cf132f941a0710a682695d596c57c1fa0d9750de2a",
+    "baseCompatibilityProofSha256": "05ba733574e6178e015da121d1f586f5dff17ca76ac517ab10bf2f0e39db8fce",
+    "baseCompatibilityCommandSha256": "f5284233674759aa8bb29fec5d77b4f99cc95d837c270dbede27fe8694018dd9",
+    "scoringPinSha256": "c426f0f98ac6b931549baa9220c9ac6e394afb4f1e9cdaae3cf3a28ced5eaf42",
+    "scoringProofSha256": "69d27603af1ab4ccc8930a4740336ec47f7acb5bed1c761a2341766b313d7a21",
+    "scoringCommandSha256": "7a375b12fdd282e50942bdf8bd811ba9876c5662d8b87562315ff0d32113fcc4",
+    "scoringTestCount": 154,
+    "scoringPassed": 154,
+    "cleanupCidAndImageUnchanged": true,
+    "backupMarkerPath": "/srv/yougui/config/backups-disabled",
+    "backupMarkerSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "backupTimerEnabled": "masked",
+    "backupTimerActive": "inactive",
+    "backupServiceActive": "inactive",
+    "backupPolicyDisabled": true,
+    "backupPathsExist": {
+      "/srv/yougui/backups": false,
+      "/srv/yougui/album-backups": false,
+      "/srv/yougui/.backup-transfer": false
+    },
+    "appResources": {
+      "nanoCpus": 1000000000,
+      "memoryBytes": 805306368
+    },
+    "availableDiskBytes": 21996453888
+  },
+  "reviewSha256": "f9a6a20cefe2ebb86a5bb9f09aad49bb3dfd5aa4a9fc04c598d8f614cb062f15",
+  "reviewRulingSha256": "1173981240efcd25a5b6bba703cdc94438ac317bfdd82ff1d12cabf85d84924c",
+  "limitations": [
+    "真实 Android 未验收",
+    "角色语音和完整声效未完成",
+    "实际客户端桌面斜切尚未复现",
+    "完整雀魂体验目标仍 active"
+  ],
+  "backupCreated": false,
+  "userDataDownloaded": false
+}
