@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {discardWaits} from '@/components/mahjong/discard-waits';
+import {currentWaits,discardWaits} from '@/components/mahjong/discard-waits';
 import type {GameView} from '@/modules/mahjong/types';
 const shapes=(waits:ReturnType<typeof discardWaits>)=>waits.map(({tile,remaining})=>({tile,remaining}));
 const tiles=(s:string)=>[...s.matchAll(/([mpsz])(\d+)/g)].flatMap(m=>[...m[2]].map(n=>m[1]+n));
@@ -19,3 +19,19 @@ it('a different discard can create a non-furiten wait, while every historical ow
 it('passed-ron blockage persists after a riichi discard, but ordinary own discard resets temporary blockage',()=>{const g=view('m123p123s456789z12');g.choices=[{id:'z2',type:'discard',value:'z2'}];Object.assign(g,{ronBlocked:true});expect(discardWaits(g,0,'yonma','z2')[0].furiten).toBe(false);g.players[0].riichi=true;expect(discardWaits(g,0,'yonma','z2')[0].furiten).toBe(true)});
 it('counts an exposed indicator without inventing a fifth tile',()=>{const g=view();g.doraIndicators=['z1'];expect(discardWaits(g,0,'yonma','d:z1')[0].remaining).toBe(1)});
 it('all thirteen orphan waits share permanent furiten after discarding one of those waits',()=>{const g=view('m119p19s19z1234567');g.choices=[{id:'m1',type:'discard',value:'m1'}];const result=discardWaits(g,0,'sanma','m1');expect(result).toHaveLength(13);expect(result.every(w=>w.furiten&&w.ronYaku&&w.tsumoYaku)).toBe(true)});
+
+it('current thirteen-tile waits need no discard choice and preserve current temporary furiten',()=>{
+ const g=view('m123p123s456789z1');g.drawnTile=null;g.choices=[];g.turnSeat=1;
+ expect(currentWaits(g,0,'yonma')[0]).toMatchObject({tile:'z1',remaining:3,ronYaku:false,tsumoYaku:true,furiten:false});
+ g.ronBlocked=true;expect(currentWaits(g,0,'yonma')[0].furiten).toBe(true);
+ g.ronBlocked=false;g.players[0].discards=['z1-'];expect(currentWaits(g,0,'yonma')[0].furiten).toBe(true);
+});
+it('current open and closed-kan waits count public tiles without mutating the view',()=>{
+ for(const meld of ['p111-','p1111']){const g=view('s123456789z4');g.players[0].melds=[meld];g.players[1].nuki=2;g.drawnTile=null;g.choices=[];
+ const before=structuredClone(g);expect(currentWaits(g,0,'sanma')[0]).toMatchObject({tile:'z4',remaining:1});expect(g).toEqual(before);}
+});
+it('current wait entry is absent for fourteen tiles, non-tenpai and finished hands',()=>{
+ expect(currentWaits(view(),0,'yonma')).toEqual([]);
+ const g=view('p147s258m369z1234');expect(currentWaits(g,0,'yonma')).toEqual([]);
+ const ready=view('p123456789s123z1');ready.settlement={kind:'draw',name:'荒牌',yaku:[],delta:[0,0,0,0],uraIndicators:[]};expect(currentWaits(ready,0,'yonma')).toEqual([]);
+});

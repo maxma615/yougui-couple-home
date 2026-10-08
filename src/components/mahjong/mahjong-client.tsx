@@ -1,14 +1,14 @@
 "use client";
 
 import {useMahjongActionPlacement} from "./use-action-placement";
-import {discardWaits} from "./discard-waits";
+import {currentWaits,discardWaits} from "./discard-waits";
 import { MahjongFinalRanking } from "./mahjong-final-ranking";
 
 import { MahjongCallOption } from "./mahjong-call-option";
 
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ArrowRight, Check, CircleHelp, Clock3, Copy, Crown, Dices, DoorOpen, Expand, LoaderCircle, Radio, RefreshCw, Sparkles, Swords, Smartphone, Volume2, VolumeX, Wifi, WifiOff, X } from "lucide-react";
 
 import { apiRequest, errorMessage } from "@/components/api-client";
@@ -408,6 +408,11 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const [riichiMode, setRiichiMode] = useState(false);
   const [pendingCallType, setPendingCallType] = useState<Choice["type"] | null>(null);
   const [selectedHandTile, setSelectedHandTile] = useState<{ tileId: string; choiceId: string } | null>(null);
+  const [hoveredChoiceId, setHoveredChoiceId] = useState<string | null>(null);
+  const [showCurrentWaits, setShowCurrentWaits] = useState(false);
+  const currentHandWaits = useMemo(() => game ? currentWaits(game, ownSeat, room.variant) : [], [game, ownSeat, room.variant]);
+  const waitCache = useMemo(() => new Map<string, ReturnType<typeof discardWaits>>(), [game, ownSeat, room.variant]);
+  useEffect(() => { setHoveredChoiceId(null); setShowCurrentWaits(false); }, [game?.decisionId, room.id, ownSeat, riichiMode, connected, busy]);
   const [dragPreview, setDragPreview] = useState<{ tileId: string; x: number; y: number } | null>(null);
   const [overDiscardTarget, setOverDiscardTarget] = useState(false);
   const [choiceSubmitted, setChoiceSubmitted] = useState(false);
@@ -627,7 +632,13 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   }
   const pendingCalls = pendingCallType ? otherChoices.filter(choice => choice.type === pendingCallType) : [];
   const allowedChoices = riichiMode ? riichiChoices : discardChoices;
-  const selectedWaits = selectedHandTile && allowedChoices.some(choice=>choice.id===selectedHandTile.choiceId) && connected && !busy && !choiceSubmitted && !isFinished ? discardWaits(game,ownSeat,room.variant,selectedHandTile.choiceId) : [];
+  const previewChoiceId = hoveredChoiceId ?? selectedHandTile?.choiceId;
+  if (previewChoiceId && allowedChoices.some(choice=>choice.id===previewChoiceId) && !waitCache.has(previewChoiceId)) {
+    waitCache.set(previewChoiceId, discardWaits(game,ownSeat,room.variant,previewChoiceId));
+  }
+  const canPreview = connected && !busy && !choiceSubmitted && !isFinished && !game.settlement;
+  const selectedWaits = canPreview ? previewChoiceId && allowedChoices.some(choice=>choice.id===previewChoiceId) ? waitCache.get(previewChoiceId) ?? [] : showCurrentWaits ? currentHandWaits : [] : [];
+
   const ownMember = room.members.find((member) => member.seat === ownSeat);
 
   const cancelNukiInput = (event: { target: EventTarget | null }) => {
@@ -639,7 +650,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     }
   };
   return <section ref={audioRootRef} onPointerDownCapture={cancelNukiInput} onClickCapture={cancelNukiInput} onKeyDownCapture={cancelNukiInput} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
-    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions"><button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
+    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions">{canPreview && currentHandWaits.length > 0 ? <button type="button" className="mahjong-screen-button" aria-label="查看待牌" aria-pressed={showCurrentWaits} onClick={() => setShowCurrentWaits(value => !value)}>听牌</button> : null}<button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
 
     {tableScreen.hint ? <div className="mahjong-screen-hint" role="status" aria-label="屏幕方向提示" title={tableScreen.hint}>请旋转手机</div> : null}
     <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside>
@@ -681,9 +692,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
             const tileId = `hand:${index}:${tile}`;
             const choices = allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(tile) && !choice.value.endsWith("_"));
             const choice = choices[0];
-            return <HandActionTile key={tileId} tileId={tileId} value={tile} choices={choices} disabled={busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
+            return <HandActionTile key={tileId} tileId={tileId} value={tile} choices={choices} disabled={busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onHover={setHoveredChoiceId} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
           })}
-          {game.drawnTile ? <span className={`mahjong-drawn-wrap${nukiMotion.heldDecisionId === game.decisionId ? " is-nuki-held" : ""}`}><i>摸</i><HandActionTile key={game.decisionId} tileId={`drawn:${game.decisionId}:${game.drawnTile}`} value={game.drawnTile} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={busy || !connected || choiceSubmitted} drawn arriving={drawArrival.arriving} selected={Boolean(selectedHandTile?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` && selectedHandTile.choiceId === allowedChoices.find(choice => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))?.id)} drag={dragPreview?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` ? dragPreview : null} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/></span> : null}
+          {game.drawnTile ? <span className={`mahjong-drawn-wrap${nukiMotion.heldDecisionId === game.decisionId ? " is-nuki-held" : ""}`}><i>摸</i><HandActionTile key={game.decisionId} tileId={`drawn:${game.decisionId}:${game.drawnTile}`} value={game.drawnTile} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={busy || !connected || choiceSubmitted} drawn arriving={drawArrival.arriving} selected={Boolean(selectedHandTile?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` && selectedHandTile.choiceId === allowedChoices.find(choice => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))?.id)} drag={dragPreview?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` ? dragPreview : null} onHover={setHoveredChoiceId} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/></span> : null}
         </div></div></div>
       </div>
     </div>
@@ -796,9 +807,10 @@ function choiceDescription(value: string) {
   return [...match[2].replace(/\D/g, "")].map((number) => displayShortTile(`${match[1]}${number}`)).join(" ");
 }
 
-function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriving = false, selected = false, drag, onActivate, onPointerStart, onPointerMove, onPointerEnd, onPointerCancel }: {
+function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriving = false, selected = false, drag, onHover, onActivate, onPointerStart, onPointerMove, onPointerEnd, onPointerCancel }: {
   tileId: string; value: string; choices: Choice[]; disabled: boolean; drawn?: boolean; arriving?: boolean; selected?: boolean;
   drag: { tileId: string; x: number; y: number } | null;
+  onHover: (choiceId: string | null) => void;
   onActivate: (tileId: string, choice: Choice, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onPointerStart: (tileId: string, choice: Choice, event: ReactPointerEvent<HTMLButtonElement>) => void;
   onPointerMove: (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => void;
@@ -808,7 +820,7 @@ function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriv
   const choice = choices[0];
   const dragging = Boolean(drag);
   const style = drag ? { "--mahjong-drag-x": `${drag.x}px`, "--mahjong-drag-y": `${drag.y}px` } as CSSProperties : undefined;
-  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)} onLostPointerCapture={event => onPointerCancel(tileId, event)}/>;
+  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onPointerEnter={event => event.pointerType === "mouse" && !disabled && choice && onHover(choice.id)} onPointerLeave={event => event.pointerType === "mouse" && onHover(null)} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)} onLostPointerCapture={event => onPointerCancel(tileId, event)}/>;
 }
 
 function MountedDrawRack({age,hand,seat,name}:{age:number;hand:string;seat:number;name:string}) {

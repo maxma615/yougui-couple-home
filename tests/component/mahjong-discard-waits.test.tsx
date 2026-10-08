@@ -29,3 +29,22 @@ it('switching to riichi hides a previous ordinary selection until a riichi tile 
 it('shows the no-yaku label for a different discard that keeps a closed tsumo yaku',()=>{
  const r=room();r.game!.hand=['m1','m2','m3','p1','p2','p3','s4','s5','s6','s7','s8','s9','z1','z2'];r.game!.drawnTile='z2';r.game!.choices=[{id:'z2',type:'discard',value:'z2_'}];render(<GameRoom room={r} ownSeat={0} connected motionCanAnimate={false} host busy={false} onChoice={()=>{}} onRematch={()=>{}} onFinish={()=>{}} onLeave={()=>{}}/>);fireEvent.click(screen.getByRole('button',{name:'切出 南风'}));const text=screen.getByRole('status',{name:'待牌预览'}).textContent;expect(text).toContain('无役');expect(text).not.toContain('振听');
 });
+
+it('waiting players can toggle current waits without commands and disconnect clears the toggle',()=>{
+ const r=room();r.game!.hand.pop();r.game!.drawnTile=null;r.game!.choices=[];r.game!.turnSeat=1;r.game!.ronBlocked=true;
+ const onChoice=vi.fn(),props={room:r,ownSeat:0,motionCanAnimate:false,host:true,busy:false,onChoice,onRematch:()=>{},onFinish:()=>{},onLeave:()=>{}};
+ const mounted=render(<GameRoom {...props} connected/>);
+ const toggle=screen.getByRole('button',{name:'查看待牌'});expect(toggle.getAttribute('aria-pressed')).toBe('false');
+ fireEvent.click(toggle);expect(screen.getByRole('status',{name:'待牌预览'}).textContent).toContain('振听');expect(onChoice).not.toHaveBeenCalled();
+ fireEvent.click(toggle);expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();fireEvent.click(toggle);
+ mounted.rerender(<GameRoom {...props} connected={false}/>);expect(screen.queryByRole('button',{name:'查看待牌'})).toBeNull();expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();
+ mounted.rerender(<GameRoom {...props} connected/>);expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();expect(onChoice).not.toHaveBeenCalled();
+});
+it('mouse hover previews without selection, while touch entry does not open a preview',()=>{
+ const onChoice=vi.fn();render(<GameRoom room={room()} ownSeat={0} connected motionCanAnimate={false} host busy={false} onChoice={onChoice} onRematch={()=>{}} onFinish={()=>{}} onLeave={()=>{}}/>);
+ const button=screen.getAllByRole('button',{name:'切出 东风'}).find(b=>!(b as HTMLButtonElement).disabled)!;
+ const enter=(kind:string)=>{const event=new Event('pointerover',{bubbles:true});Object.defineProperty(event,'pointerType',{value:kind});fireEvent(button,event);};
+ enter('touch');expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();enter('mouse');expect(screen.getByRole('status',{name:'待牌预览'})).toBeTruthy();expect(button.getAttribute('aria-pressed')).toBe('false');expect(onChoice).not.toHaveBeenCalled();
+ const leave=new Event('pointerout',{bubbles:true});Object.defineProperty(leave,'pointerType',{value:'mouse'});fireEvent(button,leave);expect(screen.queryByRole('status',{name:'待牌预览'})).toBeNull();
+ fireEvent.click(button);expect(onChoice).not.toHaveBeenCalled();fireEvent.click(button);expect(onChoice).toHaveBeenCalledOnce();
+});
