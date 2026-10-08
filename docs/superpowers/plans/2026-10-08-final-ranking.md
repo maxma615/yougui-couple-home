@@ -22,16 +22,16 @@
 
 ### Task 1: 服务器终局时间接口
 **Files:** src/modules/mahjong/rooms.ts, types.ts; tests/unit/mahjong-rooms.test.ts.
-- [ ] 写真实原生结束与注入now的失败用例：最后人/电脑确认、重读、离开、重开及提前排名不可见。
-- [ ] 运行RED并保存真实失败原因。
-- [ ] 实现finishedAt一次性赋值与rankingFlow DTO，不改变引擎支付。
-- [ ] 运行GREEN并提交。
+- [x] 写真实原生结束与注入now的失败用例：最后人/电脑确认、重读、离开、重开及提前排名不可见。
+- [x] 运行RED并保存真实失败原因。
+- [x] 实现finishedAt一次性赋值与rankingFlow DTO，不改变引擎支付。
+- [x] 运行GREEN并提交。
 
 ### Task 2: 终局组件及有限时间线
 **Files:** create src/components/mahjong/mahjong-final-ranking.tsx and final-ranking-presentation.ts; modify mahjong-client.tsx, src/app/mahjong/mahjong.css; create tests/components/mahjong-final-ranking.test.tsx.
-- [ ] 写组件RED覆盖三四人所有时刻、重连/乱序、新id、负数同分长名、离线busy与卸载。
-- [ ] 实现server-relative有限时钟、原生排序、200ms行入场与1000ms淡入；终局主操作按4200/5000开放。
-- [ ] 运行GREEN；实际两浏览器667×375/1440×810布局、动态偏好与行为验证；提交。
+- [x] 写组件RED覆盖三四人所有时刻、重连/乱序、新id、负数同分长名、离线busy与卸载。
+- [x] 实现server-relative有限时钟、原生排序、200ms行入场与1000ms淡入；终局主操作按4200/5000开放。
+- [x] 运行GREEN；实际两浏览器667×375/1440×810布局、动态偏好与行为验证；提交。
 
 ### Task 3: 原生联机与发布验证
 **Files:** tests/integration/mahjong-draw-runtime.test.ts; docs/mahjong-final-ranking-acceptance.md; new immutable local audit namespace.

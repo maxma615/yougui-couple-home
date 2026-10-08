@@ -8,7 +8,7 @@ import {drawEngine} from "../fixtures/mahjong-draw-game";
 import type {MahjongCommand} from "../../src/modules/mahjong/types";
 const out=`.local/audit/final-ranking-browser-${Date.now()}`;mkdirSync(out,{recursive:true});
 const css=readFileSync('src/app/mahjong/mahjong.css','utf8');
-const harness=`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {MahjongFinalRanking} from './src/components/mahjong/mahjong-final-ranking';const root=createRoot(document.getElementById('root'));window.renderRanking=p=>flushSync(()=>root.render(<div className="mahjong-page"><div className="mahjong-game is-finished"><MahjongFinalRanking {...p} onRematch={()=>window.rematches++} onFinish={()=>{}}/></div></div>));window.rematches=0;`;
+const harness=`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.renderRanking=p=>flushSync(()=>root.render(<div className="mahjong-page"><GameRoom room={p.room} ownSeat={p.ownSeat} host={p.host} busy={p.busy} connected={p.connected} onChoice={()=>{}} onLeave={()=>{}} onRematch={()=>window.rematches++} onFinish={()=>{}}/></div>));window.rematches=0;`;
 const bundle=await build({stdin:{contents:harness,loader:'tsx',resolveDir:process.cwd()},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',tsconfig:'tsconfig.json'});
 function final(variant:'sanma'|'yonma'){
  const count=variant==='sanma'?3:4;let now=1000;
@@ -23,7 +23,7 @@ function final(variant:'sanma'|'yonma'){
   const choice=game.choices.find(c=>c.type==='ack')??game.choices.find(c=>c.type==='pass')??game.choices.find(c=>c.type==='discard'&&c.value?.endsWith('_'));
   if(choice){now++;send(seat,{action:'respond',roomId:room.id,decisionId:game.decisionId,choiceId:choice.id});break;}
  }
- assert.equal(view().status,'finished');const end=view();return {ranking:end.game!.ranking!,flow:end.game!.rankingFlow,members:end.members,ownSeat:0,host:true,connected:true,busy:false};
+ assert.equal(view().status,'finished');const end=view();return {room:end,ranking:end.game!.ranking!,flow:end.game!.rankingFlow,members:end.members,ownSeat:0,host:true,connected:true,busy:false};
 }
 const results=[];
 for(const engine of [chromium,webkit]){const browser=await engine.launch();try{
@@ -31,7 +31,7 @@ for(const engine of [chromium,webkit]){const browser=await engine.launch();try{
   const page=await browser.newPage({viewport});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.setContent(`<style>body{margin:0;line-height:1.65}*,*:before,*:after{box-sizing:border-box}${css}</style><div id="root"></div>`);
-   await page.addScriptTag({content:bundle.outputFiles[0].text});const props=final(variant);
+   await page.addScriptTag({content:`globalThis.process={env:{NODE_ENV:"development"}};globalThis.__name=(t,v)=>Object.defineProperty(t,"name",{value:v,configurable:true});${bundle.outputFiles[0].text}`});const props=final(variant);
    await page.evaluate(p=>(window as any).renderRanking(p),props);
    assert.equal(await page.locator('[data-ranking-visible="true"]').count(),0);
    await page.waitForFunction(()=>document.querySelector('[data-ranking-visible="true"]'));
@@ -42,7 +42,7 @@ for(const engine of [chromium,webkit]){const browser=await engine.launch();try{
    assert.ok(bounds.button.height>=44);assert.ok(bounds.box.left>=0&&bounds.box.right<=viewport.width);assert.ok(bounds.scrollWidth<=viewport.width);assert.ok(bounds.button.bottom<=viewport.height,JSON.stringify(bounds));
    await page.getByRole('button',{name:'再开一场'}).click();assert.equal(await page.evaluate(()=>(window as any).rematches),1);
    const label=`${engine.name()}-${variant}-${viewport.width}`;await page.screenshot({path:`${out}/${label}.png`});
-   await page.evaluate(p=>(window as any).renderRanking({...p,flow:{...p.flow,elapsedMs:6000}}),props);
+   await page.evaluate(p=>(window as any).renderRanking({...p,room:{...p.room,game:{...p.room.game,rankingFlow:{...p.flow,elapsedMs:6000}}}}),props);
    assert.equal(await page.locator('[data-ranking-visible="true"]').count(),props.ranking.length);
    assert.deepEqual(errors,[]);results.push({label,bounds,rows:props.ranking.length});
   }finally{await page.close();}
