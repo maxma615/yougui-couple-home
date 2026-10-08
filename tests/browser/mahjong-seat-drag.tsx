@@ -77,6 +77,7 @@ async function mount(page: Page, r: RoomView) {
   await page.setContent(`<base href="https://mahjong.local/"><style>*{box-sizing:border-box}body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><div id="root"></div>`);
   await page.addScriptTag({content:`globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v,configurable:true});globalThis.process={env:{NODE_ENV:'development'}};${bundle}\n${projectedSampleScript}`});
   await page.evaluate(r=>(window as any).renderRoom(r),r);
+  await page.evaluate(()=>window.addEventListener('pointermove',event=>{(window as any).lastPointerPosition={x:event.clientX,y:event.clientY};},true));
   await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>('img.mahjong-tile__art')].every(i=>i.complete&&i.naturalWidth===300));
 }
 const records: any[] = [];
@@ -91,7 +92,7 @@ for(const engine of [chromium,webkit]) {
         try {
           await mount(page,r);
           const tile=page.locator('.mahjong-hand > button:not([disabled])').nth(5);
-          if(kind==='earlyCaptureLoss') await tile.click();
+          if(kind==='earlyCaptureLoss'||['viewportResize','orientationChange','tableResize','fullscreenChange'].includes(kind)) {await tile.click();assert.equal(await tile.getAttribute('aria-pressed'),'true');}
           await tile.hover();await page.waitForTimeout(180);
           const box=(await tile.boundingBox())!;assert.ok(box);
           const sourceId=await tile.getAttribute('data-hand-instance-id');assert.equal(sourceId,'hand:5:s1');
@@ -105,14 +106,15 @@ for(const engine of [chromium,webkit]) {
           if(kind==='opponentRack') target=await page.evaluate(()=>{
             for(const face of document.querySelectorAll('.mahjong-opponent-rack .mahjong-standing-tile__face')) {
               for(const point of (window as any).mahjongPhysicalSamples(face,[[.5,.5],[.25,.25],[.75,.75]])) {
-                if(document.elementFromPoint(point.x,point.y)?.closest('.mahjong-opponent-rack')) return point;
+                const nativePoint={...point,x:Math.floor(point.x),y:Math.floor(point.y)};
+                if(document.elementFromPoint(nativePoint.x,nativePoint.y)?.closest('.mahjong-opponent-rack')) return nativePoint;
               }
             }
             throw new Error('no actual opponent tile paint hit');
           });
           await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(target.x,target.y,{steps:10});await page.waitForTimeout(35);
           if(kind==='dragBack') {target=start;await page.mouse.move(start.x,start.y,{steps:10});}
-          const preview=await page.evaluate(p=>{const tile=document.querySelector<HTMLButtonElement>('[data-hand-instance-id="hand:5:s1"]');return {hit:document.elementFromPoint(p.x,p.y)?.className,capture:tile?.hasPointerCapture(1),drag:tile?.classList.contains('is-dragging'),target:document.querySelector('.mahjong-table')?.classList.contains('is-discard-target'),rect:tile?.getBoundingClientRect().toJSON()};},target);
+          const preview=await page.evaluate(p=>{const tile=document.querySelector<HTMLButtonElement>('[data-hand-instance-id="hand:5:s1"]');const native=(window as any).lastPointerPosition;return {native,nativeHit:native?document.elementFromPoint(native.x,native.y)?.className:null,nativeRack:native?Boolean(document.elementFromPoint(native.x,native.y)?.closest('.mahjong-opponent-rack')):null,hit:document.elementFromPoint(p.x,p.y)?.className,capture:tile?.hasPointerCapture(1),drag:tile?.classList.contains('is-dragging'),target:document.querySelector('.mahjong-table')?.classList.contains('is-discard-target'),rect:tile?.getBoundingClientRect().toJSON()};},target);
           record.setupSuccess=true;record.sourceId=sourceId;record.start=start;record.target=target;record.geometry=geom;record.preview=preview;
           assert.equal(preview.capture,true,'native capture must succeed before behavior assertion');assert.equal(preview.drag,kind!=='earlyCaptureLoss');
           if(kind==='ordinaryClearRackDrop') {assert.equal(preview.hit,'mahjong-table__surface');assert.ok(preview.rect.bottom<geom.rackTop,'whole painted tile clears original rack');}
@@ -126,6 +128,8 @@ for(const engine of [chromium,webkit]) {
             await page.waitForTimeout(60);
             assert.equal(await page.locator('.is-dragging').count(),0,'geometry change cancels the active drag before release');
             assert.equal(await page.locator('.is-discard-target').count(),0,'geometry change clears the old drop target');
+            assert.equal(await tile.evaluate(el=>el.hasPointerCapture(1)),false,'geometry change releases actual native capture before pointer-up');
+            assert.equal(await tile.getAttribute('aria-pressed'),'false','geometry change clears a previous selection before pointer-up');
           }
           if(kind==='changedDecision') {game.respond(0,r.game!.decisionId,'discard:s1');const next=room(game,0,2);assert.notEqual(next.game!.decisionId,r.game!.decisionId);await page.evaluate(r=>(window as any).renderRoom(r),next);}
           if(kind==='disconnected'||kind==='busy') await page.evaluate(({r,kind})=>(window as any).renderRoom(r,{connected:kind!=='disconnected',busy:kind==='busy'}),{r,kind});
@@ -170,7 +174,7 @@ for(const engine of [chromium,webkit]) {
           record.geometry=await page.evaluate(()=>{
             const q=(e:Element)=>(window as any).mahjongPhysicalSamples(e,[[0,0],[1,0],[1,1],[0,1]]);
             const tray=document.querySelector<HTMLElement>('[data-nuki-seat="0"]')!,group=tray.querySelector<HTMLElement>('.mahjong-nuki-tray__tiles')!,rack=document.querySelector('[data-motion-rack-seat="0"]')!.parentElement!;
-            return {groupTransform:getComputedStyle(group).transform,rackTransform:getComputedStyle(rack).transform,position:rack.closest('.mahjong-table__position')?.className,groupQuad:q(group),trayQuad:q(tray),countTransform:getComputedStyle(tray.querySelector('small')!).transform,countUpright:(()=>{const m=new DOMMatrixReadOnly(getComputedStyle(tray.querySelector('small')!).transform);return Math.abs(m.m11-1)<.001&&Math.abs(m.m22-1)<.001&&Math.abs(m.m12)<.001&&Math.abs(m.m21)<.001&&Math.abs(m.m41)<.001&&Math.abs(m.m42)<.001&&m.m43>=0;})(),tiles:[...group.querySelectorAll<HTMLElement>('.mahjong-tile')].map(e=>({quad:q(e),footprint:q(e.closest('[data-nuki-volume]')!.querySelector('[data-flight-base]')!),center:(window as any).mahjongPhysicalSamples(e,[[.5,.5]])[0]})),rackQuad:q(rack),riverQuads:[...document.querySelectorAll('.mahjong-river')].map(q)};
+            return {groupTransform:getComputedStyle(group).transform,rackTransform:getComputedStyle(rack).transform,position:rack.closest('.mahjong-table__position')?.className,groupQuad:q(group),trayQuad:q(tray),countTransform:getComputedStyle(tray.querySelector('small')!).transform,countUpright:(()=>{const m=new DOMMatrixReadOnly(getComputedStyle(tray.querySelector('small')!).transform);return [m.m11,m.m22,m.m33,m.m44].every(v=>Math.abs(v-1)<.001)&&[m.m12,m.m13,m.m14,m.m21,m.m23,m.m24,m.m31,m.m32,m.m34,m.m41,m.m42].every(v=>Math.abs(v)<.001)&&m.m43>=0;})(),tiles:[...group.querySelectorAll<HTMLElement>('.mahjong-tile')].map(e=>({quad:q(e),footprint:q(e.closest('[data-nuki-volume]')!.querySelector('[data-flight-base]')!),center:(window as any).mahjongPhysicalSamples(e,[[.5,.5]])[0]})),rackQuad:q(rack),riverQuads:[...document.querySelectorAll('.mahjong-river')].map(q)};
           });
           record.setupSuccess=true;
           await page.screenshot({path:out+'/'+stem+'-snapshot.png'});await page.waitForTimeout(120);

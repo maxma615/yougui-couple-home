@@ -14,8 +14,8 @@ import { northReplacementFixture } from "../fixtures/mahjong-view-game";
 import { projectedSampleScript } from "./projected-samples";
 import type { RoomView } from "../../src/modules/mahjong/types";
 
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css", "mahjong-call-announcement.css", "mahjong-standing-tile.css"]
-  .map(file => readFileSync(`src/app/mahjong/${file}`, "utf8")).join("\n");
+const css = [...readFileSync("src/app/mahjong/page.tsx", "utf8").matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)]
+  .map(match => readFileSync(`src/app/mahjong/${match[1]}`, "utf8")).join("\n");
 const output = `.local/audit/mahjong-camera-symmetry-${new Date().toISOString().replace(/[-:.TZ]/g, "")}`;
 mkdirSync(output, { recursive: false });
 const colours = [[250, 30, 190], [20, 230, 230], [20, 40, 250], [70, 250, 35]];
@@ -53,6 +53,7 @@ for (const engine of [chromium, webkit]) {
       const noop = () => {};
       const html = renderToStaticMarkup(<GameRoom room={room} ownSeat={0} host busy={false} connected onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
       await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
+      if (process.env.CAMERA_PROBE_CSS) await page.addStyleTag({ content: process.env.CAMERA_PROBE_CSS });
       await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
       await page.addScriptTag({ content: projectedSampleScript });
       const measured = await page.evaluate(colours => {
@@ -128,6 +129,6 @@ for (const engine of [chromium, webkit]) {
     }
   } finally { await browser.close(); }
 }
-writeFileSync(`${output}/summary.json`, JSON.stringify({ baseHead: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), testSha256: createHash("sha256").update(readFileSync("tests/browser/mahjong-camera-symmetry-20261007.tsx")).digest("hex"), cssSha256: createHash("sha256").update(css).digest("hex"), results, failures }, null, 2)+"\n");
+writeFileSync(`${output}/summary.json`, JSON.stringify({ probeCss: process.env.CAMERA_PROBE_CSS ?? null, baseHead: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), testSha256: createHash("sha256").update(readFileSync("tests/browser/mahjong-camera-symmetry-20261007.tsx")).digest("hex"), cssSha256: createHash("sha256").update(css).digest("hex"), results, failures }, null, 2)+"\n");
 assert.deepEqual(failures, [], "projected DOM geometry must be symmetric, fit the viewport, and agree with composited pixels in both engines");
 console.log(`PASS ${results.length} real-engine scenes with ${results.length*4} paint checks; full tabletop fits symmetrically in ${output}`);
