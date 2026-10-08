@@ -1,6 +1,6 @@
 # 当前听牌的役满反馈
 
-2026-10-09。本地候选基于 `66021fc`；线上仍为 `cfab111` / Build `pNittH_PZMUP958kouvxB`。本步尚未执行隔离 Linux 验证与 ECS 发布。
+2026-10-09。运行源码 `93a1b18` / Build `_8agQM7C5ZfpN9nu_ftQ6` 已发布到 ECS，公网健康和全部 133 个资源摘要验证通过。以下保留本地候选与实际发布过程。
 
 参考只读旧官方客户端 `https://game.maj-soul.com/1/v0.11.252.w/code.js` 的 `UI_TingPai.setData1`：全部待牌的荣和/自摸路线达到役满时选择确定效果，否则任一路线达到时选择机会效果；数累计役满允许时包含基础翻数加表宝牌的 13 翻阈值。效果延迟 600 ms、显示 3000 ms，待牌集合变化后允许新提示，相同集合/等级不重复，剩余摸牌数为零时不触发。倍满分支是语音，没有新增常驻视觉标记。本次采用原创 CSS 和既有授权书法字体，没有复制厂商图像、角色音声或效果模型。
 
@@ -35,4 +35,20 @@
 - `.local/audit/wait-value-full-r03.log`、`wait-value-types-r03.log`、`wait-value-build-r02.log`、`wait-value-secrets-r02.log`：真实终态退出0。
 - `.local/audit/wait-value-browser-r02.log`：24/24，真实退出0；`.local/audit/yakuman-opportunity-1791479886804/summary.json`、16张提示图片：绑定测试开始/结束均一致的组件、页面、CSS、字体与打包摘要。
 - `.local/audit/wait-value-local-gates-r01.json`：各日志/浏览器摘要、本候选源码身份与观察到的终态汇总；提交前再次读取原摘要核对当前文件一致。
-- 当前源码尚未执行 Linux/ECS 发布，线上仍 cfab111。完成 commit 立即普通推送 GitHub main 与 codex/riichi-four-player，保留原有线上清理器与禁备份策略。
+- 本地候选完成后立即推送 GitHub main 与 codex/riichi-four-player；随后按下节验证并发布，清理器与禁备份策略保持。
+
+
+## 实际 ECS 发布（2026-10-09）
+
+- 源码：`93a1b1820a21bbdc8fe4de50dfe7bea1598c555d`；构建：`_8agQM7C5ZfpN9nu_ftQ6`。
+- 实际 Linux amd64 镜像：`sha256:aaf7c52a2f17c90090de01eb461276c22e7a9ab93de3f726641dea43933abbbc`，继承原在线 cfab111 镜像，不重装依赖。
+- 冻结清单：`79dbeb4954bb4bd1a583eceb7b3cd397111e94fd9c0ee4b89540bad2024d7971`；644 个源码、449 个 Next 构建文件全摘要一致，排除构建缓存；上传归档 37,283,131 字节，SHA-256 `6646f5a2c77294bad20996c5184512ff167c1442ee1c3ade895d1ce4a782aaef`，远端展开再次核对。
+- 同一冻结镜像在无网络、只读、半核/384 MiB、单 worker 的隔离 Linux 容器中通过确切 28 文件/443 项验证，实际退出 0。保持文件隔离、每例/钩子120秒，使用线程池及原生加载纯 JavaScript 配置；报告逐项核对原始文件集合、所有断言和镜像/源码/构建身份。
+- 追加本地 64 个原生待牌交互回归，和本候选原生役满24场景一起绑定冻结发布，计88场景；`.local/audit/discard-waits-browser-1791480195261/{manifest,summary}.json`、`wait-value-waits-browser-r01.log`，实际退出0，源/CSS摘要再次核对。
+- 固定发布器实际退出0：无活动真人牌局、入口屏障保护切换、健康后恢复入口。12表发布前/后/最终状态摘要均为 `9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`；用户7、空间3、成员5、照片29、迁移7。只核对统计和摘要，没有下载真实资料。
+- 照片清理器 CID `a6629849bb2b7885a8879a57d1cfdac23b0b3aaf74fd955569bf7da141ecaa4b` / 镜像 `sha256:cc099863d79c79b41e5da3780a5e9ed0d133b99afb23700edd2d4b6c0ffcf873` 保持。禁备份标记、masked/inactive timer、inactive service 和三个不存在的备份目录保持，无备份创建/下载。正式应用继续 1CPU/768MiB。
+- 默认可信 TLS 下健康200，全部133个公开静态资源逐一摘要吻合，包括扩展书法字体。发布器已结束；`.local/ecs-deploy/wait-value-published-closeout-r01.json` 绑定13个实际终态阶段和公网证据。
+
+保留运维失败：最初fork r01完整443项通过，但180.93秒测试耗时加容器开销触发部署任务总预算，实际124；关闭文件隔离的本机试案24断言失败，立即排除，不用于发布。保留隔离的线程池r02与原生配置r03均完整443项通过、报告校验成功，但178.22/178.37秒加容器启动/收尾仍触发180秒总预算，实际124。随后仅将部署任务总预算改为240秒，保留每个测试/钩子超时、全部443项、隔离和资源限制，r04的177.70秒测试及完整任务实际退出0后才发布。没有把前三次124记成成功。运行观察脚本两次整理失败（已结束PID、不存在的Docker Health字段）也保留；改用实际HTTP健康接口证明网站健康。
+
+发布工具、原始日志、冻结源/构建、候选/Linux及发布身份、所有失败均保留在应用`.local/`，没有覆盖失败编号或重复构建已完成的候选。该补充记录亦立即提交推送GitHub两分支；属于文档提交，不改变运行93a1b18镜像。根任务审查，非独立审查。真实Android、角色/倍满声音、未知情境/当前私有厂商字段、完整当前雀魂体验仍未证明，整体目标继续 active。
