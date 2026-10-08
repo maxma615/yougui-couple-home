@@ -40,3 +40,5 @@
 闭环证据`.local/ecs-deploy/automatic-published-closeout-r01.json`绑定13个终结成功阶段及公网133摘要；冻结manifestSHA256为`69fcf123a18e4e4b3e99f205599ef6ac90cf0116f3827e1cebc39eefe3ff5b7f`。代码两次commit均已立即推送GitHub两分支，发布记录亦立即推送。当前原生浏览器仍是GameRoom桥接引擎，不宣称自动操作已完成真实生产账号/WSS联机或Android实机验收；完整当前厂商声音、视觉、协议与全体验目标继续active。
 
 后续本地候选补齐Root真实HTTP/Socket自动操作，并修正连续拔北在补牌仍隐藏时提前发指令的问题；最终949项、网络88和桥接36通过，尚未发布。见[联机与补牌时序](mahjong-automatic-network-acceptance.md)。上述89f9464发布记录仍为已交付版本。
+
+上述补牌时序后续候选现已发布fef6e66，Linux502及公网133验证通过；详情以[联机与补牌时序发布记录](mahjong-automatic-network-acceptance.md)末节为准。

@@ -455,3 +455,8 @@ WebKit affine fallback、厂商相机/布局/完整鸣牌和和牌时序、牌�
 ## 自动操作联机与补牌阶段（2026-10-09，本地候选）
 
 正式Root/会话/API、真实本地HTTP/Socket及原生引擎88场景通过，覆盖三四麻两尺寸/两浏览器/两传输；手机服务端Socket先发、桌面HTTP先回，各含重复帧。88原生合法POST逐决定/nonce唯一且最多一笔在途。新增发送前DOM记录取得有效RED：第二/三次自动拔北仍在补牌隐藏或入手时发送。现自动操作等待既有拔北hold与入手arriving清除，手动行为和规则/服务器任务不变；最终网络88、桥接36、949完整和类型/构建/扫描通过。首次Chromium scroll-into-view点击超时未定位，保留失败/截图诊断，完整重跑通过，未force/放宽等待或伪称设备问题已修复。根非独立审查，见[本步验收](mahjong-automatic-network-acceptance.md)。候选立即推送两分支，Linux/ECS待发布，已交付运行89f9464；生产账号/WSS与Android/当前厂商完整体验目标active。
+
+
+## 自动操作补牌阶段已发布（2026-10-09）
+
+运行fef6e66 / Build SyqNXitxCD_KjJQ7Iwn4g已上线，自动操作等待拔北落地及补牌入手。Linux同一冻结镜像502/31、656源码/449构建和默认可信TLS公网133摘要/健康200通过，固定发布器实际exit0，无真人活动牌局并恢复入口。12表摘要、清理器、1CPU/768MiB和禁备份保持，无真实资料/备份下载或创建。保留裸数字子串误报并改正复核，实际阶段命令不变。见[联机与发布验收](mahjong-automatic-network-acceptance.md)。949本地、88真实本地HTTP/Socket及36桥接证据绑定；正式生产账号/WSS、Android和当前厂商完整体验仍待验，目标active，发布记录立即推送两分支。
