@@ -40,3 +40,14 @@
 最终代码完整978项/92文件、类型检查、生产构建及374文件凭据扫描实际exit0，证据blank-recovery-full-r02.log、blank-recovery-type-r02.log、blank-recovery-build-r01.log、blank-recovery-secrets-r01.log。中间类型检查发现nullable room，补充显式非空检查后重跑通过；中间测试误把新游戏初始化当旧决定去重，修正测试预期（新游戏本就应允许明确操作），没有改产品scope。
 
 原144原生浏览器回归在最终产品源码下全部通过（blank-recovery-browser-r01.log / .local/audit/blank-table-browser-1791495936490/proof.json），Chromium/WebKit、三四麻、两横屏、mouse/touchscreen输入保持合法精确弃牌与默认关闭，结束后再次核对所有源摘要。此144仍是GameRoom桥接引擎，不含本次Root失败HTTP实际传输；失败恢复的Root覆盖由组件测试证明。最终63项定向检查通过，根非独立复核blank-recovery-final-review-r01.json。
+
+
+## 真实HTTP与Socket恢复验收（2026-10-09）
+
+正式MahjongClient/SessionProvider/apiRequest、真实本地HTTP和Socket.IO、正式RoomStore.execute幂等及物理108/136张引擎：Chromium/WebKit × 三四麻 × 两横屏 × WebSocket/polling × mouse/touchscreen × 摸切/pass × 五种故障次序，共320唯一场景全部实际exit0。五种分别为首次POST未执行即503、POST及重读GET均503、原生已执行后响应连接断开且Socket先到、原生已执行后连接断开且Socket后到、重读旧GET晚于新的Socket版本。没有替换浏览器fetch结果、force点击、假时钟或放宽超时。
+
+共256个原生接受操作；同一决定最多一次，POST逻辑提交448次（包含初始明确手势和明确重试/下一回合），无自动补发，最多一个在途。明确拒绝后成功重读才可重试；GET也失败及旧GET被排序拒绝保持去重。已成功弃牌后不再提交旧决定；已成功pass后轮到自己摸牌，则先等实体入手完成，再允许用户重新双击切当前精确摸牌，这是新决定而非重复过牌。鼠标和触屏都从elementFromPoint证实的真正空白桌布操作。
+
+首个脚本因浏览器对断开连接用相同nonce重传而失败；原简化服务误将传输重试当新操作。替换为正式RoomStore（通过正常create/join/ready/start注入物理引擎），相同nonce只查询现状、不再次执行。第二个脚本误把pass后新摸牌决定也算旧操作，修正测试为每个原生决定最多一次，并核对第二次确为新决定及当前摸牌Choice。两份失败证据blank-recovery-network-r01.log/r02.log保留，产品代码未因测试假设更改。最终blank-recovery-network-r03.log及.local/audit/blank-recovery-network-1791496342222/proof.json，结束后源摘要全核对一致。
+
+当前受限Linux选择在本机同一单worker/threads/isolate配置下545项/35文件通过，类型检查通过，根非独立复核于.local/audit/recovery-final/review.json。仍不是ECS的Linux终态证据；账号会话由测试HTTP端提供，不能证明生产账号权限/TLS/WSS或真实Android。新增网络验收立即提交推送，线上仍2bcc076，候选待发布。
