@@ -102,7 +102,14 @@ for(const engine of [chromium,webkit]) {
           if(kind==='earlyCaptureLoss') target={x:start.x+3,y:start.y};
           if(kind==='outsideBoard') target={x:1,y:1};
           if(kind==='hud') target=await page.evaluate(()=>(window as any).mahjongPhysicalSamples(document.querySelector('.mahjong-table__dora'),[[.5,.5]])[0]);
-          if(kind==='opponentRack') target=await page.evaluate(()=>(window as any).mahjongPhysicalSamples(document.querySelector('.mahjong-opponent-rack'),[[.5,.5]])[0]);
+          if(kind==='opponentRack') target=await page.evaluate(()=>{
+            for(const face of document.querySelectorAll('.mahjong-opponent-rack .mahjong-standing-tile__face')) {
+              for(const point of (window as any).mahjongPhysicalSamples(face,[[.5,.5],[.25,.25],[.75,.75]])) {
+                if(document.elementFromPoint(point.x,point.y)?.closest('.mahjong-opponent-rack')) return point;
+              }
+            }
+            throw new Error('no actual opponent tile paint hit');
+          });
           await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(target.x,target.y,{steps:10});await page.waitForTimeout(35);
           if(kind==='dragBack') {target=start;await page.mouse.move(start.x,start.y,{steps:10});}
           const preview=await page.evaluate(p=>{const tile=document.querySelector<HTMLButtonElement>('[data-hand-instance-id="hand:5:s1"]');return {hit:document.elementFromPoint(p.x,p.y)?.className,capture:tile?.hasPointerCapture(1),drag:tile?.classList.contains('is-dragging'),target:document.querySelector('.mahjong-table')?.classList.contains('is-discard-target'),rect:tile?.getBoundingClientRect().toJSON()};},target);
@@ -163,7 +170,7 @@ for(const engine of [chromium,webkit]) {
           record.geometry=await page.evaluate(()=>{
             const q=(e:Element)=>(window as any).mahjongPhysicalSamples(e,[[0,0],[1,0],[1,1],[0,1]]);
             const tray=document.querySelector<HTMLElement>('[data-nuki-seat="0"]')!,group=tray.querySelector<HTMLElement>('.mahjong-nuki-tray__tiles')!,rack=document.querySelector('[data-motion-rack-seat="0"]')!.parentElement!;
-            return {groupTransform:getComputedStyle(group).transform,rackTransform:getComputedStyle(rack).transform,position:rack.closest('.mahjong-table__position')?.className,groupQuad:q(group),trayQuad:q(tray),countTransform:getComputedStyle(tray.querySelector('small')!).transform,tiles:[...group.querySelectorAll<HTMLElement>('.mahjong-tile')].map(e=>({quad:q(e),center:(window as any).mahjongPhysicalSamples(e,[[.5,.5]])[0]})),rackQuad:q(rack),riverQuads:[...document.querySelectorAll('.mahjong-river')].map(q)};
+            return {groupTransform:getComputedStyle(group).transform,rackTransform:getComputedStyle(rack).transform,position:rack.closest('.mahjong-table__position')?.className,groupQuad:q(group),trayQuad:q(tray),countTransform:getComputedStyle(tray.querySelector('small')!).transform,countUpright:(()=>{const m=new DOMMatrixReadOnly(getComputedStyle(tray.querySelector('small')!).transform);return Math.abs(m.m11-1)<.001&&Math.abs(m.m22-1)<.001&&Math.abs(m.m12)<.001&&Math.abs(m.m21)<.001&&Math.abs(m.m41)<.001&&Math.abs(m.m42)<.001&&m.m43>=0;})(),tiles:[...group.querySelectorAll<HTMLElement>('.mahjong-tile')].map(e=>({quad:q(e),footprint:q(e.closest('[data-nuki-volume]')!.querySelector('[data-flight-base]')!),center:(window as any).mahjongPhysicalSamples(e,[[.5,.5]])[0]})),rackQuad:q(rack),riverQuads:[...document.querySelectorAll('.mahjong-river')].map(q)};
           });
           record.setupSuccess=true;
           await page.screenshot({path:out+'/'+stem+'-snapshot.png'});await page.waitForTimeout(120);
@@ -171,11 +178,12 @@ for(const engine of [chromium,webkit]) {
           assert.equal(g.tiles.length,count,'exact cumulative physical Norths');
           const matrix=g.groupTransform.match(/matrix\(([^)]+)\)/)?.[1].split(',').map(Number);
           assert.ok(matrix&&Math.abs(matrix[0])<.001&&Math.abs(matrix[1]-sign)<.001&&Math.abs(matrix[2]+sign)<.001&&Math.abs(matrix[3])<.001,'side North physical group must share local ±90° seat plane');
-          assert.equal(g.countTransform,'none','count remains upright');
+          assert.equal(g.countUpright,true,'count remains upright while its existing physical height may translate Z');
           const box=(points:any[])=>({left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))});
           const trayBox=box(g.trayQuad);record.trayBounds=trayBox;
           for(const tile of g.tiles) {
-            for(const p of tile.quad) {assert.ok(p.x>0&&p.x<viewport.width&&p.y>0&&p.y<viewport.height,'full North face inside viewport');assert.ok(inside(p,g.trayQuad),'rotated face reserved by actual tray quad');}
+            for(const p of tile.quad) assert.ok(p.x>0&&p.x<viewport.width&&p.y>0&&p.y<viewport.height,'full elevated North face inside viewport');
+            for(const p of tile.footprint) assert.ok(inside(p,g.trayQuad),'physical North footprint reserved by actual tray quad');
             const visible=await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y)?.closest('[data-nuki-seat="0"]'),tile.center);assert.ok(visible,'North center visible in actual hit geometry');
           }
           assert.equal(overlaps(g.trayQuad,g.rackQuad),false,'tray does not cover actual rack quad');
