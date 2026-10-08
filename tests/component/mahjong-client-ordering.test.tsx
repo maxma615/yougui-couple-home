@@ -47,7 +47,7 @@ async function deliver(held: ReturnType<typeof deferred>, state: MahjongResponse
 async function socketState(state: MahjongResponse, socket = sockets.at(-1)!) { server = state; await act(async () => { if(!socket.connected)socket.deliver("connect"); socket.deliver("mahjong:state", state); }); }
 function beginFinish() { fireEvent.click(screen.getByRole("button", { name: "解散牌桌" })); fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "解散牌桌" })); }
 async function finish() { beginFinish(); await screen.findByRole("button", { name: "创建东风牌桌" }); }
-async function create() { fireEvent.click(screen.getByRole("button", { name: "创建东风牌桌" })); await screen.findByText("BBBBBBBB"); }
+async function create() { const previous=sockets.at(-1);fireEvent.click(screen.getByRole("button", { name: "创建东风牌桌" })); await screen.findByText("BBBBBBBB"); await waitFor(()=>expect(sockets.at(-1)).not.toBe(previous)); }
 function expectRoom(id: string) { expect(screen.getByTestId("mahjong-room-code").textContent).toBe(id.toUpperCase().repeat(8)); }
 
 it("keeps a finished room dissolved when its pre-Finish GET arrives late", async () => {
@@ -180,7 +180,7 @@ for(const recovery of ['accepted','failed-get','missing-choice','new-instance','
   });
   await act(async()=>blankPair());expect(posts).toBe(1);expect(gets).toBe(1);
   if(recovery==='stale-get'){
-   await socketState({...current,room:{...current.room!,version:current.room!.version+1}});
+   await socketState({...current,room:{...current.room!,version:current.room!.version+1,game:{...current.room!.game!,choices:[]}}});
    await deliver(held,current);
   }
   // Recovery must not replay the first gesture or automatically submit.
@@ -188,4 +188,34 @@ for(const recovery of ['accepted','failed-get','missing-choice','new-instance','
   await act(async()=>blankPair());
   expect(posts).toBe(recovery==='accepted'||recovery==='new-instance'?2:1);
  } finally {localStorage.clear();}
+});
+
+for(const source of ['get','socket'] as const)it('recovers from a failed first GET using a later accepted '+source+' without replay',async()=>{
+ localStorage.setItem('yougui.mahjong.doubleClick','1');
+ try {
+  const current=playing();await start(current);await socketState(current);let posts=0,gets=0,online=false;
+  mocks.api.mockImplementation((_path:string,options:RequestInit)=>{
+   if(options.method==='POST'){posts++;return Promise.reject(new Error('offline POST'));}
+   gets++;return online?Promise.resolve(current):Promise.reject(new Error('offline GET'));
+  });
+  await act(async()=>blankPair());expect(posts).toBe(1);expect(gets).toBe(1);
+  await act(async()=>blankPair());expect(posts).toBe(1);
+  online=true;
+  if(source==='socket')await socketState(current);else await act(async()=>fireEvent(window,new Event('online')));
+  expect(posts).toBe(1);
+  await act(async()=>blankPair());expect(posts).toBe(2);
+ }finally{localStorage.clear();}
+});
+
+it('consumes failed recovery once and cannot resurrect a removed choice from later snapshots',async()=>{
+ localStorage.setItem('yougui.mahjong.doubleClick','1');
+ try{
+  const current=playing();await start(current);await socketState(current);let posts=0;
+  mocks.api.mockImplementation((_p:string,o:RequestInit)=>o.method==='POST'?(posts++,Promise.reject(new Error('offline POST'))):Promise.reject(new Error('offline GET')));
+  await act(async()=>blankPair());expect(posts).toBe(1);
+  await socketState({...current,room:{...current.room!,version:9,game:{...current.room!.game!,choices:[]}}});
+  // An accepted snapshot removed the option; even a later same-ID offer cannot reuse the failure marker.
+  await socketState({...current,room:{...current.room!,version:10}});
+  await act(async()=>blankPair());expect(posts).toBe(1);
+ }finally{localStorage.clear();}
 });

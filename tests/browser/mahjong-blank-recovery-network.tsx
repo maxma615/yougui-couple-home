@@ -19,7 +19,7 @@ const results:any[]=[];
 const pause=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 for(const browserType of [chromium,webkit]) {
  const browser=await browserType.launch();
- try {for(const variant of ['sanma','yonma'] as const)for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const transport of ['websocket','polling'] as const)for(const hasTouch of [false,true])for(const operation of ['discard','pass'] as const)for(const kind of ['rejected','failed-get','committed-before','committed-after','stale-get'] as const){
+ try {for(const variant of ['sanma','yonma'] as const)for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const transport of ['websocket','polling'] as const)for(const hasTouch of [false,true])for(const operation of ['discard','pass'] as const)for(const kind of ['rejected','failed-get','committed-before','committed-after','stale-get','later-get','later-socket'] as const){
   const seat=operation==='pass'?1:0;
   const game=physicalEngine(variant,operation==='pass'?{0:'p789s234567z1234',1:'p1123456789s123'}:{0:'p123456789s124z2'},operation==='pass'?'p1':'s2');
   if(operation==='pass'){const g=game.view(0);game.respond(0,g.decisionId,g.choices.find(c=>c.value==='p1_')!.id);}
@@ -30,7 +30,7 @@ for(const browserType of [chromium,webkit]) {
   for(let n=1;n<identities.length;n++)execute(n,{action:'join',code:created.code} as any);
   for(let n=0;n<identities.length;n++){store.connection(String(n),1);execute(n,{action:'ready',ready:true,roomId:created.id} as any);}
   execute(0,{action:'start',roomId:created.id} as any);
-  let version=10,live:Socket|undefined,firstFailed=false,inFlight=0,maxInFlight=0,gets=0,transportReplays=0;
+  let version=10,live:Socket|undefined,firstFailed=false,inFlight=0,maxInFlight=0,gets=0,transportReplays=0,recoveryReady=false;
   const posts:any[]=[],accepted:any[]=[],errors:string[]=[],serverErrors:string[]=[],timers=new Set<ReturnType<typeof setTimeout>>();
   const response=():MahjongResponse=>({serviceRunning:true,room:{...store.view(String(seat))!,version}});
   const initial=response(),initialDecision=initial.room!.game!.decisionId;
@@ -40,7 +40,7 @@ for(const browserType of [chromium,webkit]) {
    if(path==='/api/session')return json(res,200,{user:{id:String(seat),displayName:'玩家'+seat,email:null,role:'member'},home:null});
    if(path==='/api/mahjong'&&req.method==='GET'){
     gets++;
-    if(firstFailed&&kind==='failed-get')return json(res,503,{error:{message:'GET unavailable'}});
+    if(firstFailed&&(kind==='failed-get'||kind.startsWith('later-')&&!recoveryReady))return json(res,503,{error:{message:'GET unavailable'}});
     if(firstFailed&&kind==='stale-get'){version++;live!.emit('mahjong:state',response());await pause(150);return json(res,200,initial);}
     return json(res,200,response());
    }
@@ -64,9 +64,9 @@ for(const browserType of [chromium,webkit]) {
      }
      json(res,503,{error:{message:'POST rejected before operation'}});inFlight--;return;
     }
-    assert(kind==='rejected'||kind.startsWith('committed')&&operation==='pass','only explicit retries or the next native turn');
+    assert(kind==='rejected'||kind==='stale-get'||kind.startsWith('later-')||kind.startsWith('committed')&&operation==='pass','only explicit retries or the next native turn');
     assert.equal(command.decisionId,game.view(seat).decisionId);
-    if(kind==='rejected')assert.equal(command.decisionId,initialDecision);
+    if(!kind.startsWith('committed'))assert.equal(command.decisionId,initialDecision);
     else assert.notEqual(command.decisionId,initialDecision);assert(game.view(seat).choices.some(c=>c.id===command.choiceId));
     store.execute(identities[seat],command);accepted.push(command);version++;
     live!.emit('mahjong:state',response());json(res,200,response());inFlight--;return;
@@ -86,12 +86,17 @@ for(const browserType of [chromium,webkit]) {
    await pair();await page.waitForFunction(()=>window.dispatches.length===1&&window.requestsPending===0);
    // Let actual React state and delayed Socket delivery settle without synthetic timers.
    await page.waitForTimeout(250);assert.equal(posts.length,1);assert.equal((await page.evaluate(()=>window.dispatches)).length,1,'no automatic replay');
+   if(kind.startsWith('later-')){
+    await pair();await page.waitForTimeout(100);assert.equal(posts.length,1,'failed GET alone stays consumed');recoveryReady=true;
+    if(kind==='later-socket')live!.emit('mahjong:state',response());else await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+    await page.waitForFunction(()=>window.requestsPending===0);await page.waitForTimeout(150);assert.equal(posts.length,1,'fresh baseline never auto replays');
+   }
    const nextTurn=kind.startsWith('committed')&&operation==='pass';
    if(nextTurn)await page.waitForFunction(()=>!document.querySelector('.is-draw-arriving')&&!document.querySelector('.is-nuki-held'));
    const current=game.view(seat),nextChoice=nextTurn?current.choices.find(c=>c.type==='discard'&&c.value===current.drawnTile+'_'):null;
    if(nextTurn)assert(nextChoice,'native next turn drawn discard');
    await pair();await page.waitForFunction(()=>window.requestsPending===0);await page.waitForTimeout(250);
-   const expected=kind==='rejected'||nextTurn?2:1;assert.equal(posts.length,expected);assert.equal(accepted.length,kind==='failed-get'||kind==='stale-get'?0:nextTurn?2:1);assert.equal(maxInFlight,1);assert.equal(inFlight,0);assert.deepEqual(errors,[]);assert.deepEqual(serverErrors,[]);assert.equal(timers.size,0);
+   const expected=kind==='rejected'||kind==='stale-get'||kind.startsWith('later-')||nextTurn?2:1;assert.equal(posts.length,expected);assert.equal(accepted.length,kind==='failed-get'?0:nextTurn?2:1);assert.equal(maxInFlight,1);assert.equal(inFlight,0);assert.deepEqual(errors,[]);assert.deepEqual(serverErrors,[]);assert.equal(timers.size,0);
    if(accepted.length)assert.equal(accepted[0].choiceId,initial.room!.game!.choices.find(c=>operation==='pass'?c.type==='pass':c.value==='s2_')!.id);
    if(nextTurn){assert.equal(accepted[1].choiceId,nextChoice!.id);assert.notEqual(accepted[1].decisionId,initialDecision);}
    assert.equal(new Set(accepted.map(c=>c.decisionId)).size,accepted.length,'one native operation per decision');
@@ -100,4 +105,4 @@ for(const browserType of [chromium,webkit]) {
   }catch(error){await page.screenshot({path:out+`/${browserType.name()}-${variant}-${viewport.width}-${transport}-${hasTouch}-${operation}-${kind}-failure.png`});writeFileSync(out+'/failure.json',JSON.stringify({error:String(error),posts,accepted,errors,serverErrors,body:await page.locator('body').innerText()},null,2));throw error;}finally{for(const timer of timers)clearTimeout(timer);await context.close();await new Promise<void>(resolve=>io.close(()=>resolve()));}
  }}finally{await browser.close();}
 }
-assert.equal(results.length,320);assert.deepEqual(Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))])),sources);writeFileSync(out+'/proof.json',JSON.stringify({sources,bundleSha256:sha(bundle),results},null,2));console.log('PASS 320 native HTTP Socket blank recovery scenes',out);
+assert.equal(results.length,448);assert.deepEqual(Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))])),sources);writeFileSync(out+'/proof.json',JSON.stringify({sources,bundleSha256:sha(bundle),results},null,2));console.log('PASS 448 native HTTP Socket blank recovery scenes',out);

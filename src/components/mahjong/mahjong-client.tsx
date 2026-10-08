@@ -106,6 +106,10 @@ function MahjongRoot() {
   const responseRevision = useRef(0);
   const getSequence = useRef(0);
   const pendingMutation = useRef<number | null>(null);
+  const failedChoiceRecovery = useRef<{
+    roomId: string; gameInstanceId: GameView["gameInstanceId"]; handId: GameView["handId"];
+    ownSeat: number; decisionId: string; choiceId: string;
+  } | null>(null);
   const [socketEpoch, setSocketEpoch] = useState(0);
   const room = response?.room || null;
   const isMember = session?.user.role === "member";
@@ -128,6 +132,20 @@ function MahjongRoot() {
       setSocketEpoch(epoch => epoch + 1);
     }
     responseRef.current = next;
+    const failed = failedChoiceRecovery.current;
+    if (failed && pendingMutation.current === null) {
+      // Only accepted authoritative snapshots consume this marker; failed/stale reads retain it.
+      failedChoiceRecovery.current = null;
+      const recovered = next.room;
+      if (recovered?.id === failed.roomId
+        && recovered.game?.gameInstanceId === failed.gameInstanceId
+        && recovered.game?.handId === failed.handId
+        && recovered.mySeat === failed.ownSeat
+        && recovered.game?.decisionId === failed.decisionId
+        && recovered.game.choices.some(choice => choice.id === failed.choiceId)) {
+        setChoiceRecoveryEpoch(epoch => epoch + 1);
+      }
+    }
     responseRevision.current++;
     setResponse(next);
     if (!sameMotionSnapshot) {
@@ -231,10 +249,9 @@ function MahjongRoot() {
     if (pendingMutation.current !== null) return;
     const revision = ++responseRevision.current;
     pendingMutation.current = revision;
+    failedChoiceRecovery.current = null;
     latestMotionIntent.current = motionIntent;
     let reconcile = false;
-    let failedChoice = false;
-    const submittedGame = room?.game;
     setBusy(true);
     setNotice("");
     try {
@@ -246,25 +263,18 @@ function MahjongRoot() {
       reconcile = !applyResponse(next, revision, { canAnimate: true, intent: motionIntent });
     } catch (error) {
       if (responseRevision.current === revision) setNotice(errorMessage(error));
-      failedChoice = command.action === "respond";
+      if (command.action === "respond" && room?.game) {
+        failedChoiceRecovery.current = {
+          roomId: room.id, gameInstanceId: room.game.gameInstanceId, handId: room.game.handId,
+          ownSeat: room.mySeat, decisionId: command.decisionId, choiceId: command.choiceId,
+        };
+      }
       reconcile = true;
     } finally {
       pendingMutation.current = null;
       setBusy(false);
       // Re-read after completion rather than guessing whether a delayed POST is newer than a socket.
-      if (reconcile) {
-        const recovered = await refresh(true);
-        // A failed POST alone cannot rearm input: require an accepted, still-current baseline.
-        if (failedChoice && command.action === "respond" && recovered?.room && responseRef.current === recovered
-          && recovered.room?.id === roomId
-          && recovered.room.game?.gameInstanceId === submittedGame?.gameInstanceId
-          && recovered.room.game?.handId === submittedGame?.handId
-          && recovered.room.mySeat === room?.mySeat
-          && recovered.room.game?.decisionId === command.decisionId
-          && recovered.room.game?.choices.some(choice => choice.id === command.choiceId)) {
-          setChoiceRecoveryEpoch(epoch => epoch + 1);
-        }
-      }
+      if (reconcile) await refresh(true);
     }
   }, [room, refresh, applyResponse]);
 
