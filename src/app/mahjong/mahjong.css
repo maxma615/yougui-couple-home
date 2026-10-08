@@ -756,7 +756,7 @@ button.mahjong-player__head { width: 100%; min-height: 30px; padding: 0; text-al
 .mahjong-draw-cause { grid-column: 1 / -1; text-align: center; padding: 16px; font-size: clamp(24px,4cqw,40px); color: #e7d6a6; }
 .mahjong-page .mahjong-game .mahjong-draw-rack span { margin: 0; }
 .mahjong-draw-rack { display: flex; gap: 2px; transform-style: preserve-3d; }
-.mahjong-draw-rack__tile { --flight-depth: calc(var(--rack-height) * .16); position: relative; display: block; width: calc(var(--rack-height) * .71); height: var(--rack-height); transform-style: preserve-3d; transform-origin: center bottom; animation: mahjong-draw-flip 300ms ease-out both; }
+.mahjong-draw-rack__tile { --flight-depth: calc(var(--rack-height) * .16); position: relative; display: block; width: calc(var(--rack-height) * .71); height: var(--rack-height); transform-style: preserve-3d; transform-origin: center bottom; animation: mahjong-draw-flip 300ms ease-out both; animation-delay: var(--draw-flip-age,0ms); }
 .mahjong-draw-rack__tile > .mahjong-discard-flight__face-up { transform: translateZ(var(--flight-depth)); }
 .mahjong-draw-rack__tile .mahjong-tile { width: 100%; height: 100%; padding: 0; }
 @keyframes mahjong-draw-flip { from { transform: rotateX(-90deg); } to { transform: rotateX(0); } }

@@ -26,9 +26,9 @@
 
 ### Task 2: 有限排程及对应席位三荣提示
 **Files:** settlement-presentation.ts,mahjong-client.tsx,mahjong-settlement-panel.tsx; create mahjong-abort-announcements.tsx and mahjong-abort-announcements.css; tests/component/mahjong-abort-sequence.test.tsx; tests/browser/mahjong-abort-sequence.tsx.
-- [ ] 按A分支、三荣300/500/1200及亮牌/原因/确认所有边界写实际组件RED，含旧DTO/重连/乱序/新阶段/卸载。
-- [ ] 实现排程与原生座位指示，500ms原因淡入；保留旧动作反馈/实体弃牌屏障。
-- [ ] GREEN，实际两浏览器原生GameRoom完整矩阵、长名/44px/减少动态/连续弃牌时序；提交。
+- [x] 按A分支、三荣300/500/1200及亮牌/原因/确认所有边界写实际组件RED，含旧DTO/重连/乱序/新阶段/卸载。
+- [x] 实现排程与原生座位指示，500ms原因淡入；保留旧动作反馈/实体弃牌屏障。
+- [x] GREEN，实际两浏览器原生GameRoom完整矩阵、长名/44px/减少动态/连续弃牌时序；提交。
 
 ### Task 3: 联机、独立终审、固定候选发布
 **Files:** extend tests/integration/mahjong-draw-runtime.test.ts; docs/mahjong-abort-sequence-acceptance.md and measurements artifact; immutable new audit/ops namespace.

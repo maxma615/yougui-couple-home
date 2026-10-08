@@ -11,7 +11,7 @@
 旧本地参考报告把三家和allplayertiles中索引!=消息seat解读为非荣家，直接源码不能证明该角色，已保留原报告并另存reference-correction.md。四麻原生三荣实测只公开三荣家手牌；不得显示未公开放铳者手牌。缓存不是最新客户端或官方实际payload证明，原生规则/安全边界优先，完整目标不能由本轮完成判定。
 
 ## 数据接口
-DrawInfo可选abortPresentation: { riichiSeat?: number; ronSeats: number[] }，仅kind=abort。四麻声明席位来自结束前最后公开弃牌的立直标记；三荣席位来自原生_hule并映射model.player_id。三麻四杠声明席位来自已确认discard reaction.riichi；九种九牌不伪造声明/荣家。元数据不包含新藏牌，序列包装深拷贝沿用现有DTO边界。
+DrawInfo可选abortPresentation: { riichiSeat?: number; ronSeats: number[] }，仅kind=abort。四麻声明席位来自结束前最后公开弃牌的立直标记；三荣席位来自原生已公开荣家手牌并映射model.player_id。三麻四杠声明席位来自已确认discard reaction.riichi；九种九牌不伪造声明/荣家。元数据不包含新藏牌，序列包装深拷贝沿用现有DTO边界。
 
 ## 有限时间线与视觉
 沿用服务器settlementFlow elapsedMs、performance.now和最后实体弃牌最大剩余时长，刷新/重连不重新启动已过时刻。同一局只向前，新局和新阶段清理提示。加入三荣start+300/start+500/start+1200边界，无无限循环。四家立直旧DTO回退A=1000，其余无元数据回退A=500；三荣无元数据不猜测席位。

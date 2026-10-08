@@ -11,7 +11,7 @@ import type {Choice,MahjongCommand} from "../../src/modules/mahjong/types";
 
 const out=`.local/audit/draw-sequence-browser-${Date.now()}`;
 mkdirSync(out,{recursive:true});
-const cssFiles=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css","mahjong-camera.css","mahjong-call-announcement.css","mahjong-standing-tile.css"];
+const cssFiles=["mahjong.css","mahjong-river.css","mahjong-meld.css","mahjong-interaction.css","mahjong-discard-motion.css","mahjong-table-center.css","mahjong-table-edge.css","mahjong-camera.css","mahjong-call-announcement.css","mahjong-standing-tile.css","mahjong-abort-announcements.css"];
 const css=cssFiles.map(f=>readFileSync(`src/app/mahjong/${f}`,"utf8")).join("\n");
 const harness=`import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {GameRoom} from './src/components/mahjong/mahjong-client';
 const root=createRoot(document.getElementById('root'));let current,busy=false;

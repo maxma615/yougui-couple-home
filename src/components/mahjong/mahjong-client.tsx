@@ -23,6 +23,7 @@ import { MahjongRiver as River } from "./mahjong-river";
 import { MahjongMeld as MeldView } from "./mahjong-meld";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
+import { MahjongAbortAnnouncements } from "./mahjong-abort-announcements";
 import { MahjongCallAnnouncement } from "./mahjong-call-announcement";
 import { MahjongStandingTile } from "./mahjong-standing-tile";
 import { useDrawArrival } from "./use-draw-arrival";
@@ -608,13 +609,14 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       {feedback ? feedback.actionLabel && ["call", "riichi", "nuki", "win"].includes(feedback.kind)
         ? <MahjongCallAnnouncement key={feedback.key} feedback={feedback} members={room.members} ownSeat={ownSeat}/>
         : <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
+      {game.settlement?.drawInfo?.kind === "abort" ? <MahjongAbortAnnouncements settlement={game.settlement} flow={game.settlementFlow} elapsed={drawPresentation.elapsed} members={room.members} ownSeat={ownSeat} capacity={capacity} reducedMotion={drawPresentation.reducedMotion}/> : null}
       <div className="mahjong-table__surface" data-testid="mahjong-table-surface">
         <div className="mahjong-table__grain" aria-hidden="true"/>
         <div className="mahjong-table__seams mahjong-table__lane" aria-hidden="true"/>
         {Array.from({ length: capacity - 1 }, (_, index) => index + 1).map(offset => {
           const player = byRelative(offset);
           const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
-          return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel revealedHand={revealedHands.find(hand => hand.seat === player?.seat)?.hand} player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
+          return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel revealKey={game.settlementFlow?.id} revealAge={game.settlementFlow?.stage === "draw" && game.settlement ? Math.max(0,drawPresentation.elapsed-drawRevealAt(game.settlement)) : 300} revealedHand={revealedHands.find(hand => hand.seat === player?.seat)?.hand} player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
         })}
         <div className="mahjong-table__own-public"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} includeIdentity={false}/></div>
         <div className="mahjong-table__center" aria-label="场况台">
@@ -671,7 +673,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   </section>;
 }
 
-type PlayerPanelProps = { revealedHand?: string; player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void; includeIdentity?: boolean };
+type PlayerPanelProps = { revealKey?: string; revealAge?: number; revealedHand?: string; player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void; includeIdentity?: boolean };
 
 function PlayerIdentity({ player, member, ownSeat, offset, capacity, onInspect }: PlayerPanelProps) {
   if (!player) return null;
@@ -684,12 +686,12 @@ function PlayerIdentity({ player, member, ownSeat, offset, capacity, onInspect }
   </>;
 }
 
-function PlayerPanel({ revealedHand, player, member, ownSeat, active, offset, capacity, onInspect, includeIdentity = true }: PlayerPanelProps) {
+function PlayerPanel({ revealKey, revealAge = 300, revealedHand, player, member, ownSeat, active, offset, capacity, onInspect, includeIdentity = true }: PlayerPanelProps) {
   if (!player) return null;
   return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
     {includeIdentity ? <PlayerIdentity player={player} member={member} ownSeat={ownSeat} active={active} offset={offset} capacity={capacity} onInspect={onInspect}/> : null}
     {offset !== 0 ? <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
-      {revealedHand ? <div className="mahjong-draw-rack" data-draw-reveal-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的公开手牌`}>{winningHand({kind:"draw", name:"", hand:revealedHand,yaku:[],delta:[],uraIndicators:[]}).closed.map((tile,index)=><span key={`${index}-${tile}`} className="mahjong-draw-rack__tile"><MahjongFaceUpFlightTile value={tile}/></span>)}</div> : Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
+      {revealedHand ? <div key={revealKey} style={{"--draw-flip-age":`${-Math.min(300,revealAge)}ms`} as CSSProperties} className="mahjong-draw-rack" data-draw-reveal-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的公开手牌`}>{winningHand({kind:"draw", name:"", hand:revealedHand,yaku:[],delta:[],uraIndicators:[]}).closed.map((tile,index)=><span key={`${index}-${tile}`} className="mahjong-draw-rack__tile"><MahjongFaceUpFlightTile value={tile}/></span>)}</div> : Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
         const drawn = player.hasDrawnTile === true && index === Math.min(player.handCount, 14) - 1;
         return <MahjongStandingTile key={index} drawn={drawn}/>;
       }) }

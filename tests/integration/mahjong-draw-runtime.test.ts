@@ -1,31 +1,29 @@
 import { randomUUID } from "node:crypto";
 import net from "node:net";
-import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { io, type Socket } from "socket.io-client";
 import { runMigrations } from "@/cli/migrate";
 import { createSession, SESSION_COOKIE_NAME } from "@/modules/auth/session";
 import { runMahjongServer } from "@/modules/mahjong/server";
 import { RoomStore } from "@/modules/mahjong/rooms";
 import { physicalEngine } from "../fixtures/mahjong-settlement-game";
+import { abortEngine, playAbort, type AbortKind } from "../fixtures/mahjong-abort-game";
 import { drawEngine, playToDraw } from "../fixtures/mahjong-draw-game";
 import { createTestDatabase, type TestDatabase } from "../helpers/database";
 import type { GameVariant, MahjongResponse, RoomView } from "@/modules/mahjong/types";
 
 let db: TestDatabase, service: Awaited<ReturnType<typeof runMahjongServer>>, address: string;
 let drawEnding: "exhaustive" | "nagashi" | "abort" | "final" = "exhaustive";
+let specialAbort: {kind:AbortKind;declare:boolean;dealer:number}|null=null;
 const users: string[] = [], cookies: string[] = [], sockets: Socket[] = [];
 const origin = "http://127.0.0.1:34447";
 beforeAll(async () => {
   db = await createTestDatabase(); await runMigrations(db.pool);
   vi.stubEnv("DATABASE_URL",db.databaseUrl);vi.stubEnv("APP_ORIGIN",origin);
-  for(let n=0;n<5;n++) {
-    const id=randomUUID();users.push(id);
-    await db.pool.query('INSERT INTO users(id,email,display_name,password_hash) VALUES($1,$2,$3,$4)',[id,`draw-${id}@example.test`,`玩家${n}`,"not-a-login-hash"]);
-    cookies.push(`${SESSION_COOKIE_NAME}=${(await createSession(id,db.pool)).token}`);
-  }
   const port=await new Promise<number>((resolve,reject)=>{const socket=net.createServer();socket.on('error',reject);socket.listen(0,'127.0.0.1',()=>{const p=(socket.address() as net.AddressInfo).port;socket.close(()=>resolve(p));});});
   address=`http://127.0.0.1:${port}`;
   const rooms=new RoomStore({gameFactory:variant=>{
+      if(specialAbort){const raw=abortEngine(specialAbort.kind,variant,specialAbort.dealer,specialAbort.declare);playAbort(raw,specialAbort.kind,specialAbort.dealer,specialAbort.declare);return raw;}
       const raw=drawEnding==='abort'?physicalEngine(variant,{0:'m19p19s19z1234567'},'z1'):drawEngine(variant,drawEnding==='nagashi'?[0,1]:[],drawEnding==='final'?{hands:['m19p369s369z14577','m19p147s258z13566','m19p258s147z23477','m2346p3468s2468z3']}:{});
       if(drawEnding==='abort') {const v=raw.view(0);raw.respond(0,v.decisionId,v.choices.find(c=>c.type==='abort')!.id);}
       else playToDraw(raw,variant==='sanma'?3:4);
@@ -33,7 +31,16 @@ beforeAll(async () => {
   }});
   service=await runMahjongServer({port,rooms,sweepMs:30,botDelayMs:0});
 });
-afterEach(async()=>{ if(service?.rooms.view(users[0])) await post(0,{action:"finish"}); drawEnding='exhaustive'; });
+// Each independent scenario authenticates fresh users. Production rate limits
+// remain intact instead of carrying ten prior lobby creations into this test.
+beforeEach(async()=>{users.length=0;cookies.length=0;
+  for(let n=0;n<5;n++) {
+    const id=randomUUID();users.push(id);
+    await db.pool.query('INSERT INTO users(id,email,display_name,password_hash) VALUES($1,$2,$3,$4)',[id,`draw-${id}@example.test`,`玩家${n}`,"not-a-login-hash"]);
+    cookies.push(`${SESSION_COOKIE_NAME}=${(await createSession(id,db.pool)).token}`);
+  }
+});
+afterEach(async()=>{ if(service?.rooms.view(users[0])) await post(0,{action:"finish"}); drawEnding='exhaustive';specialAbort=null; });
 afterAll(async()=>{sockets.forEach(s=>s.disconnect());if(service)await service.close();vi.unstubAllEnvs();if(db)await db.cleanup();});
 async function post(seat:number,body:object){return fetch(`${address}/internal/room`,{method:'POST',headers:{cookie:cookies[seat],origin,'content-type':'application/json'},body:JSON.stringify({nonce:randomUUID(),...(['create','join'].includes((body as {action:string}).action)?{}:{roomId:service.rooms.view(users[seat])?.id}),...body})});}
 async function connect(seat:number){
@@ -142,5 +149,57 @@ it.each(['sanma','yonma'] as const)('publishes %s final ranking only after the l
   expect(payload.game!.rankingFlow!.elapsedMs).toBeGreaterThanOrEqual(final.game!.rankingFlow!.elapsedMs);
   expect((await post(1,{action:'rematch'})).status).toBe(403);
   expect((await post(0,{action:'rematch'})).status).toBe(200);expect(view().game).toBeNull();
+ }finally{client.socket.disconnect();}
+});
+
+const specialCases = [
+ {variant:'yonma',kind:'winds',declare:false,dealer:0},
+ {variant:'yonma',kind:'riichi',declare:false,dealer:2},
+ {variant:'yonma',kind:'ron',declare:false,dealer:1},
+ {variant:'yonma',kind:'ron',declare:true,dealer:3},
+ {variant:'yonma',kind:'kans',declare:true,dealer:1},
+ {variant:'sanma',kind:'kans',declare:true,dealer:1},
+] as const;
+for(const scenario of specialCases) it(`authenticated ${scenario.variant} ${scenario.kind} declared=${scenario.declare} pushes native public declarations and keeps final ACK private`,async()=>{
+ specialAbort=scenario;const count=scenario.variant==='sanma'?3:4,clients=await Promise.all(Array.from({length:count},(_,seat)=>connect(seat)));
+ try{
+  const room=await create(scenario.variant,count),first=view().game!,handId=first.handId,old=first.players.map(p=>p.score),info=first.settlement!.drawInfo!;
+  expect(info.kind).toBe('abort');expect(info.abortPresentation).toBeDefined();expect(first.settlementFlow?.stage).toBe('draw');
+  expect(first.settlement?.delta).toEqual(Array(count).fill(0));
+  if(scenario.kind==='ron'){
+   expect(info.abortPresentation?.ronSeats).toEqual([1,2,3].map(w=>(scenario.dealer+w)%4));
+   expect(info.revealedHands.some(h=>h.seat===scenario.dealer)).toBe(false);
+   expect(first.riichiSticks).toBe(0);expect(old).toEqual([25000,25000,25000,25000]);
+  }
+  await vi.waitFor(()=>expect(clients.every(c=>c.states.some(s=>s.room?.game?.decisionId===first.decisionId))).toBe(true));
+  for(let seat=0;seat<count;seat++){
+   const pushed=clients[seat].states.find(s=>s.room?.game?.decisionId===first.decisionId)!.room!.game!;
+   expect(pushed.settlement?.drawInfo).toEqual(info);expect(pushed.hand).toEqual(view(seat).game!.hand);
+   expect(pushed.players.every(p=>!('hand' in p)&&!('drawnTile' in p))).toBe(true);
+  }
+  expect((await post(4,{action:'respond',roomId:room.id,decisionId:first.decisionId,choiceId:'ack'})).status).toBe(409);
+  clients[count-1].socket.disconnect();
+  const restored=await fetch(`${address}/internal/room`,{headers:{cookie:cookies[count-1]}}),payload=(await restored.json() as MahjongResponse).room!;
+  expect(payload.game!.settlement?.drawInfo).toEqual(info);expect(payload.game!.settlementFlow!.id).toBe(first.settlementFlow!.id);
+  expect(payload.game!.settlementFlow!.elapsedMs).toBeGreaterThanOrEqual(first.settlementFlow!.elapsedMs);
+  clients[count-1]=await connect(count-1);
+  for(let seat=0;seat<count-1;seat++){
+   await choose(seat,'ack');expect(view(seat).game!.choices).toEqual([]);
+   expect(view(seat).game!.handId).toBe(handId);expect(view(seat).game!.players.map(p=>p.score)).toEqual(old);
+   expect(view(count-1).game!.settlementFlow?.stage).toBe('draw');
+  }
+  expect((await post(0,{action:'respond',decisionId:first.decisionId,choiceId:'ack'})).status).toBe(409);
+  const next=await choose(count-1,'ack');expect(next.game!.handId).toBe(handId!+1);expect(next.game!.settlementFlow).toBeUndefined();expect(next.game!.riichiSticks).toBe(first.riichiSticks);
+ }finally{clients.forEach(c=>c.socket.disconnect());}
+});
+for(const scenario of specialCases) it(`bounded ${scenario.variant} workers ACK ${scenario.kind} while preserving the human abort clock`,async()=>{
+ specialAbort=scenario;const count=scenario.variant==='sanma'?3:4,client=await connect(0);
+ try{
+  const completed=service.bots.metrics.completed;await create(scenario.variant,1);
+  const first=view().game!,handId=first.handId,old=first.players.map(p=>p.score),clock=first.settlementFlow!.id;
+  await vi.waitFor(()=>expect(service.rooms.botDecisions()).toEqual([]),{timeout:5000});
+  expect(service.bots.metrics.completed-completed).toBe(count-1);expect(service.bots.metrics.peakWorkers).toBeLessThanOrEqual(1);expect(service.bots.metrics.unexpectedErrors).toBe(0);
+  expect(view().game!.settlementFlow?.id).toBe(clock);expect(view().game!.handId).toBe(handId);expect(view().game!.players.map(p=>p.score)).toEqual(old);
+  await choose(0,'ack');expect(view().game!.handId).toBe(handId!+1);expect(view().game!.settlementFlow).toBeUndefined();
  }finally{client.socket.disconnect();}
 });

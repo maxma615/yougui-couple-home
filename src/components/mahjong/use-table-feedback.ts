@@ -46,6 +46,12 @@ export function useTableFeedback(game:GameView|null, members:RoomMember[], ownSe
       setFeedback(null);
       return;
     }
+    // The server-relative abort sequence owns declarations and the result.
+    // Do not replace its ordered seat indicators with an immediate generic draw.
+    if (game.settlement?.drawInfo?.kind === "abort" && game.settlementFlow?.stage === "draw") {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current=null; activeKind.current=null; setFeedback(null); return;
+    }
     if (old.decision===next.decision) return;
     // GET refreshes and a socket's first snapshot establish state only. They may
     // contain actions that happened while this view was disconnected.
