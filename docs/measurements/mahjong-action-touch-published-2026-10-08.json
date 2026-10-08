@@ -1,0 +1,22 @@
+{
+  "sourceRevision": "b17ef236f16fdf63c4cca827c9087ab150d1e0c1",
+  "buildId": "RD1L87FOTIHvEFEurT3hN",
+  "imageId": "sha256:15438c6a8c366acd1a6ea792272dd6dbf59f65a5f19876b00308499f4edd520b",
+  "sourceFiles": 595,
+  "nextFiles": 449,
+  "linuxTests": 263,
+  "localTests": 780,
+  "browserTouchMouseScenes": 24,
+  "publicAssets": 130,
+  "fullGoalComplete": false,
+  "cameraUserRuntimeCauseConfirmed": false,
+  "evidenceSha256": {
+    "action-touch-b17ef23-r01-public-proof.json": "33dbd24eacc40cae527fdc699efe0f35da44de19406134bd2a12faa890f40e0e",
+    "action-touch-b17ef23-r01-owned-sync-proof.json": "87e75cc7e6e2a6fc917accdc9bd49dd87870a0cf62a65c86d913fbc8768620a1",
+    "action-touch-b17ef23-r03-linux-status.json": "2e76c4c57358a2f6ce496b24552fff0a59014c4c6e52ba9aca6036a605fb59c7",
+    "action-touch-b17ef23-r02-publish-status.json": "aa8566cd56dc5b1af6809028a941e67141de473ddee40f1cc3cb60231a9ca017",
+    "action-touch-b17ef23-r01-live-check.json": "335bf695995d4eafc532541f4ab0d8e9ce277499ce6993bca904b4e85abb5d8d",
+    "action-touch-b17ef23-r01-final-health.json": "70d11277908038b1dc84b918dda90dc0e07d8d68a2779947b529c1784f0e6e89",
+    "action-touch-b17ef23-r01-published-preflight.json": "bc96d7707776e56cd4c6e26d936e8e629cf17126891b6f7107c6838a7ddb4415"
+  }
+}
