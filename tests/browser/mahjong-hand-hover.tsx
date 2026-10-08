@@ -14,12 +14,12 @@ const bundle=(await build({stdin:{contents:`import React from'react';import{crea
 const results:any[]=[];
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch();
- try{for(const variant of ['sanma','yonma'] as const)for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const kind of ['desktop','touch','two-click','interrupted','riichi']){
+ try{for(const variant of ['sanma','yonma'] as const)for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const kind of ['desktop','touch','two-click','interrupted','riichi','press']){
   const game=physicalEngine(variant,{0:kind==='riichi'?'p123456789s123z2':'p123456789s124z2'},kind==='riichi'?'z3':'s2');
   const room:RoomView={id:'hand-hover-native',code:'ABCDEFGH',hostUserId:'0',variant,mode:'east',status:'playing',version:1,mySeat:0,game:game.view(0),members:game.view(0).players.map(p=>({seat:p.seat,userId:String(p.seat),displayName:'玩家'+p.seat,kind:'human',ready:true,connected:true}))};
   const commands:any[]=[],errors:string[]=[];
   const context=await browser.newContext({viewport,hasTouch:kind==='touch'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
-  if(kind==='two-click')await context.addInitScript(()=>localStorage.setItem('yougui.mahjong.confirmClick','1'));
+  if(kind==='two-click'||kind==='press')await context.addInitScript(()=>localStorage.setItem('yougui.mahjong.confirmClick','1'));
   await page.route('http://hand-hover.local/**',route=>{const p=new URL(route.request().url()).pathname;if(p.startsWith('/fonts/')||p.startsWith('/images/'))return route.fulfill({body:readFileSync('public'+p),contentType:p.endsWith('.woff2')?'font/woff2':p.endsWith('.svg')?'image/svg+xml':'image/webp'});return route.fulfill({contentType:'text/html',body:`<style>*{box-sizing:border-box}body{margin:0}${cssFiles.map(f=>readFileSync(f,'utf8')).join('\n')}</style><div id="root"></div><script>globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v,configurable:true});globalThis.process={env:{NODE_ENV:'development'}};${bundle}</script>`});});
   await page.exposeFunction('respond',(choice:any,intent:any)=>{
    const g=game.view(0);assert(g.choices.some(c=>c.id===choice.id),'native offered choice');assert.equal(commands.length,0);
@@ -32,6 +32,11 @@ for(const engine of [chromium,webkit]){
    const tile=page.locator('.mahjong-hand button[data-choice-id]:enabled').first();await tile.waitFor();const id=await tile.getAttribute('data-choice-id');
    if(kind==='touch'){
     await tile.tap();assert.equal(commands.length,0,'first touch only selects');assert.equal(await tile.getAttribute('aria-pressed'),'true');await tile.tap();
+   }else if(kind==='press'){
+    await tile.hover();const b=await tile.boundingBox();assert(b);await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();
+    assert.equal(await tile.getAttribute('aria-pressed'),'true','physical press lifts immediately');assert.equal(commands.length,0,'press never submits');
+    await page.waitForTimeout(100);await page.mouse.up();await page.waitForTimeout(30);assert.equal(commands.length,0,'holding first press does not gain confirmation');
+    const lifted=await tile.boundingBox();assert(lifted);await page.mouse.move(lifted.x+lifted.width/2,lifted.y+lifted.height/2);await page.mouse.down();assert.equal(commands.length,0,'second press waits for release');await page.mouse.up();
    }else if(kind==='two-click'){
     await tile.hover();await page.waitForTimeout(30);assert.equal(await tile.getAttribute('aria-pressed'),'false');await tile.click();assert.equal(commands.length,0,'first desktop click only selects in configured mode');await tile.click();
    }else{
@@ -47,4 +52,4 @@ for(const engine of [chromium,webkit]){
   }catch(error){await page.screenshot({path:out+`/${engine.name()}-${variant}-${viewport.width}-${kind}-failure.png`});writeFileSync(out+'/failure.json',JSON.stringify({error:String(error),commands,errors},null,2));throw error;}finally{await context.close();}
  }}finally{await browser.close();}
 }
-assert.equal(results.length,40);assert.deepEqual(Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))])),sources);writeFileSync(out+'/proof.json',JSON.stringify({sources,bundleSha256:sha(bundle),results},null,2));console.log('PASS 40 native hand-hover scenes',out);
+assert.equal(results.length,48);assert.deepEqual(Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))])),sources);writeFileSync(out+'/proof.json',JSON.stringify({sources,bundleSha256:sha(bundle),results},null,2));console.log('PASS 48 native hand-hover scenes',out);

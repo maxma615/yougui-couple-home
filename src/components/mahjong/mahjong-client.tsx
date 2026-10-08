@@ -512,10 +512,12 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   }, [drawArrival.cancel, audio.invalidate, room.status]);
   const selectedHandTileRef = useRef<{ tileId: string; choiceId: string } | null>(null);
   const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; rackTop: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
+  const pressedHandChoiceRef = useRef<{tileId:string;choiceId:string;confirmed:boolean}|null>(null);
   const submittedChoiceRef = useRef(false);
   const suppressPointerClickRef = useRef(false);
   const wasBusyRef = useRef(busy);
   const clearHandSelection = useCallback(() => {
+    pressedHandChoiceRef.current = null;
     selectedHandTileRef.current = null;
     setSelectedHandTile(null);
   }, []);
@@ -621,12 +623,15 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     if (busy || !connected || submittedChoiceRef.current) return;
     handReflow.captureBeforeInput();
     drawArrival.cancel();
+    const pressed = pressedHandChoiceRef.current;
+    pressedHandChoiceRef.current = null;
     if (suppressPointerClickRef.current && event.detail > 0) {
       suppressPointerClickRef.current = false;
       return;
     }
     const selected = selectedHandTileRef.current;
-    if (selected?.tileId === tileId && selected.choiceId === choice.id) {
+    const confirmed = pressed ? pressed.tileId === tileId && pressed.choiceId === choice.id && pressed.confirmed : selected?.tileId === tileId && selected.choiceId === choice.id;
+    if (confirmed) {
       submitHandChoice(choice, event.currentTarget);
       return;
     }
@@ -637,6 +642,8 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const startHandPointer = (tileId: string, choice: Choice, event: ReactPointerEvent<HTMLButtonElement>) => {
     if (busy || !connected || submittedChoiceRef.current || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
     handHover.press(event.pointerType);
+    const selected = selectedHandTileRef.current;
+    pressedHandChoiceRef.current = {tileId,choiceId:choice.id,confirmed:selected?.tileId===tileId && selected.choiceId===choice.id};
     drawArrival.cancel();
     suppressPointerClickRef.current = false;
     activeTilePointerRef.current = {
@@ -647,6 +654,10 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     };
     try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* Pointer capture is unavailable in some embedded browsers. */ }
     handReflow.captureBeforeInput();
+    // Freeze the unlifted rack and confirmation state before showing press feedback.
+    const next = {tileId,choiceId:choice.id};
+    selectedHandTileRef.current = next;
+    setSelectedHandTile(next);
   };
   // Native hit testing follows the actual projected felt, rather than the
   // surface's axis-aligned bounding box. Freeze the rack boundary on press:
@@ -682,6 +693,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     suppressPointerClickRef.current = true;
     window.setTimeout(() => { suppressPointerClickRef.current = false; }, 0);
     if (landedInTable) submitHandChoice(active.choice, active.element);
+    else clearHandSelection();
   };
   const cancelHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
     const active = activeTilePointerRef.current;

@@ -502,3 +502,32 @@ it('offers an opt-in blank table shortcut and keeps it off by default',()=>{
  for(let i=0;i<2;i++){fireEvent.pointerDown(surface,{pointerId:1,button:0,clientX:100,clientY:100});fireEvent.pointerUp(surface,{pointerId:1,button:0,clientX:100,clientY:100});}
  expect(onChoice).not.toHaveBeenCalled();
 });
+
+it('lifts the pressed tile immediately, but the first release only selects',()=>{
+ vi.stubGlobal('PointerEvent',MouseEvent);
+ const view=fixtureGame().view(0);view.hand=['p1','p2'];view.drawnTile=null;view.choices=[{id:'press:p1',type:'discard',value:'p1'}];
+ const onChoice=show(view),tile=screen.getByRole('button',{name:'切出 一筒'});
+ fireEvent.pointerDown(tile,{pointerId:51,button:0,pointerType:'touch',clientX:40,clientY:350});
+ expect(tile.getAttribute('aria-pressed')).toBe('true');expect(onChoice).not.toHaveBeenCalled();
+ fireEvent.pointerUp(tile,{pointerId:51,button:0,pointerType:'touch',clientX:40,clientY:350});fireEvent.click(tile,{detail:1});expect(onChoice).not.toHaveBeenCalled();
+ fireEvent.pointerDown(tile,{pointerId:52,button:0,pointerType:'touch',clientX:40,clientY:350});expect(onChoice).not.toHaveBeenCalled();
+ fireEvent.pointerUp(tile,{pointerId:52,button:0,pointerType:'touch',clientX:40,clientY:350});fireEvent.click(tile,{detail:1});expect(onChoice).toHaveBeenCalledExactlyOnceWith(view.choices[0]);
+});
+
+it('pressing a different repeated physical copy cannot confirm its prior sibling',()=>{
+ vi.stubGlobal('PointerEvent',MouseEvent);
+ const view=fixtureGame().view(0);view.hand=['p1','p1','p2'];view.drawnTile=null;view.choices=[{id:'copy:p1',type:'discard',value:'p1'}];
+ const onChoice=show(view),copies=screen.getAllByRole('button',{name:'切出 一筒'});
+ fireEvent.click(copies[0]);fireEvent.pointerDown(copies[1],{button:0,clientX:40,clientY:350});expect(copies[0].getAttribute('aria-pressed')).toBe('false');expect(copies[1].getAttribute('aria-pressed')).toBe('true');
+ fireEvent.pointerUp(copies[1],{button:0,clientX:40,clientY:350});fireEvent.click(copies[1],{detail:1});expect(onChoice).not.toHaveBeenCalled();
+ fireEvent.pointerDown(copies[1],{button:0,clientX:40,clientY:350});fireEvent.pointerUp(copies[1],{button:0,clientX:40,clientY:350});fireEvent.click(copies[1],{detail:1});expect(onChoice).toHaveBeenCalledExactlyOnceWith(view.choices[0]);
+});
+
+it.each(['blur','pagehide','orientationchange'])('cancelling a lifted press on %s prevents its release from confirming',event=>{
+ vi.stubGlobal('PointerEvent',MouseEvent);
+ const view=fixtureGame().view(0);view.hand=['p1','p2'];view.drawnTile=null;view.choices=[{id:'cancel:p1',type:'discard',value:'p1'}];
+ const onChoice=show(view),tile=screen.getByRole('button',{name:'切出 一筒'});
+ fireEvent.pointerDown(tile,{button:0,clientX:40,clientY:350});expect(tile.getAttribute('aria-pressed')).toBe('true');
+ act(()=>window.dispatchEvent(new Event(event)));expect(tile.getAttribute('aria-pressed')).toBe('false');fireEvent.pointerUp(tile,{button:0,clientX:40,clientY:350});fireEvent.click(tile,{detail:1});expect(onChoice).not.toHaveBeenCalled();
+ fireEvent.pointerDown(tile,{button:0,clientX:40,clientY:350});fireEvent.pointerUp(tile,{button:0,clientX:40,clientY:350});fireEvent.click(tile,{detail:1});expect(onChoice).not.toHaveBeenCalled();
+});

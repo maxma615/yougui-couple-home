@@ -139,7 +139,12 @@ for(const engine of [chromium,webkit]) {
           if(kind==='changedDecision') {game.respond(0,r.game!.decisionId,'discard:s1');const next=room(game,0,2);assert.notEqual(next.game!.decisionId,r.game!.decisionId);await page.evaluate(r=>(window as any).renderRoom(r),next);}
           if(kind==='disconnected'||kind==='busy') await page.evaluate(({r,kind})=>(window as any).renderRoom(r,{connected:kind!=='disconnected',busy:kind==='busy'}),{r,kind});
           await page.screenshot({path:`${out}/${engine.name()}-${viewport.width}-${kind}-preview.png`});
+          if(kind==='dragBack') await tile.evaluate(el=>{
+            (window as any).dragBackSelectionStates=[];
+            new MutationObserver(()=>{(window as any).dragBackSelectionStates.push(el.getAttribute('aria-pressed'));}).observe(el,{attributes:true,attributeFilter:['aria-pressed']});
+          });
           await page.mouse.up();await page.waitForTimeout(60);
+          if(kind==='dragBack') {record.dragBackSelectionStates=await page.evaluate(()=>(window as any).dragBackSelectionStates);assert.ok(record.dragBackSelectionStates.includes('false'),'dragging back resets before desktop hover may select again');}
           const choices=await page.evaluate(()=>(window as any).choices);record.choices=choices;
           const accepted=kind==='ordinaryClearRackDrop'||kind==='centerControl';
           if(accepted) assert.equal(preview.target,true,'preview and release share playable region');
