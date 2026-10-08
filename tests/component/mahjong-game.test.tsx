@@ -443,3 +443,24 @@ it("cancels the pointer sequence even if capture is lost before reaching the dra
   expect(onChoice).not.toHaveBeenCalled();
   expect(tile.getAttribute("aria-pressed")).toBe("false");
 });
+
+for(const event of ['blur','pagehide','visibilitychange'])it(`cancels an in-flight discard after ${event} without a late release command`,()=>{
+ const descriptor=Object.getOwnPropertyDescriptor(document,'visibilityState');
+ try{
+  if(event==='visibilitychange')Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});
+  const view=fixtureGame().view(0),discard=view.choices.find(c=>c.type==='discard'&&!c.value?.endsWith('_'))!,onChoice=show(view);
+  const tile=document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!,rack=screen.getByTestId('mahjong-hand');
+  Object.defineProperty(rack,'getBoundingClientRect',{configurable:true,value:()=>({top:320})});
+  Object.defineProperty(document,'elementFromPoint',{configurable:true,value:()=>screen.getByTestId('mahjong-table-surface')});
+  fireEvent.click(tile);fireEvent.pointerDown(tile,{pointerId:28,isPrimary:true,button:0,clientX:80,clientY:350});fireEvent.pointerMove(tile,{pointerId:28,clientX:80,clientY:240});
+  expect(tile.classList.contains('is-dragging')).toBe(true);
+  fireEvent(event==='visibilitychange'?document:window,new Event(event));
+  expect(tile.classList.contains('is-dragging')).toBe(false);expect(tile.getAttribute('aria-pressed')).toBe('false');
+  fireEvent.pointerUp(tile,{pointerId:28,clientX:80,clientY:240});fireEvent.click(tile,{detail:1});
+  expect(onChoice).not.toHaveBeenCalled();
+  if(event==='visibilitychange'){Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});fireEvent(document,new Event('visibilitychange'));}
+  // A fresh press remains usable; cancelling a stale sequence must not lock the table.
+  fireEvent.pointerDown(tile,{pointerId:29,isPrimary:true,button:0,clientX:80,clientY:350});fireEvent.pointerMove(tile,{pointerId:29,clientX:80,clientY:240});fireEvent.pointerUp(tile,{pointerId:29,clientX:80,clientY:240});
+  expect(onChoice).toHaveBeenCalledExactlyOnceWith(discard);
+ }finally{if(descriptor)Object.defineProperty(document,'visibilityState',descriptor);else Reflect.deleteProperty(document,'visibilityState');}
+});

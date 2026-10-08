@@ -468,7 +468,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       setOverDiscardTarget(false);
       try { active.element.releasePointerCapture?.(active.pointerId); } catch { /* The browser may have already cancelled capture. */ }
     };
-    const events = ["resize", "orientationchange", "fullscreenchange", "webkitfullscreenchange"];
+    const events = ["resize", "orientationchange", "fullscreenchange", "webkitfullscreenchange", "blur", "pagehide"];
+    const visibilityChanged = () => { if (document.visibilityState === "hidden") cancel(); };
+    document.addEventListener("visibilitychange", visibilityChanged);
     for (const event of events) window.addEventListener(event, cancel);
     const orientation = window.screen.orientation;
     orientation?.addEventListener?.("change", cancel);
@@ -482,6 +484,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     if (table) observer?.observe(table);
     return () => {
       for (const event of events) window.removeEventListener(event, cancel);
+      document.removeEventListener("visibilitychange", visibilityChanged);
       orientation?.removeEventListener?.("change", cancel);
       observer?.disconnect();
     };

@@ -17,7 +17,7 @@ const out = `.local/audit/seat-drag-${process.env.SEAT_STAGE || 'green'}-${Date.
 mkdirSync(out, {recursive: true});
 const sha = (v: string | Buffer) => createHash('sha256').update(v).digest('hex');
 const cssFiles = [...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import "\.\/([^"]+\.css)";/g)].map(m=>m[1]);
-const sourceFiles = ['src/components/mahjong/mahjong-client.tsx', ...cssFiles.map(f => 'src/app/mahjong/'+f)];
+const sourceFiles = ['public/fonts/mahjong-brush.woff2','tests/browser/mahjong-seat-drag.tsx','src/modules/mahjong/engine.ts','src/modules/mahjong/sanma.ts','tests/fixtures/mahjong-view-game.ts','src/components/mahjong/mahjong-client.tsx', ...cssFiles.map(f => 'src/app/mahjong/'+f)];
 const sources = Object.fromEntries(sourceFiles.map(f => [f, sha(readFileSync(f))]));
 const css = cssFiles.map(f => readFileSync('src/app/mahjong/'+f,'utf8')).join('\n');
 const harness = `import React from 'react';import{createRoot}from'react-dom/client';import{flushSync}from'react-dom';import{GameRoom}from'./src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.choices=[];window.renderRoom=(room,opts={})=>flushSync(()=>root.render(React.createElement('main',{className:'mahjong-page'},React.createElement('div',{className:'mahjong-shell'},React.createElement(GameRoom,{room,ownSeat:room.mySeat,host:true,busy:opts.busy??false,connected:opts.connected??true,motionCanAnimate:false,onChoice:(choice,intent)=>window.choices.push({choice,intent}),onFinish:()=>{},onLeave:()=>{},onRematch:()=>{}})))));`;
@@ -73,26 +73,28 @@ function extract(game: SanmaGame, count: number) {
   const v=game.view(0),discard=v.choices.find(c=>c.type==='discard');assert.ok(discard);game.respond(0,v.decisionId,discard.id);
 }
 async function mount(page: Page, r: RoomView) {
+  await page.route('https://mahjong.local/fonts/**',route=>route.fulfill({body:readFileSync('public'+new URL(route.request().url()).pathname),contentType:'font/woff2'}));
   await page.route('https://mahjong.local/images/**',route=>route.fulfill({body:readFileSync('public'+new URL(route.request().url()).pathname),contentType:route.request().url().endsWith('.svg')?'image/svg+xml':'image/webp'}));
   await page.setContent(`<base href="https://mahjong.local/"><style>*{box-sizing:border-box}body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}${css}</style><div id="root"></div>`);
   await page.addScriptTag({content:`globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v,configurable:true});globalThis.process={env:{NODE_ENV:'development'}};${bundle}\n${projectedSampleScript}`});
   await page.evaluate(r=>(window as any).renderRoom(r),r);
   await page.evaluate(()=>window.addEventListener('pointermove',event=>{(window as any).lastPointerPosition={x:event.clientX,y:event.clientY};},true));
   await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>('img.mahjong-tile__art')].every(i=>i.complete&&i.naturalWidth===300));
+  await page.evaluate(()=>document.fonts.ready);
 }
 const records: any[] = [];
 for(const engine of [chromium,webkit]) {
   const browser=await engine.launch();
   try {
     for(const viewport of [{width:667,height:375},{width:844,height:390},{width:1440,height:810}]) {
-      for(const kind of ['ordinaryClearRackDrop','centerControl','dragBack','outsideBoard','hud','opponentRack','pointercancel','lostCapture','changedDecision','disconnected','busy','earlyCaptureLoss','viewportResize','orientationChange','tableResize','fullscreenChange'].filter(kind=>!process.env.SEAT_INPUT_ONLY||kind===process.env.SEAT_INPUT_ONLY)) {
+      for(const kind of ['ordinaryClearRackDrop','centerControl','dragBack','outsideBoard','hud','opponentRack','pointercancel','lostCapture','changedDecision','disconnected','busy','earlyCaptureLoss','viewportResize','orientationChange','tableResize','fullscreenChange','windowBlur','pageHide','hiddenPage'].filter(kind=>!process.env.SEAT_INPUT_ONLY||process.env.SEAT_INPUT_ONLY.split(',').includes(kind))) {
         const game=ordinaryGame(),r=room(game),page=await browser.newPage({viewport}),errors:string[]=[];
         page.on('pageerror',e=>errors.push(e.message));
         const record:any={engine:engine.name(),viewport,kind,snapshotHash:sha(JSON.stringify(r))};
         try {
           await mount(page,r);
           const tile=page.locator('.mahjong-hand > button:not([disabled])').nth(5);
-          if(kind==='earlyCaptureLoss'||['viewportResize','orientationChange','tableResize','fullscreenChange'].includes(kind)) {await tile.click();assert.equal(await tile.getAttribute('aria-pressed'),'true');}
+          if(kind==='earlyCaptureLoss'||['viewportResize','orientationChange','tableResize','fullscreenChange','windowBlur','pageHide','hiddenPage'].includes(kind)) {await tile.click();assert.equal(await tile.getAttribute('aria-pressed'),'true');}
           await tile.hover();await page.waitForTimeout(180);
           const box=(await tile.boundingBox())!;assert.ok(box);
           const sourceId=await tile.getAttribute('data-hand-instance-id');assert.equal(sourceId,'hand:5:s1');
@@ -120,10 +122,13 @@ for(const engine of [chromium,webkit]) {
           if(kind==='ordinaryClearRackDrop') {assert.equal(preview.hit,'mahjong-table__surface');assert.ok(preview.rect.bottom<geom.rackTop,'whole painted tile clears original rack');}
           if(kind==='pointercancel') await tile.dispatchEvent('pointercancel',{pointerId:1,isPrimary:true,clientX:target.x,clientY:target.y});
           if(kind==='lostCapture'||kind==='earlyCaptureLoss') {await tile.evaluate(e=>(e as HTMLButtonElement).releasePointerCapture(1));await page.mouse.move(target.x+1,target.y,{steps:2});}
-          if(['viewportResize','orientationChange','tableResize','fullscreenChange'].includes(kind)) {
+          if(['viewportResize','orientationChange','tableResize','fullscreenChange','windowBlur','pageHide','hiddenPage'].includes(kind)) {
             if(kind==='viewportResize') await page.setViewportSize({width:viewport.width+40,height:viewport.height});
             else if(kind==='orientationChange') await page.evaluate(()=>window.dispatchEvent(new Event('orientationchange')));
             else if(kind==='tableResize') await page.evaluate(()=>{const table=document.querySelector<HTMLElement>('.mahjong-table')!;table.style.width=(table.clientWidth-40)+'px';});
+            else if(kind==='windowBlur') await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+            else if(kind==='pageHide') await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+            else if(kind==='hiddenPage') await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
             else await page.evaluate(()=>document.dispatchEvent(new Event('fullscreenchange',{bubbles:true})));
             await page.waitForTimeout(60);
             assert.equal(await page.locator('.is-dragging').count(),0,'geometry change cancels the active drag before release');
@@ -150,7 +155,8 @@ for(const engine of [chromium,webkit]) {
             await page.mouse.up();assert.equal((await page.evaluate(()=>(window as any).choices)).length,1);
             game.respond(0,r.game!.decisionId,choices[0].choice.id);assert.equal(game.view(0).players[0].discards.at(-1)?.replace(/[_*]/g,''),'s1');
           }
-          if(['viewportResize','orientationChange','tableResize','fullscreenChange'].includes(kind)) {
+          if(['viewportResize','orientationChange','tableResize','fullscreenChange','windowBlur','pageHide','hiddenPage'].includes(kind)) {
+            if(kind==='hiddenPage') await page.evaluate(()=>{Reflect.deleteProperty(document,'visibilityState');document.dispatchEvent(new Event('visibilitychange'));});
             const fresh=(await tile.boundingBox())!;assert.ok(fresh);
             const nextStart={x:fresh.x+fresh.width/2,y:fresh.y+fresh.height/2};
             const nextTarget=await page.evaluate(()=>(window as any).mahjongPhysicalSamples(document.querySelector('.mahjong-table__center'),[[.5,.5]])[0]);
@@ -202,6 +208,7 @@ for(const engine of [chromium,webkit]) {
     }
   } finally {await browser.close();}
 }
+assert.deepEqual(Object.fromEntries(sourceFiles.map(f=>[f,sha(readFileSync(f))])),sources,'tested sources must remain unchanged');
 writeFileSync(out+'/proof.json',JSON.stringify({sources,bundleHash:sha(bundle),cssHash:sha(css),records},null,2));
 console.log('ARTIFACT',out,'PASS',records.filter(r=>r.pass).length,'FAIL',records.filter(r=>!r.pass).length);
 assert.equal(records.filter(r=>!r.pass).length,0,'browser regression failures (see unique proof)');
