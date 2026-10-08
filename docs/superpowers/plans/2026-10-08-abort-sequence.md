@@ -19,10 +19,10 @@
 
 ### Task 1: 原生abort元数据和完整牌山fixture
 **Files:** src/modules/mahjong/types.ts,engine.ts,sanma.ts; create tests/fixtures/mahjong-abort-game.ts and tests/unit/mahjong-abort-sequence.test.ts.
-- [ ] 从实际native-probe-r01提炼完整牌山合法场景；增加三麻四杠和换庄/声明中断样例。
-- [ ] 元数据、公开手牌、原生比分/供托与最后ACK写RED并实际运行。
-- [ ] 实现可选abortPresentation，仅原生公开动作；深拷贝/序列保持。
-- [ ] GREEN、原生旧回归、提交。
+- [x] 从实际native-probe-r01提炼完整牌山合法场景；增加三麻四杠和换庄/声明中断样例。
+- [x] 元数据、公开手牌、原生比分/供托与最后ACK写RED并实际运行。
+- [x] 实现可选abortPresentation，仅原生公开动作；深拷贝/序列保持。
+- [x] GREEN、原生旧回归、提交。
 
 ### Task 2: 有限排程及对应席位三荣提示
 **Files:** settlement-presentation.ts,mahjong-client.tsx,mahjong-settlement-panel.tsx; create mahjong-abort-announcements.tsx and mahjong-abort-announcements.css; tests/component/mahjong-abort-sequence.test.tsx; tests/browser/mahjong-abort-sequence.tsx.

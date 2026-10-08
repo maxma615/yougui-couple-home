@@ -351,6 +351,10 @@ export class SanmaGame {
       tenpaiSeats: abort ? [] : tenpai,
       drawInfo: {
         kind: abort ? "abort" : nagashi.length ? "nagashi" : "exhaustive",
+        ...(abort ? {abortPresentation: {
+          ...(this.reaction?.kind === "discard" && this.reaction.riichi ? {riichiSeat: this.reaction.actor} : {}),
+          ronSeats: [],
+        }} : {}),
         revealedHands: (abort ? name === "九種九牌" ? [this.turn] : [] : tenpai).map(seat => ({
           seat, hand: this.players[seat].hand.toString(), waits: abort ? [] : waits(this.players[seat].hand),
         })),

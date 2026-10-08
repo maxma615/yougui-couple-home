@@ -91,7 +91,10 @@ export class RiichiGame extends Majiang.Game {
       const delta = this.mapBySeat(draw.fenpei);
       if (kind === "nagashi" && !delta.every((amount, seat) => nagashiResults.reduce((sum, result) => sum + result.delta[seat], 0) === amount)) throw Error("Native nagashi partition mismatch");
       this.settlement = { kind: "draw", name: draw.name, yaku: [], delta, uraIndicators: [],
-        tenpaiSeats: kind === "abort" ? [] : revealedHands.map(hand => hand.seat), drawInfo: {kind, revealedHands, nagashiResults} };
+        tenpaiSeats: kind === "abort" ? [] : revealedHands.map(hand => hand.seat), drawInfo: {kind, revealedHands, nagashiResults, ...(kind === "abort" ? {abortPresentation: {
+          ...(draw.name !== "九種九牌" && this._dapai?.endsWith("*") ? {riichiSeat: model.player_id[model.lunban]} : {}),
+          ronSeats: draw.name === "三家和" ? revealedHands.map(hand => hand.seat) : [],
+        }} : {})} };
     }
     for (let wind = 0; wind < 4; wind++) {
       const choices = this.legalChoices(wind);
