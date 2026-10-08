@@ -18,6 +18,7 @@ for(const engine of [chromium,webkit]){
  try{
   for(const hasTouch of [true,false])for(const viewport of [{width:667,height:375},{width:844,height:390},{width:1440,height:810}]){
    const context=await browser.newContext({viewport,hasTouch});const page=await context.newPage();
+   await page.route('https://mahjong.local/fonts/**',route=>route.fulfill({status:200,contentType:'font/woff2',body:readFileSync('public'+new URL(route.request().url()).pathname)}));
    await page.route('https://mahjong.local/images/**',async route=>{
     const path=new URL(route.request().url()).pathname;
     await route.fulfill({status:200,contentType:path.endsWith('.svg')?'image/svg+xml':'image/webp',body:readFileSync('public'+path)});
@@ -32,6 +33,7 @@ for(const engine of [chromium,webkit]){
     const room:RoomView={id:'touch-fixture',code:'ABCDEFGH',hostUserId:'0',mode:'east',variant:'sanma',status:'playing',version:1,mySeat:0,game,
      members:game.players.map(p=>({userId:String(p.seat),seat:p.seat,displayName:`玩家${p.seat}`,kind:'human',ready:true,connected:true}))};
     await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><div id="root"></div>`);
+    assert.equal(await page.evaluate(async()=>(await document.fonts.load('40px "Yougui Mahjong Brush"','立直自摸吃碰杠拔北')).length),1);
     await page.addScriptTag({content:`globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v,configurable:true});globalThis.process={env:{NODE_ENV:"development"}};${bundle}`});
     await page.evaluate(room=>(window as any).renderRoom(room),room);
     await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>('img.mahjong-tile__art')].every(i=>i.complete&&i.naturalWidth>0));

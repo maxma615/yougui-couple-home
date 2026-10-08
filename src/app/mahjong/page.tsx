@@ -12,6 +12,8 @@ import "./mahjong-camera.css";
 import "./mahjong-call-announcement.css";
 import "./mahjong-standing-tile.css";
 import "./mahjong-abort-announcements.css";
+import "./mahjong-calligraphy.css";
+import "./mahjong-action-placement.css";
 
 export const metadata: Metadata = {
   title: "麻将室 · 有归",

@@ -1,0 +1,40 @@
+/* Ma Shan Zheng, SIL OFL 1.1; locally served so declarations need no font CDN. */
+@font-face {
+  font-family: "Yougui Mahjong Brush";
+  src: url("/fonts/mahjong-brush.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.mahjong-game .mahjong-call-announcement__label,
+.mahjong-game .mahjong-abort-declaration b {
+  font-family: "Yougui Mahjong Brush", serif;
+  font-weight: 400;
+  font-style: normal;
+  font-synthesis: none;
+  letter-spacing: -.035em;
+  color: #fff0c9;
+  -webkit-text-stroke: 3px #322114;
+  paint-order: stroke fill;
+  text-shadow: 2px 3px 0 #091723, 0 0 12px #efb86b80;
+}
+
+.mahjong-game .mahjong-action-dock .mahjong-call-label,
+.mahjong-game .mahjong-action-dock .mahjong-button--tsumo,
+.mahjong-game .mahjong-action-dock .mahjong-button--riichi:not(.is-selected),
+.mahjong-game .mahjong-player__riichi {
+  font-family: "Yougui Mahjong Brush", serif;
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: clamp(17px, 4cqh, 23px);
+  line-height: 1;
+}
+
+.mahjong-game .mahjong-action-dock .mahjong-call-label small {
+  font-family: var(--font-body), sans-serif;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.mahjong-game .mahjong-player__riichi { font-size: 16px; }

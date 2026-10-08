@@ -1,5 +1,6 @@
 "use client";
 
+import {useMahjongActionPlacement} from "./use-action-placement";
 import { MahjongFinalRanking } from "./mahjong-final-ranking";
 
 import { MahjongCallOption } from "./mahjong-call-option";
@@ -46,7 +47,7 @@ const choiceNames: Record<Choice["type"], string> = {
   kan: "杠",
   tsumo: "自摸",
   ron: "荣和",
-  abort: "九種九牌",
+  abort: "九种九牌",
   pass: "过",
   ack: "继续",
   nuki: "拔北",
@@ -411,6 +412,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const [choiceSubmitted, setChoiceSubmitted] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const audioRootRef = useRef<HTMLElement>(null);
+  useMahjongActionPlacement(audioRootRef,Boolean(game)&&room.status!=="finished",`${room.id}:${room.variant}:${ownSeat}:${game?.decisionId}:${room.version}:${riichiMode}:${pendingCallType}`);
   const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef});
   const nukiMotion = useNukiMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});

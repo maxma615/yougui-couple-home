@@ -69,7 +69,9 @@ for(const engine of [chromium,webkit]){
     for(const size of [{width:667,height:375},{width:844,height:390},{width:1440,height:810}]){
       const page=await browser.newPage({viewport:size});
       await page.route("https://mahjong.local/images/**",route=>{const pathname=new URL(route.request().url()).pathname;return route.fulfill({status:200,contentType:pathname.endsWith(".svg")?"image/svg+xml":"image/webp",body:readFileSync(`public${pathname}`)});});
+      await page.route("https://mahjong.local/fonts/**", route => route.fulfill({status:200,contentType:"font/woff2",body:readFileSync("public"+new URL(route.request().url()).pathname)}));
       await page.setContent(`<base href="https://mahjong.local/"><style>*{box-sizing:border-box}body{margin:0;--font-body:sans-serif;--font-display:serif}${css}</style><div id="root"></div>`);
+      assert.equal(await page.evaluate(async () => (await document.fonts.load('40px "Yougui Mahjong Brush"', "立直自摸荣和吃碰杠拔北")).length), 1, "local brush font decoded");
       await page.addScriptTag({content:'globalThis.__name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});globalThis.process={env:{NODE_ENV:"development"}};'});
       await page.addScriptTag({content:bundle.outputFiles[0].text});
       const render=(room:RoomView,connected=true,canAnimate=true)=>page.evaluate(async({room,connected,canAnimate})=>{
@@ -88,6 +90,7 @@ for(const engine of [chromium,webkit]){
           const metric=await declaration.evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,pointer:getComputedStyle(el).pointerEvents};});
           assert(metric.x>=0&&metric.y>=0&&metric.x+metric.w<=size.width+.5&&metric.y+metric.h<=size.height+.5);
           assert.equal(metric.pointer,'none');
+          assert.match(await declaration.locator('b').evaluate(el=>getComputedStyle(el).fontFamily), /Yougui Mahjong Brush/);
           await render(f.after);assert.equal(await declaration.count(),1,'duplicate state does not restart declaration');
           await page.screenshot({path:`.local/audit/call-announcement-${engine.name()}-${f.kind}-${size.width}.png`});
           await page.waitForTimeout(1050);assert.equal(await declaration.count(),0);

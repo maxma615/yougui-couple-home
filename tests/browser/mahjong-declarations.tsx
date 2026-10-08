@@ -17,6 +17,7 @@ for(const engine of [chromium,webkit]){
  try{
   for(const variant of ['sanma','yonma'] as const)for(const kind of [...(['riichi','ron','tsumo'] as const),...(variant==='sanma'?(['rob-nuki','rob-nuki-double','rob-nuki-kokushi'] as const):[])]){
    const page=await browser.newPage({viewport:{width:844,height:390}});
+   await page.route('https://mahjong.local/fonts/**',route=>route.fulfill({status:200,contentType:'font/woff2',body:readFileSync('public'+new URL(route.request().url()).pathname)}));
    await page.route('https://mahjong.local/images/**',route=>{const path=new URL(route.request().url()).pathname;return route.fulfill({status:200,contentType:path.endsWith('.svg')?'image/svg+xml':'image/webp',body:readFileSync(`public${path}`)});});
    await page.route('https://mahjong.local/',route=>route.fulfill({status:200,contentType:'text/html',body:`<!doctype html><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;--font-body:sans-serif;--font-display:serif}${css}</style><div id="root"></div>`}));
    await page.goto('https://mahjong.local/');await page.addScriptTag({content:'globalThis.__name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});globalThis.process={env:{NODE_ENV:"development"}};'});await page.addScriptTag({content:bundle.outputFiles[0].text});
