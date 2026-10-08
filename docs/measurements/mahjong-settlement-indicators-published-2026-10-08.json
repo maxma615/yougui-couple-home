@@ -1,0 +1,20 @@
+{
+  "sourceRevision": "5b5eaef6d6c3b3ebfa5fab3871e737879719dfc6",
+  "buildId": "ljPrqP5UqPVSitwFOHeGz",
+  "imageId": "sha256:df89ac64e71290fad5c2b6ee52a1104bbfaded4557d6e4aa8c1badededb061b2",
+  "sourceFiles": 590,
+  "nextFiles": 449,
+  "linuxTests": 238,
+  "localTests": 780,
+  "publicAssets": 130,
+  "fullGoalComplete": false,
+  "evidenceSha256": {
+    "settlement-indicators-5b5eaef-r01-public-proof.json": "fd64f525b17cdddb107d62f70ca5f41ca2e9b9df569b667f141cd93db9cf7832",
+    "settlement-indicators-5b5eaef-r01-owned-sync-proof.json": "48e1928b0b529f8530db9fbe125edaf128955d5046592d7a3cf38b6cacbc37ad",
+    "settlement-indicators-5b5eaef-r04-linux-status": "98906ce384a8ad6b6ff4d32c19afccff2b0b03a3b2c52cfb27d5635780535d29",
+    "settlement-indicators-5b5eaef-r02-publish-status": "d7fa5f2a97ed8d06efbbedec425b076f7aacfe47a510ca3af5eb8baa7f09270e",
+    "settlement-indicators-5b5eaef-r01-live-check": "889458037785804cd5e72cbfbc475301dc3491b4534dde888cffda149243b05c",
+    "settlement-indicators-5b5eaef-r01-final-health": "39ef44ee1d3d1dcadb88387068e48b6ac77fe945c1f6d89cd8bdbb3858e21629",
+    "settlement-indicators-5b5eaef-r01-published-preflight": "077fcd0b6f57eb3bf12f2297441e8ac39409e54adfaf9174ca6d75d722070e4d"
+  }
+}
