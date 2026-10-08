@@ -152,7 +152,7 @@ for(const engine of [chromium,webkit]) {
      assert.equal(overlap.sourceEventStillInRiver,false,'the call flight owns the claimed river source');
      assert.equal(overlap.targetVolumeVisibility,'hidden');assert.equal(overlap.targetPhysicalVisibility.length,6);
      assert.ok(overlap.targetPhysicalVisibility.every(value=>value==='hidden'));assert.equal(overlap.sideCount,4);
-     await page.evaluate(()=>{for(const a of document.querySelector('[data-testid="mahjong-call-flight"]')?.getAnimations()??[])a.finish()});await page.waitForTimeout(30);
+     await page.evaluate(async()=>{const animations=document.querySelector('[data-testid="mahjong-call-flight"]')?.getAnimations()??[];if(!animations.length)throw Error('Expected actual call flight animations before finishing');for(const a of animations)a.finish();await Promise.all(animations.map(a=>a.finished));});await page.waitForFunction(()=>!document.querySelector('[data-testid="mahjong-call-flight"]'),null,{timeout:1000});
      const cleanup=await page.evaluate(()=>{const target=document.querySelector<HTMLElement>('[data-meld-seat="1"][data-meld-index="0"] [data-called] .mahjong-tile')!,volume=target.closest<HTMLElement>('[data-meld-volume]')!;return {
       callFlightCount:document.querySelectorAll('[data-testid="mahjong-call-flight"]').length,
       discardFlightCount:document.querySelectorAll('[data-testid="mahjong-discard-flight"]').length,
