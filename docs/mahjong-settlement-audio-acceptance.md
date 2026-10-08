@@ -31,3 +31,13 @@
 目标 Linux 的确切20文件选择先在本地运行，**307/307**通过。服务器只读核对仍是8dd5182：619源文件、449构建文件全摘要通过，运行镜像、清理器与禁备份状态正确，未切换线上。
 
 证据：`.local/audit/settlement-audio-browser-1791469631684/{manifest,summary}.json`、`settlement-audio-runtime-r03.log`（实际退出0）、`table-audio-wave-1791469577784/summary.json`、`settlement-audio-wave-r01.log`（实际退出0）、`settlement-audio-final/linux-selection-local-r01.{log,json}`，以及 `.local/ecs-deploy/late-response-remote-captures/late-response-settlement-audio-parent-r01.json`。保留脚本r01的JSX括号错误、r02缺少浏览器process环境定义失败；修正脚本整理后相同完整30例r03通过，没有减少用例或改产品来适配测试。下一步冻结、隔离Linux和保护发布，整体目标仍未完成。
+
+## 已实际发布到上海 ECS（同日）
+
+运行源码 **8dfee3c39b13c614aa1191b079c414cbba48a19f** / Build **fjnFrHLjDgP9r79naIm5Q** 已在 <https://8.133.186.15/mahjong> 发布。镜像 `sha256:7b60bd74ead3c8e858a9c0ccafb817690bba5f42774e5c4dd33519561078b881`，完整清单 SHA-256 `68ebb30b61c63e2844d22433faae4cf1fb40a2b05cfc857c5c2ccb81ead824bd`。
+
+隔离 Linux 容器以半个CPU、384MiB、只读文件系统和无网络运行确切20文件，**307/307**通过。构建与Linux观察均等待同一个实际进程结束，没有因一次观察仍在运行而重启。发布器固定摘要，确认无进行中的真人桌（检查成员0）、短暂屏障排空后切换并恢复入口，实际发布退出0。线上624源文件、449构建文件全部摘要一致，默认可信TLS检查公网**133/133资源**及健康接口200通过。
+
+12张业务/迁移表前后逐行摘要相同（`9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`），7用户、3空间、5成员、29照片和7迁移保持。照片清理器容器与镜像不变。禁备份标记完整，timer masked/inactive、service inactive，未创建或下载备份。生产配额仍为1CPU/768MiB。发布结束后的实际健康状态与publisherFinished均通过。
+
+冻结与发布证据在 `.local/ecs-deploy/late-response-8dfee3c-r01-frozen.json`、`late-response-remote-captures/late-response-8dfee3c-*`、`late-response-8dfee3c-r01-public-proof.json` 和 `settlement-audio-published-closeout-r01.json`。一次收尾汇总最初把实际健康字段 `appHealthy` 写成 `healthy` 而读取失败，改正后读取已有实际报告，未重启发布或覆盖证据。两条代码/浏览器提交及本发布记录都普通快进推送main与麻将分支；所属路径同步保护主目录HEAD/索引。真实Android扬声器、远端登录WSS播放和完整厂商声画仍未验收，整体目标保持进行。
