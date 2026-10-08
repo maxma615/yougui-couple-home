@@ -1,5 +1,7 @@
 "use client";
 
+import {blankTableAction} from "./blank-table-action";
+import {useBlankTableDoubleTap} from "./use-blank-table-double-tap";
 import {useAutomaticPlay} from "./use-automatic-play";
 import {useMahjongActionPlacement} from "./use-action-placement";
 import {WaitPeekButton} from "./wait-peek-button";
@@ -439,6 +441,22 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     }
     onChoice(choice);
   }});
+  const tableShortcut = useBlankTableDoubleTap({scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
+    if (!game || submittedChoiceRef.current) return false;
+    const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType));
+    if (!action) return false;
+    automatic.manual();
+    if (action.kind === "return-picker") { setPendingCallType(null); return false; }
+    if (action.kind === "return-riichi") { setRiichiMode(false); return false; }
+    if (action.kind !== "choice") return false;
+    if (action.choice.type === "discard") {
+      const source=[...(audioRootRef.current?.querySelectorAll<HTMLButtonElement>(".mahjong-hand button[data-choice-id]")??[])].filter(button=>button.dataset.choiceId===action.choice.id).at(-1);
+      if (!source) return false;
+      drawArrival.cancel();nukiMotion.cancel();
+      submitHandChoice(action.choice,source);
+    } else { setPendingCallType(null);publicCallMotion.cancel();onChoice(action.choice); }
+    return true;
+  }});
   const discardMotion = useDiscardMotion({ room, ownSeat, connected, canAnimate: motionCanAnimate, intent: motionIntent, tableRef });
   const finishDiscardAudio = useCallback((id:string)=>{audio.land(id);discardMotion.finishFlight(id);},[audio.land,discardMotion.finishFlight]);
   const finishCallAudio = useCallback((id:string)=>{audio.land(id);publicCallMotion.finishFlight(id);},[audio.land,publicCallMotion.finishFlight]);
@@ -670,8 +688,8 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       handReflow.cancel();
     }
   };
-  return <section ref={audioRootRef} onPointerDownCapture={cancelNukiInput} onClickCapture={cancelNukiInput} onKeyDownCapture={cancelNukiInput} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
-    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions">{canPreview && peekWaits.length > 0 ? <WaitPeekButton held={showCurrentWaits} onHold={setShowCurrentWaits}/> : null}{!isFinished ? <details className="mahjong-automatic"><summary>便捷操作</summary><div role="group" aria-label="自动操作">{([['win','自动和牌'],['noCalls','不鸣牌'],['drawnDiscard','自动摸切'],...(room.variant==='sanma' ? [['north','自动拔北']] : [])] as [keyof typeof automatic.options,string][]).map(([key,label])=><button type="button" key={key} aria-pressed={automatic.options[key]} onClick={()=>automatic.toggle(key)}>{label}<span>{automatic.options[key] ? '开' : '关'}</span></button>)}</div></details> : null}<button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
+  return <section ref={audioRootRef} onPointerDownCapture={event=>{tableShortcut.down(event);cancelNukiInput(event);}} onPointerUp={tableShortcut.up} onPointerCancel={tableShortcut.reset} onClickCapture={cancelNukiInput} onKeyDownCapture={event=>{tableShortcut.reset();cancelNukiInput(event);}} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
+    <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions">{canPreview && peekWaits.length > 0 ? <WaitPeekButton held={showCurrentWaits} onHold={setShowCurrentWaits}/> : null}{!isFinished ? <details className="mahjong-automatic"><summary>便捷操作</summary><div role="group" aria-label="自动操作">{([['win','自动和牌'],['noCalls','不鸣牌'],['drawnDiscard','自动摸切'],...(room.variant==='sanma' ? [['north','自动拔北']] : [])] as [keyof typeof automatic.options,string][]).map(([key,label])=><button type="button" key={key} aria-pressed={automatic.options[key]} onClick={()=>automatic.toggle(key)}>{label}<span>{automatic.options[key] ? '开' : '关'}</span></button>)}<button type="button" aria-pressed={tableShortcut.enabled} title="双击桌布过牌或切出最后一张牌；选牌时先返回" onClick={tableShortcut.toggle}>双击过牌／摸切<span>{tableShortcut.enabled ? "开" : "关"}</span></button></div></details> : null}<button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
 
     {tableScreen.hint ? <div className="mahjong-screen-hint" role="status" aria-label="屏幕方向提示" title={tableScreen.hint}>请旋转手机</div> : null}
     <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside>

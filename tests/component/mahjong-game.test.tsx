@@ -492,3 +492,13 @@ it('keeps alternative calls on the table and returns focus without submitting wh
  expect(document.activeElement).toBe(trigger);
  expect(onChoice).not.toHaveBeenCalled();
 });
+
+it('offers an opt-in blank table shortcut and keeps it off by default',()=>{
+ localStorage.removeItem('yougui.mahjong.doubleClick');
+ const view=fixtureGame().view(0),onChoice=show(view);
+ const toggle=screen.getByRole('button',{name:/双击过牌.*摸切/});
+ expect(toggle.getAttribute('aria-pressed')).toBe('false');
+ const surface=document.querySelector('.mahjong-table__surface')!;
+ for(let i=0;i<2;i++){fireEvent.pointerDown(surface,{pointerId:1,button:0,clientX:100,clientY:100});fireEvent.pointerUp(surface,{pointerId:1,button:0,clientX:100,clientY:100});}
+ expect(onChoice).not.toHaveBeenCalled();
+});
