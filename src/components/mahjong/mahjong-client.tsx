@@ -444,6 +444,35 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     selectedHandTileRef.current = null;
     setSelectedHandTile(null);
   }, []);
+  useEffect(() => {
+    const cancel = () => {
+      const active = activeTilePointerRef.current;
+      if (!active) return;
+      activeTilePointerRef.current = null;
+      suppressPointerClickRef.current = true;
+      clearHandSelection();
+      setDragPreview(null);
+      setOverDiscardTarget(false);
+      try { active.element.releasePointerCapture?.(active.pointerId); } catch { /* The browser may have already cancelled capture. */ }
+    };
+    const events = ["resize", "orientationchange", "fullscreenchange", "webkitfullscreenchange"];
+    for (const event of events) window.addEventListener(event, cancel);
+    const orientation = window.screen.orientation;
+    orientation?.addEventListener?.("change", cancel);
+    const table = tableRef.current;
+    let size = table?.getBoundingClientRect();
+    const observer = table && typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => {
+      const next = table.getBoundingClientRect();
+      if (size && (Math.abs(next.width - size.width) > .5 || Math.abs(next.height - size.height) > .5)) cancel();
+      size = next;
+    }) : null;
+    if (table) observer?.observe(table);
+    return () => {
+      for (const event of events) window.removeEventListener(event, cancel);
+      orientation?.removeEventListener?.("change", cancel);
+      observer?.disconnect();
+    };
+  }, [clearHandSelection, room.id, Boolean(game)]);
   useEffect(() => { setRiichiMode(false); setPendingCallType(null); }, [game?.decisionId, room.id]);
   useEffect(() => { if (!connected) setPendingCallType(null); }, [connected]);
   useEffect(() => {

@@ -16,7 +16,7 @@ import type {RoomView} from '../../src/modules/mahjong/types';
 const out = `.local/audit/seat-drag-${process.env.SEAT_STAGE || 'green'}-${Date.now()}`;
 mkdirSync(out, {recursive: true});
 const sha = (v: string | Buffer) => createHash('sha256').update(v).digest('hex');
-const cssFiles = ['mahjong.css','mahjong-river.css','mahjong-meld.css','mahjong-interaction.css','mahjong-discard-motion.css','mahjong-table-center.css','mahjong-table-edge.css','mahjong-camera.css','mahjong-call-announcement.css','mahjong-standing-tile.css'];
+const cssFiles = [...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import "\.\/([^"]+\.css)";/g)].map(m=>m[1]);
 const sourceFiles = ['src/components/mahjong/mahjong-client.tsx', ...cssFiles.map(f => 'src/app/mahjong/'+f)];
 const sources = Object.fromEntries(sourceFiles.map(f => [f, sha(readFileSync(f))]));
 const css = cssFiles.map(f => readFileSync('src/app/mahjong/'+f,'utf8')).join('\n');
@@ -84,7 +84,7 @@ for(const engine of [chromium,webkit]) {
   const browser=await engine.launch();
   try {
     for(const viewport of [{width:667,height:375},{width:844,height:390},{width:1440,height:810}]) {
-      for(const kind of ['ordinaryClearRackDrop','centerControl','dragBack','outsideBoard','hud','opponentRack','pointercancel','lostCapture','changedDecision','disconnected','busy','earlyCaptureLoss'].filter(kind=>!process.env.SEAT_INPUT_ONLY||kind===process.env.SEAT_INPUT_ONLY)) {
+      for(const kind of ['ordinaryClearRackDrop','centerControl','dragBack','outsideBoard','hud','opponentRack','pointercancel','lostCapture','changedDecision','disconnected','busy','earlyCaptureLoss','viewportResize','orientationChange','tableResize','fullscreenChange'].filter(kind=>!process.env.SEAT_INPUT_ONLY||kind===process.env.SEAT_INPUT_ONLY)) {
         const game=ordinaryGame(),r=room(game),page=await browser.newPage({viewport}),errors:string[]=[];
         page.on('pageerror',e=>errors.push(e.message));
         const record:any={engine:engine.name(),viewport,kind,snapshotHash:sha(JSON.stringify(r))};
@@ -111,6 +111,15 @@ for(const engine of [chromium,webkit]) {
           if(kind==='ordinaryClearRackDrop') {assert.equal(preview.hit,'mahjong-table__surface');assert.ok(preview.rect.bottom<geom.rackTop,'whole painted tile clears original rack');}
           if(kind==='pointercancel') await tile.dispatchEvent('pointercancel',{pointerId:1,isPrimary:true,clientX:target.x,clientY:target.y});
           if(kind==='lostCapture'||kind==='earlyCaptureLoss') {await tile.evaluate(e=>(e as HTMLButtonElement).releasePointerCapture(1));await page.mouse.move(target.x+1,target.y,{steps:2});}
+          if(['viewportResize','orientationChange','tableResize','fullscreenChange'].includes(kind)) {
+            if(kind==='viewportResize') await page.setViewportSize({width:viewport.width+40,height:viewport.height});
+            else if(kind==='orientationChange') await page.evaluate(()=>window.dispatchEvent(new Event('orientationchange')));
+            else if(kind==='tableResize') await page.evaluate(()=>{const table=document.querySelector<HTMLElement>('.mahjong-table')!;table.style.width=(table.clientWidth-40)+'px';});
+            else await page.evaluate(()=>document.dispatchEvent(new Event('fullscreenchange',{bubbles:true})));
+            await page.waitForTimeout(60);
+            assert.equal(await page.locator('.is-dragging').count(),0,'geometry change cancels the active drag before release');
+            assert.equal(await page.locator('.is-discard-target').count(),0,'geometry change clears the old drop target');
+          }
           if(kind==='changedDecision') {game.respond(0,r.game!.decisionId,'discard:s1');const next=room(game,0,2);assert.notEqual(next.game!.decisionId,r.game!.decisionId);await page.evaluate(r=>(window as any).renderRoom(r),next);}
           if(kind==='disconnected'||kind==='busy') await page.evaluate(({r,kind})=>(window as any).renderRoom(r,{connected:kind!=='disconnected',busy:kind==='busy'}),{r,kind});
           await page.screenshot({path:`${out}/${engine.name()}-${viewport.width}-${kind}-preview.png`});
@@ -129,6 +138,17 @@ for(const engine of [chromium,webkit]) {
             assert.equal(await page.locator('.is-dragging').count(),0);
             await page.mouse.up();assert.equal((await page.evaluate(()=>(window as any).choices)).length,1);
             game.respond(0,r.game!.decisionId,choices[0].choice.id);assert.equal(game.view(0).players[0].discards.at(-1)?.replace(/[_*]/g,''),'s1');
+          }
+          if(['viewportResize','orientationChange','tableResize','fullscreenChange'].includes(kind)) {
+            const fresh=(await tile.boundingBox())!;assert.ok(fresh);
+            const nextStart={x:fresh.x+fresh.width/2,y:fresh.y+fresh.height/2};
+            const nextTarget=await page.evaluate(()=>(window as any).mahjongPhysicalSamples(document.querySelector('.mahjong-table__center'),[[.5,.5]])[0]);
+            await page.mouse.move(nextStart.x,nextStart.y);await page.mouse.down();await page.mouse.move(nextTarget.x,nextTarget.y,{steps:10});await page.mouse.up();await page.waitForTimeout(60);
+            const resumed=await page.evaluate(()=>(window as any).choices);
+            assert.equal(resumed.length,1,'fresh press after cancellation still discards once');
+            assert.deepEqual(resumed[0].choice,r.game!.choices.find(c=>c.id==='discard:s1'));
+            game.respond(0,r.game!.decisionId,resumed[0].choice.id);assert.equal(game.view(0).players[0].discards.at(-1)?.replace(/[_*]/g,''),'s1');
+            record.resumedChoice=resumed[0].choice;
           }
           assert.deepEqual(errors,[]);record.pass=true;
         } catch(error) {record.failure=String(error);console.error('FAIL',engine.name(),viewport.width,kind,record.failure);} finally {await page.close();records.push(record);}
