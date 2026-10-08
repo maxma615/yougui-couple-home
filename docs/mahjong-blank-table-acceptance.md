@@ -23,6 +23,8 @@
 
 ## 当前交付范围
 
-代码及验收记录提交后立即推送GitHub main和工作分支。本步仍是本地完成的候选，Linux及ECS发布待下一步；上一轮正式发布为820bc85 / Build gxd3NxhCMNuLmu2jN1ePn。没有宣称新快捷开关已上线。
+运行版本2bcc07601b31c130f2e415a51d22aa7a9773b458 / Build _i9aj6L_IVuNMOBo2EqSP已发布到https://8.133.186.15/mahjong。代码提交已推送GitHub main和工作分支；本发布记录也立即提交推送。
+
+冻结镜像sha256:ebaf4559fda36ac188423f84f8d3077fb1449663122290fb6fb215546101bcac的663份源码、449份构建文件摘要一致，继承原依赖层。隔离Linux容器0.5CPU/384MiB、原生单worker配置下539项/35文件全部通过；实际exit0，未将运行状态或观察超时算通过。发布屏障内确认无活动真人牌局后切换，健康检查通过并恢复入口。13个远端阶段实际终态通过；默认可信TLS公网健康200与133份资源摘要匹配，12张表发布前后摘要一致（9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41）。应用1CPU/768MiB、清理器实例及镜像不变，禁备份标记与masked/inactive状态保持，未建立备份或下载真实用户资料。完整终态核对保存在.local/ecs-deploy/blank-published-closeout-r01.json。
 
 浏览器测试通过桥接回调把UI选择交给原生引擎，HTTP/生产账号/TLS/WSS不包含在本步144场景中。真实Android、生产网络失败/重连的完整手势验收和完整当前厂商体验继续待验证；原完整目标active，未缩小为本次快捷操作。
