@@ -14,4 +14,12 @@
 
 ## 当前状态
 
-已验证本地候选，尚未发布ECS；公网仍运行9f67bf5双立直修正。下一步复用冻结构建的受限Linux验证与发布检查。当前厂商完整游戏体验、Android实机及用户原设备透视问题仍未完整验收，持续对齐目标保持进行中。
+已发布ECS，公网运行`1b3f06037058e16d2183088f4661c3d4ee0e1bda`，Build ID `ZKSECNtC0GL8qnhmQ_H0Z`。当前厂商完整游戏体验、Android实机及用户原设备透视问题仍未完整验收，持续对齐目标保持进行中。
+
+## ECS及公网发布实证
+
+同一冻结镜像的460项/28文件Linux检查实际退出0；线程池、逐文件隔离、单worker、半核CPU、384MiB、只读且无网络，沿用240秒部署总预算及120秒单测试/钩子时限。发布器实际退出0，屏障下原生检查`authoritativeAbsence:true`、`checkedMembers:0`，切换后健康通过并恢复入口。
+
+运行镜像`sha256:318b17fd54b22dcfc0a8af3c9d8fd5c830358748d27bc014d36a89a2edc50f4f`；646源码文件、449前端构建文件在冻结包/候选/运行镜像全摘要一致，公网默认TLS验证健康200、133项资源全摘要一致。12张业务表前后摘要均为`9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`；用户7、空间3、成员5、照片29、迁移7。照片清理容器及镜像身份不变，应用仍1核/768MiB，无OOM。禁用备份标记保留、timer masked/inactive、service inactive、备份路径不存在，未生成备份或下载用户资料。
+
+冻结包37,291,435字节，SHA`df855935559716d560c83e9eab2493011ef0ae19dad5aedd5b15354f03786c70`；manifest SHA`af51d23dd12a3eda683aaae25ff3a0eae007523be0fef9251af8117c26e2f695`。忽略目录`.local/ecs-deploy/drag-lifecycle-published-closeout-r01.json`核对13阶段终态、公网133资源和最终健康绑定同一构建。本轮发布检查无失败重试；先前浏览器字体路由缺失造成的2项失败仍保留，未用来证明成功。
