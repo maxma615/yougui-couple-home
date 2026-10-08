@@ -169,6 +169,30 @@
   bottom: max(calc(30dvh + 10px), calc(max(2dvh, env(safe-area-inset-bottom)) + 6px + min(4.8dvw, 13dvh, 64px) * 1.46 * 1.31 + 8px));
 }
 
+/* A legal response can offer ron, three chi alternatives, pon, kan and pass.
+   Put the chi preview in the clear upper HUD gap instead of growing a stack
+   across the rivers; keep the remaining actions in one near-side row. */
+.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="chi"]) .mahjong-action-dock {
+  right: max(22%, env(safe-area-inset-right));
+  bottom: max(calc(23dvh + 10px), calc(max(2dvh, env(safe-area-inset-bottom)) + 6px + min(4.8dvw, 13dvh, 64px) * 1.46 * 1.31 + 8px));
+  max-width: 64%;
+  flex-wrap: nowrap;
+  pointer-events: none;
+}
+.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="chi"]) .mahjong-action-dock > button {
+  pointer-events: auto;
+}
+.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds) .mahjong-action-dock > [data-choice-type="chi"] {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100dvw - 300px);
+}
+.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds) .mahjong-action-dock > [data-choice-type="chi"] .mahjong-call-previews {
+  flex-wrap: nowrap;
+}
+
 /* A kan adds a physical tile to the side row. Reserve a standing tile's full
    height and a small gap below the indicators on short landscape tables. */
 @media (max-height: 600px) and (orientation: landscape) {
