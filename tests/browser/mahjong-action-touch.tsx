@@ -4,7 +4,6 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {build} from 'esbuild';
 import {chromium,webkit} from '@playwright/test';
-import {GameRoom} from '../../src/components/mahjong/mahjong-client';
 import {northReplacementFixture} from '../fixtures/mahjong-view-game';
 import type {RoomView,Choice} from '../../src/modules/mahjong/types';
 
@@ -36,22 +35,37 @@ for(const engine of [chromium,webkit]){
     await page.addScriptTag({content:`globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v,configurable:true});globalThis.process={env:{NODE_ENV:"development"}};${bundle}`});
     await page.evaluate(room=>(window as any).renderRoom(room),room);
     await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>('img.mahjong-tile__art')].every(i=>i.complete&&i.naturalWidth>0));
+    await page.evaluate(()=>document.querySelector('.mahjong-shell')!.insertAdjacentHTML('afterbegin','<div class="mahjong-notice" role="alert"><svg width="16" height="16" aria-hidden="true"></svg><span>测试提示：请求未完成，请重试刚才的操作。</span><button type="button" aria-label="关闭提示"><svg width="16" height="16" aria-hidden="true"></svg></button></div>'));
     assert.equal(await page.evaluate(()=>matchMedia('(pointer: coarse)').matches),hasTouch);
     const measured=await page.evaluate(minimum=>[...document.querySelectorAll<HTMLButtonElement>('.mahjong-action-dock > button')].map(button=>{
      const r=button.getBoundingClientRect();const problems:string[]=[],hits:unknown[]=[];
      if(r.width<minimum-.01||r.height<minimum-.01)problems.push('touch target smaller than minimum CSS px');
      if(r.left<0||r.top<0||r.right>innerWidth||r.bottom>innerHeight)problems.push('outside viewport');
-     for(const [u,v] of [[.1,.1],[.9,.1],[.1,.9],[.9,.9]]){const hit=document.elementFromPoint(r.left+r.width*u,r.top+r.height*v);hits.push({u,v,className:hit?.getAttribute('class'),x:r.left+r.width*u,y:r.top+r.height*v});if(!button.contains(hit))problems.push('covered touch corner');}
+     for(const [u,v] of [[.1,.1],[.9,.1],[.1,.9],[.9,.9],[.5,.5]]){const hit=document.elementFromPoint(r.left+r.width*u,r.top+r.height*v);hits.push({u,v,className:hit?.getAttribute('class'),x:r.left+r.width*u,y:r.top+r.height*v});if(!button.contains(hit))problems.push('covered touch corner');}
      for(const tile of document.querySelectorAll('.mahjong-hand [data-tile-face],.mahjong-river--0 [data-tile-face]')){
       const t=tile.getBoundingClientRect();if(Math.min(r.right,t.right)-Math.max(r.left,t.left)>.5&&Math.min(r.bottom,t.bottom)-Math.max(r.top,t.top)>.5)problems.push('overlaps own hand or river');
      }
      return {label:button.getAttribute('aria-label')??button.textContent,width:r.width,height:r.height,left:r.left,top:r.top,hits,problems};
     }),hasTouch?44:34);
     const label=`${engine.name()} ${viewport.width} ${mode} touch=${hasTouch}`;
+    let cancellation:unknown=null;
     if(mode==='native-north'){
      await page.getByRole('button',{name:'立直',exact:true})[hasTouch?'tap':'click']();
      const cancel=page.getByRole('button',{name:'返回普通切牌'}),rect=await cancel.boundingBox();
      if(hasTouch&&(!rect||rect.width<43.99||rect.height<43.99))failures.push(label+' riichi cancellation smaller than minimum CSS px');
+     cancellation=await cancel.evaluate(button=>{
+      const r=button.getBoundingClientRect(),issues:string[]=[];
+      const points=[[.1,.1],[.9,.1],[.1,.9],[.9,.9],[.5,.5]].map(([u,v])=>{
+       const x=r.left+r.width*u,y=r.top+r.height*v,hit=document.elementFromPoint(x,y),valid=button.contains(hit);
+       if(!valid)issues.push('covered cancellation target');return {x,y,valid,hitClass:hit?.getAttribute('class')};
+      });
+      if(r.left<0||r.top<0||r.right>innerWidth||r.bottom>innerHeight)issues.push('cancellation outside viewport');
+      for(const tile of document.querySelectorAll('.mahjong-hand [data-tile-face],.mahjong-river--0 [data-tile-face]')){
+       const t=tile.getBoundingClientRect();if(Math.min(r.right,t.right)-Math.max(r.left,t.left)>.5&&Math.min(r.bottom,t.bottom)-Math.max(r.top,t.top)>.5)issues.push('cancellation overlaps hand or river');
+      }
+      return {width:r.width,height:r.height,points,issues};
+     });
+     for(const issue of (cancellation as {issues:string[]}).issues)failures.push(label+' '+issue);
      await cancel[hasTouch?'tap':'click']();
      await page.getByRole('button',{name:'拔北',exact:true})[hasTouch?'tap':'click']();
      const choices=await page.evaluate(()=>(window as any).choices);
@@ -65,7 +79,7 @@ for(const engine of [chromium,webkit]){
      assert.deepEqual(await page.evaluate(()=>(window as any).choices),[game.choices.find(c=>c.id==='chi:p123-')]);
     }
 
-    assert.ok(measured.length>0);results.push({label,viewport,hasTouch,measured});
+    assert.ok(measured.length>0);results.push({label,viewport,hasTouch,noticePresent:true,measured,cancellation});
     for(const action of measured)for(const problem of action.problems)failures.push(`${label} ${action.label}: ${problem} (${action.width}x${action.height})`);
     console.log(`${measured.every(a=>!a.problems.length)?'PASS':'FAIL'} ${label}`);
    }
