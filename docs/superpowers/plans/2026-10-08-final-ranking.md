@@ -35,7 +35,7 @@
 
 ### Task 3: 原生联机与发布验证
 **Files:** tests/integration/mahjong-draw-runtime.test.ts; docs/mahjong-final-ranking-acceptance.md; new immutable local audit namespace.
-- [ ] 扩展真实认证Socket终局、电脑确认、重连与再次开局检查。
-- [ ] 完整测试、类型、构建、secrets通过；一次独立整个变更终审，修复必要问题。
-- [ ] 固定新候选镜像Linux验收；当前父版6c7dc33/12表/禁备份/清理器/无真人牌局保护全部通过后发布。
-- [ ] 实际公网摘要、数据摘要、资源限制验证；安全同步仅自有文件；记录局限并保持完整目标active。
+- [x] 扩展真实认证Socket终局、电脑确认、重连与再次开局检查。
+- [x] 完整测试、类型、构建、secrets通过；一次独立整个变更终审，修复必要问题。
+- [x] 固定新候选镜像Linux验收；当前父版6c7dc33/12表/禁备份/清理器/无真人牌局保护全部通过后发布。
+- [x] 实际公网摘要、数据摘要、资源限制验证；安全同步仅自有文件；记录局限并保持完整目标active。

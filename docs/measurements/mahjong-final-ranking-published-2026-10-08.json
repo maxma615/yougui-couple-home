@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "517826390e475db07e4fc5765155aac1a4ae87c0",
+  "release": "5178263",
+  "buildId": "YZTj8zI2Bnjn01n1Rlxo7",
+  "imageId": "sha256:55762f3abca0f790e3cbb11192d8e35f19f81df50bf573e352d7db014e34e55a",
+  "imageTag": "yougui-app:5178263-ecs",
+  "rollbackRelease": "6c7dc33",
+  "sourceFiles": 548,
+  "nextFiles": 449,
+  "manifestSha256": "3ff400978440bdbd6e07d098d3bb3b186e89b63da0292903830084d3127a60e4",
+  "archiveBytes": 37056043,
+  "archiveSha256": "cc3548c16d8819be8bc675ad441cc72540277ce3445ddccffc1e080edf5a292a",
+  "localTests": {
+    "files": 68,
+    "passed": 597,
+    "log": ".local/audit/final-ranking-20261008/full-r03.log",
+    "logSha256": "4d236419f10078af3c424625dd27d32965de75ccf73f3d822dab0880c6b2b0e9"
+  },
+  "linuxTests": {
+    "files": 4,
+    "passed": 31,
+    "imageId": "sha256:55762f3abca0f790e3cbb11192d8e35f19f81df50bf573e352d7db014e34e55a",
+    "pinSha256": "ec02c66f145211a5f1d5bc749a7c581dabb98bb9d0ee0b7786c2d5415c75ba19"
+  },
+  "browserScenes": {
+    "count": 8,
+    "summary": ".local/audit/final-ranking-browser-1791429701944/summary.json",
+    "summarySha256": "caca017be902cc96f4ec7da8b05537420ec9dbf6f800ec91843c5e0d695cba47"
+  },
+  "publicAssets": 130,
+  "publicProofSha256": "f655a42cc31049d1a80d7b3bdcf9f7f1f83f0d40a85747b59b2841f2cde150e3",
+  "remoteProofs": {
+    "candidate": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-candidate.json",
+      "sha256": "153c1c181ce07d3242bf2abcf4b8961e4d636825145d78e9d8ca6b165f509d6a",
+      "exitCode": 0
+    },
+    "linux-status": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-linux-status.json",
+      "sha256": "aa2394abc591a067d9c754182cab51d4653a3910ee1694256fbcdbd28d8c0413",
+      "exitCode": 0
+    },
+    "staging": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-staging.json",
+      "sha256": "6a9cf8cd5d986f367f48d338438537b2df939f1366e1a5cd925b9296fe903d37",
+      "exitCode": 0
+    },
+    "readiness": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-readiness.json",
+      "sha256": "79582fd881fdcc4995fb51187e520b1b9362b0a229f5a2b38efba341be07be8a",
+      "exitCode": 0
+    },
+    "publish": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-publish.json",
+      "sha256": "53deacba9185c1f7ead711052f54dd04974c3dda1a28c7546fe280c0f8f77510",
+      "exitCode": 0
+    },
+    "publish-status": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-publish-status.json",
+      "sha256": "83397cf0377251067fe70ec1bba8ca33e2e7853a6dbd885f89534e073d1069fe",
+      "exitCode": 0
+    },
+    "live-check": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-live-check.json",
+      "sha256": "93f0897a9b41e469892da5d7214e57b5b1fb19205938e3c85075dbafdb447f55",
+      "exitCode": 0
+    },
+    "final-health": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-final-health.json",
+      "sha256": "d329a2b441698e254c71d215d72f9884cf3a23a91df04e22ff03977844c45219",
+      "exitCode": 0
+    },
+    "published-preflight": {
+      "path": ".local/ecs-deploy/final-ranking-remote-captures/final-ranking-5178263-r01-published-preflight.json",
+      "sha256": "f59c6b99f1812f873025affdb16f7c144a9d0ce544c47229d92e0af032d0b21c",
+      "exitCode": 0
+    }
+  },
+  "data": {
+    "tables": 12,
+    "allTableDigestsUnchanged": true,
+    "digest": "62822111fb43742ac11d3a6ce9174bff9a9d644af57378749c0a8eccffce90ef"
+  },
+  "appResources": {
+    "nanoCpus": 1000000000,
+    "memoryBytes": 805306368
+  },
+  "backupPolicyDisabled": true,
+  "cleanupUnchanged": true,
+  "reviewSha256": "9e4c7fdcf55cd8eb5351ee96ddee8186537f4efc338ec22cbd218cd3d3ace827",
+  "reviewRulingSha256": "216b8036759e15753af1635c1de3608d5440bb9bff32a737359f5d4114703f3e",
+  "overallGoalAchieved": false
+}
