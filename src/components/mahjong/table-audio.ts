@@ -1,11 +1,22 @@
 import type {TableSoundEvent} from './table-sounds';
 
 type SoundKind=TableSoundEvent['kind'];
-const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38};
+const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38,yaku:.09,'hand-value':.24,'score-roll':.99};
 
 /** Original short resin/cloth transients, generated locally without samples. */
 export function makeTileSoundBuffer(context:BaseAudioContext,kind:SoundKind):AudioBuffer{
  const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*durations[kind]),context.sampleRate);
+ if(kind==='yaku'||kind==='hand-value'||kind==='score-roll'){
+  const samples=buffer.getChannelData(0);
+  for(let i=0;i<samples.length;i++){
+   const t=i/context.sampleRate,age=kind==='score-roll'?t%.03:t;
+   const frequency=kind==='yaku'?1174.66:kind==='hand-value'?783.99:920;
+   const decay=kind==='score-roll'?.008:kind==='yaku'?.022:.07;
+   const envelope=Math.min(1,age/.002)*Math.exp(-age/decay);
+   samples[i]=envelope*(.18*Math.sin(2*Math.PI*frequency*age)+.04*Math.sin(2*Math.PI*frequency*2*age))*Math.min(1,(samples.length-i)/context.sampleRate/.008);
+  }
+  return buffer;
+ }
  if(kind==='riichi'||kind==='ron'||kind==='tsumo'){
   // Original resonant declaration motifs. These are cues, not character voice.
   const samples=buffer.getChannelData(0),notes=kind==='riichi'?[660,990]:kind==='ron'?[440,660,880]:[523.25,783.99,1046.5];
@@ -68,7 +79,7 @@ export class TableAudioPlayer{
    this.ready=context.state==='running';return this.ready;
   }catch{return false;}
  }
- play(cue:TableSoundEvent):boolean{
+ play(cue:TableSoundEvent,offsetSeconds=0):boolean{
   if(this.seen.has(cue.id))return false;
   this.seen.add(cue.id);
   while(this.seen.size>512)this.seen.delete(this.seen.values().next().value!);
@@ -77,10 +88,13 @@ export class TableAudioPlayer{
   try{
    let buffer=this.buffers.get(cue.kind);
    if(!buffer){buffer=makeTileSoundBuffer(context,cue.kind);this.buffers.set(cue.kind,buffer);}
+   // Resume a late score-roll callback at its current visual position. Do not
+   // restart the full roll after the visible count has almost finished.
+   if(!Number.isFinite(offsetSeconds)||offsetSeconds<0||offsetSeconds>=durations[cue.kind])return false;
    if(this.active.size>=8)this.release(this.active.values().next().value!,true);
    const source=context.createBufferSource();source.buffer=buffer;source.connect(this.master);
    this.active.add(source);source.onended=()=>this.release(source,false);
-   try{source.start();return true;}catch{this.release(source,true);return false;}
+   try{if(offsetSeconds>0)source.start(0,offsetSeconds);else source.start();return true;}catch{this.release(source,true);return false;}
   }catch{return false;}
  }
  setEnabled(enabled:boolean){

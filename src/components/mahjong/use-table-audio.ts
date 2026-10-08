@@ -4,8 +4,9 @@ import type {RoomView} from '@/modules/mahjong/types';
 import {TableAudioPlayer} from './table-audio';
 import {tableSoundTransition,type PendingKakanSound,type TableSoundEvent} from './table-sounds';
 import {acceptedDeclarationSounds} from './declaration-sounds';
+import {acceptedSettlementSounds,settlementSoundPhase,type SettlementSoundEvent} from './settlement-sounds';
 
-type Pending={cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number;declarationGroup?:string;declarationOffset?:number;notBefore?:number};
+type Pending={cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number;declarationGroup?:string;declarationOffset?:number;notBefore?:number;settlement?:SettlementSoundEvent;settlementAt?:number};
 const storageKey='yougui.mahjong.sound';
 const scope=(r:RoomView)=>JSON.stringify([r.id,r.variant,r.mySeat,r.game?.gameInstanceId,r.game?.handId]);
 
@@ -26,7 +27,10 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   const entry=pending.current.get(id);
   if(!entry||entry.parent||entry.epoch!==epoch.current)return;
   pending.current.delete(id);
-  if(enabledRef.current&&document.visibilityState!=='hidden')player.current?.play(entry.cue);
+  if(enabledRef.current&&document.visibilityState!=='hidden'){
+   if(entry.settlement?.kind==='score-roll')player.current?.play(entry.cue,Math.max(0,(performance.now()-entry.settlementAt!-entry.settlement.atMs)/1000));
+   else player.current?.play(entry.cue);
+  }
   if(entry.declarationGroup&&entry.declarationOffset!==undefined){
    // A stalled main thread can release multiple due callbacks in one paint.
    // Keep later voices/cues separated from the actual first audible step.
@@ -47,6 +51,12 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    frames.current.delete(frame);
    const entry=pending.current.get(id),root=rootRef.current;
    if(!entry||entry.parent||entry.epoch!==epoch.current||!root)return;
+   if(entry.settlement){
+    const cue=entry.settlement,current=previous.current?.room,age=performance.now()-entry.settlementAt!;
+    if(!current||settlementSoundPhase(current)!==cue.phaseKey||age>=cue.endMs){pending.current.delete(id);return;}
+    if(!root.querySelector(cue.selector)){scheduleRef.current(id);return;}
+    land(id);return;
+   }
    if(entry.declarationEnd!==undefined){
     if(performance.now()>=entry.declarationEnd){pending.current.delete(id);return;}
     if(entry.notBefore!==undefined&&performance.now()<entry.notBefore){scheduleRef.current(id);return;}
@@ -123,6 +133,13 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   if(!connected||document.visibilityState==='hidden'){clear();player.current?.pause();return;}
   if(!canAnimate){clear();player.current?.cancel();return;}
   if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room)){pendingKan.current=null;return;}
+  const resultCues=acceptedSettlementSounds(old.room,room);
+  for(const cue of resultCues){
+   if(cue.kind==='score-roll'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)continue;
+   pending.current.set(cue.id,{cue,epoch:epoch.current,settlement:cue,settlementAt:performance.now()-cue.elapsedMs});
+   const timer=setTimeout(()=>{timers.current.delete(timer);if(pending.current.has(cue.id))schedule(cue.id);},Math.max(0,cue.atMs-cue.elapsedMs));
+   timers.current.add(timer);
+  }
   const transition=tableSoundTransition(old.room,room,pendingKan.current);pendingKan.current=transition.pending;
   const cues=transition.cues;
   const declarations=acceptedDeclarationSounds(old.room,room),declarationGroup=JSON.stringify(declarations.map(c=>c.id));

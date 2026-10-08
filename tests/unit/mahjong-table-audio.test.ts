@@ -8,6 +8,14 @@ function context(){
  return {ctx,sources,create:vi.fn(()=>ctx as unknown as AudioContext)};
 }
 describe('finite table audio lifecycle',()=>{
+ it('starts a delayed score roll from the remaining visual segment and consumes expired cues',async()=>{
+  const f=context(),p=new TableAudioPlayer(f.create);await p.unlock();
+  expect(p.play({id:'roll',kind:'score-roll',seat:0},.9)).toBe(true);
+  expect(f.sources[0].start).toHaveBeenCalledWith(0,.9);
+  for(const offset of [.99,1,NaN,-1])expect(p.play({id:`expired-${offset}`,kind:'score-roll',seat:0},offset)).toBe(false);
+  expect(f.sources).toHaveLength(1);expect(p.play({id:'expired-1',kind:'score-roll',seat:0})).toBe(false);
+  await p.dispose();
+ });
  it('does not create a context or queue sounds before a gesture unlock',()=>{const f=context(),p=new TableAudioPlayer(f.create);expect(p.play(cue())).toBe(false);expect(f.create).not.toHaveBeenCalled();expect(f.sources).toHaveLength(0);});
  it('plays a live cue once and releases the completed node',async()=>{const f=context(),p=new TableAudioPlayer(f.create);expect(await p.unlock()).toBe(true);expect(p.play(cue())).toBe(true);expect(p.play(cue())).toBe(false);expect(f.sources).toHaveLength(1);f.sources[0].onended!();expect(f.sources[0].disconnect).toHaveBeenCalled();await p.dispose();expect(f.sources[0].stop).not.toHaveBeenCalled();});
  it('does not replay a discarded locked cue when unlocking later',async()=>{const f=context(),p=new TableAudioPlayer(f.create);p.play(cue());await p.unlock();expect(p.play(cue())).toBe(false);expect(p.play(cue('new'))).toBe(true);});
