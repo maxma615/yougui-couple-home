@@ -172,14 +172,14 @@
 /* A legal response can offer ron, three chi alternatives, pon, kan and pass.
    Put the chi preview in the clear upper HUD gap instead of growing a stack
    across the rivers; keep the remaining actions in one near-side row. */
-.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="chi"]) .mahjong-action-dock {
+.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="pass"]) .mahjong-action-dock {
   right: max(22%, env(safe-area-inset-right));
   bottom: max(calc(23dvh + 10px), calc(max(2dvh, env(safe-area-inset-bottom)) + 6px + min(4.8dvw, 13dvh, 64px) * 1.46 * 1.31 + 8px));
   max-width: 64%;
   flex-wrap: nowrap;
   pointer-events: none;
 }
-.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="chi"]) .mahjong-action-dock > button {
+.mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="pass"]) .mahjong-action-dock > button {
   pointer-events: auto;
 }
 .mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds) .mahjong-action-dock > [data-choice-type="chi"] {
@@ -191,6 +191,24 @@
 }
 .mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds) .mahjong-action-dock > [data-choice-type="chi"] .mahjong-call-previews {
   flex-wrap: nowrap;
+}
+
+/* On short landscape tables, keep the full river clear between two response
+   clusters. All tile previews stay in their buttons, with unchanged targets. */
+@media (max-height: 600px) and (orientation: landscape) {
+  .mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="pass"]) .mahjong-action-dock {
+    left: max(19%, env(safe-area-inset-left));
+    right: max(20%, env(safe-area-inset-right));
+    max-width: none;
+    display: grid;
+    grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+    grid-template-rows: auto auto;
+    gap: 5px;
+  }
+  .mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="pass"]) .mahjong-action-dock > [data-choice-type="ron"] { grid-area: 2 / 1; }
+  .mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="pass"]) .mahjong-action-dock > [data-choice-type="pass"] { grid-area: 2 / 2; }
+  .mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="pass"]) .mahjong-action-dock > [data-choice-type="pon"] { grid-area: 1 / 1 / 2 / 3; justify-self: start; }
+  .mahjong-page .mahjong-game:not(.is-finished):has(.mahjong-hand-public-melds):has(.mahjong-action-dock [data-choice-type="pass"]) .mahjong-action-dock > [data-choice-type="kan"] { grid-area: 2 / 4; justify-self: end; transform: translateY(-16px); }
 }
 
 /* A kan adds a physical tile to the side row. Reserve a standing tile's full
