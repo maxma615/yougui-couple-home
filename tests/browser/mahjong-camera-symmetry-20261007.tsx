@@ -20,7 +20,7 @@ const output = `.local/audit/mahjong-camera-symmetry-${new Date().toISOString().
 mkdirSync(output, { recursive: false });
 const colours = [[250, 30, 190], [20, 230, 230], [20, 40, 250], [70, 250, 35]];
 const sizes = [{ width: 667, height: 375 }, { width: 844, height: 390 }, { width: 1440, height: 810 }];
-const fixtures: RoomView[] = ["sanma", "yonma"].map(variant => {
+const fixtures: RoomView[] = ["sanma", "yonma"].flatMap(variant => {
   const names = variant === "sanma" ? ["A", "B", "C"] : ["A", "B", "C", "D"];
   const game = variant === "sanma" ? northReplacementFixture() : new RiichiGame("east", names);
   if (variant === "sanma") {
@@ -32,8 +32,8 @@ const fixtures: RoomView[] = ["sanma", "yonma"].map(variant => {
     }
     assert.equal(game.view(0).players[0].nuki, 1);
   }
-  return { id: `paint-${variant}`, code: "ABCDEFGH", hostUserId: "0", variant: variant as "sanma" | "yonma", mode: "east", status: "playing", version: 1, mySeat: 0,
-    game: game.view(0), members: names.map((displayName, seat) => ({ userId: String(seat), displayName, seat, kind: "human", ready: true, connected: true })) };
+  return names.map((_, ownSeat) => ({ id: `paint-${variant}-${ownSeat}`, code: "ABCDEFGH", hostUserId: "0", variant: variant as "sanma" | "yonma", mode: "east", status: "playing", version: 1, mySeat: ownSeat,
+    game: game.view(ownSeat), members: names.map((displayName, seat) => ({ userId: String(seat), displayName, seat, kind: "human", ready: true, connected: true })) }));
 });
 mkdirSync(".local/audit", { recursive: true });
 const results: unknown[] = [], failures: string[] = [];
@@ -41,7 +41,7 @@ for (const engine of [chromium, webkit]) {
   const browser = await engine.launch({ headless: true });
   try {
     for (const room of fixtures) for (const size of sizes) {
-      const label = `${engine.name()} ${room.variant} ${size.width}x${size.height}`;
+      const label = `${engine.name()} ${room.variant} seat=${room.mySeat} ${size.width}x${size.height}`;
       const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1,
         ...(engine === webkit ? { recordVideo: { dir: `${output}/video`, size: { width: size.width + size.width % 2, height: size.height + size.height % 2 } } } : {}) });
       const page = await context.newPage();
@@ -50,12 +50,16 @@ for (const engine of [chromium, webkit]) {
         const pathname = new URL(route.request().url()).pathname;
         await route.fulfill({ status: 200, contentType: pathname.endsWith(".svg") ? "image/svg+xml" : "image/webp", body: readFileSync(`public${pathname}`) });
       });
+      await page.route("https://mahjong.local/fonts/**", route => route.fulfill({contentType:"font/woff2",body:readFileSync("public"+new URL(route.request().url()).pathname)}));
       const noop = () => {};
-      const html = renderToStaticMarkup(<GameRoom room={room} ownSeat={0} host busy={false} connected onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
+      const html = renderToStaticMarkup(<GameRoom room={room} ownSeat={room.mySeat!} host busy={false} connected onChoice={noop} onFinish={noop} onLeave={noop} onRematch={noop}/>);
       await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*::before,*::after{box-sizing:border-box}${css}</style><main class="mahjong-page"><div class="mahjong-shell">${html}</div></main>`);
       if (process.env.CAMERA_PROBE_CSS) await page.addStyleTag({ content: process.env.CAMERA_PROBE_CSS });
       await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(image => image.complete && image.naturalWidth === 300 && image.naturalHeight === 400));
-      await page.addScriptTag({ content: projectedSampleScript });
+      await page.addScriptTag({ content: `globalThis.__name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n${projectedSampleScript}` });
+      assert.equal(await page.locator(".mahjong-table__own-public [data-seat]").getAttribute("data-seat"),String(room.mySeat));
+      assert.equal(await page.getByTestId("mahjong-hand").locator("[data-tile-face]").count(),room.game!.hand.length);
+      for(const player of room.game!.players)if(player.seat!==room.mySeat)assert.equal(await page.locator(`[data-motion-rack-seat="${player.seat}"] > i`).count(),player.handCount);
       const measured = await page.evaluate(colours => {
         const surface = document.querySelector<HTMLElement>(".mahjong-table__surface")!;
         const style = getComputedStyle(surface), left = parseFloat(style.borderLeftWidth), top = parseFloat(style.borderTopWidth);
@@ -71,12 +75,31 @@ for (const engine of [chromium, webkit]) {
         });
         const farWidth = Math.hypot(quad[1].x-quad[0].x, quad[1].y-quad[0].y);
         const nearWidth = Math.hypot(quad[2].x-quad[3].x, quad[2].y-quad[3].y);
-        return { quad, farWidth, nearWidth, patches, transform: style.transform };
+        // Measure z=0 contact baselines, not the axis-aligned bounding box
+        // of raised backs. Both endpoints share the table camera and must
+        // lie on the appropriate six-pixel-offset local floor line.
+        const sample=(el:HTMLElement,points:number[][])=> (window as any).mahjongPhysicalSamples(el,points) as {x:number;y:number}[];
+        const lane=document.querySelector<HTMLElement>(".mahjong-table__lane")!,laneQuad=sample(lane,[[0,0],[1,0],[1,1],[0,1]]);
+        const seams={north:[laneQuad[0],laneQuad[1]],west:[laneQuad[0],laneQuad[3]],east:[laneQuad[1],laneQuad[2]]};
+        const cw=width-left-parseFloat(style.borderRightWidth),ch=height-top-parseFloat(style.borderBottomWidth);
+        const xy=(x:number,y:number)=>[(left+x)/width,(top+y)/height];
+        const distance=(p:{x:number;y:number},a:{x:number;y:number},b:{x:number;y:number})=>Math.abs((p.x-a.x)*(b.y-a.y)-(p.y-a.y)*(b.x-a.x))/Math.hypot(b.x-a.x,b.y-a.y);
+        const angle=(a:{x:number;y:number},b:{x:number;y:number})=>Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
+        const racks=[...surface.querySelectorAll<HTMLElement>(".mahjong-opponent-rack")].map(rack=>{
+          const position=rack.closest(".mahjong-table__position")!.className.match(/--(north|west|east)/)![1] as keyof typeof seams;
+          const bodies=[...rack.querySelectorAll<HTMLElement>(".mahjong-standing-tile__body")],depth=parseFloat(getComputedStyle(bodies[0]).height);
+          const feet=bodies.map(body=>sample(body,[[0,0],[1,0],[1,1],[0,1]]));
+          const floor=(offset:number)=>position==='north'?sample(surface,[xy(cw*.2,ch*.09-offset),xy(cw*.8,ch*.09-offset)]):sample(surface,[xy(cw*(position==='west'?.12:.88)+(position==='west'?-offset:offset),ch*.2),xy(cw*(position==='west'?.12:.88)+(position==='west'?-offset:offset),ch*.8)]);
+          const rear=floor(6),front=floor(6+depth),rearLine=[feet[0][0],feet.at(-1)![1]],frontLine=[feet[0][3],feet.at(-1)![2]];
+          const a=angle(rearLine[0],rearLine[1]),b=angle(seams[position][0],seams[position][1]),diff=Math.abs(a-b)%180;
+          return {seat:Number(rack.closest<HTMLElement>('[data-seat]')!.dataset.seat),position,count:bodies.length,depth,feet,rear,front,rearResiduals:rearLine.map(p=>distance(p,rear[0],rear[1])),frontResiduals:frontLine.map(p=>distance(p,front[0],front[1])),angleDifference:Math.min(diff,180-diff)};
+        });
+        return { quad, farWidth, nearWidth, patches, racks, transform: style.transform };
       }, colours);
       // WebKit Page.snapshotRect software-paints perspective incorrectly on this
       // host. Screencast/video uses an independent composited-frame path.
       await page.waitForTimeout(500);
-      const stem = `${output}/${engine.name()}-${room.variant}-${size.width}`;
+      const stem = `${output}/${engine.name()}-${room.variant}-seat${room.mySeat}-${size.width}`;
       const snapshot = await page.screenshot({ path: `${stem}-snapshot.png` });
       const video = page.video();
       await context.close();
@@ -122,13 +145,17 @@ for (const engine of [chromium, webkit]) {
       if (!(bl.x < tl.x && br.x > tr.x)) issues.push("table sides must diverge symmetrically toward the viewer");
       for (const [index, point] of measured.quad.entries()) if (point.x < 2 || point.x > size.width - 2 || point.y < 2 || point.y > size.height - 2) issues.push(`table corner ${index} outside visible viewport: ${point.x},${point.y}`);
       if (measured.nearWidth < measured.farWidth * 1.1) issues.push(`flat camera: near/far=${measured.nearWidth/measured.farWidth}`);
+      for(const rack of measured.racks) {
+        if(rack.angleDifference>.4)issues.push(`seat${rack.seat} ${rack.position} rack/line angle ${rack.angleDifference}`);
+        if([...rack.rearResiduals,...rack.frontResiduals].some(d=>d>.6))issues.push(`seat${rack.seat} ${rack.position} feet miss floor: ${JSON.stringify([rack.rearResiduals,rack.frontResiduals])}`);
+      }
       for (const sample of samples) if (!sample.centreMatches || sample.count < 50 || sample.centroidError > (video ? 2 : 1.5) || (!video && sample.error > 10)) issues.push(`patch${sample.index}: DOM centre ${sample.x},${sample.y} paints ${sample.actual} instead of ${sample.expected}; component=${sample.count}, centroid error=${sample.centroidError.toFixed(3)}px`);
       results.push({ label, size, capture: video ? "Screencast compositor video frame" : "Page screenshot", videoPath, ...measured, samples, issues });
       if (issues.length) { failures.push(`${label}: ${issues.join("; ")}`); console.log(`FAIL ${failures.at(-1)}`); }
-      else console.log(`PASS ${label}: projective depth and 4 DOM/paint centre samples agree`);
+      else console.log(`PASS ${label}: rack floor/seam alignment, projective depth and 4 DOM/paint centre samples agree`);
     }
   } finally { await browser.close(); }
 }
 writeFileSync(`${output}/summary.json`, JSON.stringify({ probeCss: process.env.CAMERA_PROBE_CSS ?? null, baseHead: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), testSha256: createHash("sha256").update(readFileSync("tests/browser/mahjong-camera-symmetry-20261007.tsx")).digest("hex"), cssSha256: createHash("sha256").update(css).digest("hex"), results, failures }, null, 2)+"\n");
 assert.deepEqual(failures, [], "projected DOM geometry must be symmetric, fit the viewport, and agree with composited pixels in both engines");
-console.log(`PASS ${results.length} real-engine scenes with ${results.length*4} paint checks; full tabletop fits symmetrically in ${output}`);
+console.log(`PASS ${results.length} real-engine scenes from every seat with ${results.length*4} paint checks; full tabletop fits symmetrically in ${output}`);
