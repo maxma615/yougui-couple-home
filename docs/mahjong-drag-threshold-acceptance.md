@@ -1,6 +1,6 @@
 # 拖牌判定距离与释放边界
 
-日期：2026-10-09。整体对齐目标保持 active；本步是新的本地候选，尚未发布到 ECS。
+日期：2026-10-09。整体对齐目标保持 active；本步已发布到授权 ECS。
 
 ## 行为与参考范围
 
@@ -17,6 +17,10 @@
 
 证据保存在应用忽略目录：`.local/audit/drag-threshold-red-r01.log`、`drag-threshold-target-r01.log`、`drag-threshold-full-r01.log`及`r02.log`、`drag-threshold-type-r01.log`、`drag-threshold-build-r01.log`、`drag-threshold-secrets-r01.log`。原生36场景为 `.local/audit/drag-threshold-1791506677491/proof.json`；24回归为 `.local/audit/seat-drag-threshold-regression-1791507593830/proof.json`，源码、脚本和样式摘要已逐项对照当前文件。根任务检查不称为独立审查。
 
-## 待完成
+## ECS 发布与剩余范围
 
-线上仍是 `e375a51`／Build `42L2zC9QpquUI0J_BFhRq` 七段语音版本。本候选还需同一冻结镜像的受限Linux检查、ECS发布及公网核验，遵循禁备份、不下载真实资料、资源限制及真人牌桌保护。真实Android手势和完整当前厂商体验仍未全部验收。
+已发布源提交 `d55b35fcef392c5dbb7c842c6203b4b32f63144f`／Build `hkYXOsOKAt0TWe8Q0Nrmk`，入口 <https://8.133.186.15/mahjong>。冻结Linux amd64镜像为 `sha256:0a7cc604ad80f538a8120764a383b90eb700801fed973c52bbb7d5a93a1d5d41`，692源码/449构建文件逐项摘要一致，manifest SHA256 `8b3d919a60f10aa2475fc40ada13c5b2e10584e1d592b0ac65e2aeab5ef7281d`。同一冻结镜像在半核CPU、384MiB、无网络、只读、单线程独立隔离容器中通过40文件/669项检查，测试进程PID1577770实际退出0，未重启任务或放宽360秒外层期限。发布器PID1579999实际退出0，入口保护恢复；可信TLS健康200及143个公网资源摘要全部一致。
+
+13个远程阶段均有命令绑定的实际退出0证据，汇总在应用忽略目录 `.local/ecs-deploy/drag-threshold-published-closeout-r01.json`。发布前后12张持久化表摘要一致（`9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`），权威检查无进行中的真人牌桌；照片清理器CID/镜像保持，应用1CPU/768MiB且无OOM。禁备份标记、masked/inactive timer和inactive service保持，未生成备份或下载真实资料。
+
+真实Android手势、厂商坐标缩放、生产认证WSS故障和完整当前厂商体验仍未全部验收。之前语音及其他几何证据属于此前验证，此次没有把它们称为新镜像重新执行的原生验收。
