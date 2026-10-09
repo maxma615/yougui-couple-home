@@ -1,7 +1,6 @@
 'use client';
 import {useCallback,useEffect,useLayoutEffect,useRef,useState,type RefObject} from 'react';
 import type {RoomView} from '@/modules/mahjong/types';
-import {readTileSheenPhase} from './tile-sheen-motion';
 import {acceptedPublicCallEvent} from './public-call-motion';
 import {measureDiscardElement,rectToFlight,type FlightView} from './use-discard-motion';
 type Measurement = NonNullable<ReturnType<typeof measureDiscardElement>>;
@@ -13,8 +12,7 @@ function readRivers(table:HTMLElement|null, retained:ReadonlyMap<string,Measurem
     const id = wrapper.dataset.discardEventId;
     if (wrapper.closest('.is-discard-motion-hidden')) {
       const active = id && retained.get(id);
-      const face=wrapper.querySelector<HTMLElement>('.mahjong-tile');
-      if (active) sources.set(id!,{...active,sheen:face?readTileSheenPhase(face)??active.sheen:active.sheen});
+      if (active) sources.set(id!,active);
       return;
     }
     const face = wrapper.querySelector<HTMLElement>('.mahjong-tile');
@@ -97,7 +95,7 @@ export function usePublicCallMotion({room,ownSeat,connected,canAnimate,tableRef}
           target.style.setProperty('visibility','hidden');
           volume?.style.setProperty('visibility','hidden');
           setFlight({event:{...event.source,id:event.id,seat:event.seat,index:event.index,tile:event.tile!},source:'public',sourceTileId:event.source.id,
-            sourcePaint:source.paint,targetPaint:destination.paint,sourceSheen:source.sheen,targetFace:target,
+            sourcePaint:source.paint,targetPaint:destination.paint,
             from:rectToFlight(source.rect,source.geometry),to:rectToFlight(destination.rect,destination.geometry)});
         }
       }

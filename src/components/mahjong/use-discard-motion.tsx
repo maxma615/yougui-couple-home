@@ -1,6 +1,5 @@
 "use client";
 
-import {readTileSheenPhase,continueTileSheenPhase,type TileSheenPhase} from "./tile-sheen-motion";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import type { RoomView } from "@/modules/mahjong/types";
@@ -36,8 +35,6 @@ export type FlightView = Readonly<{
   source: "own" | "opponent" | "public";
   sourceTileId?: string;
   sourcePaint?: MotionTilePaint;
-  sourceSheen?: TileSheenPhase | null;
-  targetFace?: HTMLElement;
   targetPaint?: MotionTilePaint;
   from: FlightGeometry;
   to: FlightGeometry;
@@ -153,8 +150,6 @@ export function useDiscardMotion({
           source: result.flight.source,
           sourceTileId: result.flight.sourceTileId,
           sourcePaint: result.flight.sourcePaint,
-          sourceSheen: result.flight.sourceSheen ?? readTileSheenPhase(face),
-          targetFace: face,
           targetPaint: result.flight.source === "own" ? readTilePaint(face, target) : undefined,
           from,
           to,
@@ -225,7 +220,6 @@ export function measureDiscardElement(element: HTMLElement) {
   return {
     rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
     paint: readTilePaint(element),
-    sheen: readTileSheenPhase(element),
     geometry: {
       width: geometry.width,
       height: geometry.height,
@@ -490,12 +484,6 @@ export function DiscardFlightLayer({ flight, onFinish, kind = "discard", doraTil
   useLayoutEffect(() => {
     const node = element.current;
     if (!node) return;
-    const face = node.querySelector<HTMLElement>("[data-tile-face]");
-    if (face) {
-      const phase = flight.sourceSheen ?? (flight.targetFace && readTileSheenPhase(flight.targetFace));
-      continueTileSheenPhase(face, phase);
-      if (flight.targetFace) continueTileSheenPhase(flight.targetFace, phase);
-    }
     let movement: Animation | null = null;
     let flip: Animation | null = null;
     let paint: Animation | null = null;

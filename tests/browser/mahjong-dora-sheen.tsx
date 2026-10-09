@@ -11,7 +11,7 @@ import type {RoomView} from '../../src/modules/mahjong/types';
 const out='.local/audit/dora-sheen-browser-'+Date.now();mkdirSync(out,{recursive:true});
 const sha=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');
 const cssFiles=[...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)].map(m=>'src/app/mahjong/'+m[1]);
-const files=['tests/browser/mahjong-dora-sheen.tsx','src/components/mahjong/mahjong-tile.tsx','src/components/mahjong/use-hand-hover.ts','tests/fixtures/mahjong-dora-game.ts','src/components/mahjong/mahjong-client.tsx','src/modules/mahjong/engine.ts','src/modules/mahjong/sanma.ts','tests/fixtures/mahjong-settlement-game.ts',...cssFiles];
+const files=['tests/browser/mahjong-dora-sheen.tsx','src/components/mahjong/mahjong-tile.tsx','src/components/mahjong/use-hand-hover.ts','src/components/mahjong/dora-sheen-clock.ts','src/components/mahjong/use-dora-sheen-clock.ts','tests/fixtures/mahjong-dora-game.ts','src/components/mahjong/mahjong-client.tsx','src/modules/mahjong/engine.ts','src/modules/mahjong/sanma.ts','tests/fixtures/mahjong-settlement-game.ts',...cssFiles];
 const sources=Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))]));
 const bundle=(await build({stdin:{contents:`import React from'react';import{createRoot}from'react-dom/client';import{flushSync}from'react-dom';import{GameRoom}from'./src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.renderRoom=(room,opts={})=>flushSync(()=>root.render(<main className="mahjong-page"><div className="mahjong-shell"><GameRoom room={room} ownSeat={room.mySeat} connected={opts.connected??true} host={false} busy={opts.busy??false} motionCanAnimate onChoice={(c,intent)=>window.respond(c,intent)} onFinish={()=>{}} onRematch={()=>{}} onLeave={()=>{}}/></div></main>));`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',define:{'process.env.NODE_ENV':'"development"'}})).outputFiles[0].text;
 
@@ -51,7 +51,7 @@ for(const engine of [chromium,webkit]){
     await page.evaluate(r=>(window as any).renderRoom(r),r);await page.waitForFunction(()=>[...document.querySelectorAll<HTMLImageElement>('img.mahjong-tile__art')].every(i=>i.complete&&i.naturalWidth>0));
     const families=[...new Set(r.game!.doraIndicators.map(t=>bonus(t,variant)))];
     const samples=await page.locator('[data-testid="mahjong-board"] [data-tile-face]').evaluateAll(els=>els.map(e=>({tile:e.getAttribute('data-tile-face'),content:getComputedStyle(e,'::before').content,animation:getComputedStyle(e,'::before').animationName,position:getComputedStyle(e,'::before').backgroundPosition,pointerEvents:getComputedStyle(e,'::before').pointerEvents,scope:e.closest('.mahjong-table__surface,.mahjong-hand')?'player':'hud'})));
-    for(const sample of samples){const expected=sample.scope==='player'&&(sample.tile?.[1]==='0'||families.includes(tileMatchKey(sample.tile)!));assert.equal(sample.content!=='none',expected,JSON.stringify(sample));if(expected){assert.equal(sample.animation,'mahjong-dora-sheen');assert.equal(sample.pointerEvents,'none');}}
+    for(const sample of samples){const expected=sample.scope==='player'&&(sample.tile?.[1]==='0'||families.includes(tileMatchKey(sample.tile)!));assert.equal(sample.content!=='none',expected,JSON.stringify(sample));if(expected){assert.equal(sample.animation,'none');assert.equal(sample.pointerEvents,'none');}}
     return {samples,families};
    };
    const initial=await inspect(room);
@@ -63,19 +63,20 @@ for(const engine of [chromium,webkit]){
    if(kind==='bonus-hand'){
     const face=page.locator('.mahjong-hand [data-tile-face="'+initial.families[0]+'"]').first();
     const bounds=await face.boundingBox();
-    const seek=async(time:number)=>face.evaluate(async(e,time)=>{const animations=e.getAnimations({subtree:true}).filter(a=>(a as CSSAnimation).animationName==='mahjong-dora-sheen');if(animations.length!==1)throw Error('one actual CSS pseudo-element animation');animations[0].pause();animations[0].currentTime=time;await new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r())));},time);
-    await seek(0);const before=await face.screenshot();await seek(1000);const after=await face.screenshot();assert.notEqual(sha(after),sha(before),'ordinary dora changes actual painted face pixels');assert.deepEqual(await face.boundingBox(),bounds,'light never changes the tile rectangle');
+    await page.evaluate(r=>(window as any).renderRoom(r,{connected:false}),room);
+    const seek=async(offset:number)=>page.evaluate(async offset=>{document.documentElement.style.setProperty('--mahjong-dora-offset',String(offset));await new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r())));},offset);
+    await seek(0);const before=await face.screenshot();await seek(-.6);const after=await face.screenshot();assert.notEqual(sha(after),sha(before),'ordinary dora changes actual painted face pixels');assert.deepEqual(await face.boundingBox(),bounds,'light never changes the tile rectangle');
     writeFileSync(out+`/${engine.name()}-${variant}-${viewport.width}-ordinary-dora-before.png`,before);writeFileSync(out+`/${engine.name()}-${variant}-${viewport.width}-ordinary-dora-after.png`,after);paintedSheen=true;
-    await face.evaluate(e=>e.getAnimations({subtree:true}).filter(a=>(a as CSSAnimation).animationName==='mahjong-dora-sheen').forEach(a=>a.play()));
+    await page.evaluate(r=>(window as any).renderRoom(r),room);
    }
    const geometry=await page.locator('.mahjong-table__surface [data-tile-face]').evaluateAll(els=>els.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
    let final=initial;
    if(sequence){for(const frame of sequence.slice(1))final=await inspect(frame);assert.equal(sequence.at(-1)!.game!.doraIndicators.length,2);assert(initial.samples.some(s=>s.scope==='player'&&s.tile==='z7'&&s.content==='none'));assert(final.samples.some(s=>s.scope==='player'&&s.tile==='z7'&&s.content!=='none'),'new kan indicator activates the real ordinary hand tile');}
    const glowing=page.locator('.mahjong-hand [data-tile-face="p0"]').first();
    if(await glowing.count()){
-    const before=await glowing.evaluate(e=>getComputedStyle(e,'::before').backgroundPosition);await page.waitForTimeout(600);const after=await glowing.evaluate(e=>getComputedStyle(e,'::before').backgroundPosition);assert.notEqual(after,before,'native CSS shimmer actually advances');
+    const before=await glowing.evaluate(e=>getComputedStyle(e,'::before').backgroundPosition);await page.waitForTimeout(600);const after=await glowing.evaluate(e=>getComputedStyle(e,'::before').backgroundPosition);assert.notEqual(after,before,'actual shared UV shimmer advances');
     await glowing.tap();assert.equal(commands.length,0,'shimmer never blocks or submits the first touch');
-    assert.equal(await page.getByTestId('mahjong-board').getAttribute('data-matching-tile'),'p5');assert.equal(await glowing.evaluate(e=>getComputedStyle(e,'::before').animationName),'mahjong-dora-sheen');assert.notEqual(await glowing.evaluate(e=>getComputedStyle(e,'::after').content),'none','same-family tint composes with dora sheen');
+    assert.equal(await page.getByTestId('mahjong-board').getAttribute('data-matching-tile'),'p5');assert.equal(await glowing.evaluate(e=>getComputedStyle(e,'::before').animationName),'none');assert.notEqual(await glowing.evaluate(e=>getComputedStyle(e,'::after').content),'none','same-family tint composes with dora sheen');
    }
    await page.screenshot({path:out+`/${engine.name()}-${variant}-${viewport.width}-${kind}-motion.png`});
    await page.emulateMedia({reducedMotion:'reduce'});

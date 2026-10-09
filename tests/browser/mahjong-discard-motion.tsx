@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { build } from "esbuild";
 import {createHash} from "node:crypto";
 const out=".local/audit/sheen-flight-motion-regression-"+Date.now();mkdirSync(out,{recursive:true});
-const proofSources=["tests/browser/mahjong-discard-motion.tsx","src/components/mahjong/mahjong-client.tsx","src/components/mahjong/use-discard-motion.tsx","src/components/mahjong/discard-motion.ts","src/components/mahjong/tile-sheen-motion.ts",...[...readFileSync("src/app/mahjong/page.tsx","utf8").matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)].map(m=>"src/app/mahjong/"+m[1])];
+const proofSources=["tests/browser/mahjong-discard-motion.tsx","src/components/mahjong/mahjong-client.tsx","src/components/mahjong/use-discard-motion.tsx","src/components/mahjong/discard-motion.ts","src/components/mahjong/dora-sheen-clock.ts","src/components/mahjong/use-dora-sheen-clock.ts",...[...readFileSync("src/app/mahjong/page.tsx","utf8").matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)].map(m=>"src/app/mahjong/"+m[1])];
 const hashSources=()=>Object.fromEntries(proofSources.map(p=>[p,createHash("sha256").update(readFileSync(p)).digest("hex")]));const sourceHashes=hashSources();
 import { chromium, webkit, type Page } from "@playwright/test";
 import Majiang from "@kobalab/majiang-core";

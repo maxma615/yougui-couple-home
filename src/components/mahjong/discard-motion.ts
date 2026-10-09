@@ -1,4 +1,3 @@
-import type {TileSheenPhase} from "./tile-sheen-motion";
 import type { GameView, RoomView } from "@/modules/mahjong/types";
 
 type MotionGameView = GameView & { gameInstanceId?: string; handId?: number };
@@ -52,7 +51,6 @@ export type DiscardMotionIntent = Readonly<{
   sourceRect: MotionRect;
   sourceGeometry: MotionSourceGeometry;
   sourcePaint?: MotionTilePaint;
-  sourceSheen?: TileSheenPhase | null;
   environmentEpoch: number;
 }>;
 
@@ -73,7 +71,6 @@ export type DiscardMotionFlight = Readonly<{
   sourceRect?: MotionRect;
   sourceGeometry?: MotionSourceGeometry;
   sourcePaint?: MotionTilePaint;
-  sourceSheen?: TileSheenPhase | null;
 }>;
 
 export type DiscardMotionResult = Readonly<{
@@ -228,7 +225,6 @@ export class DiscardMotionTracker {
           sourceRect: intent.sourceRect,
           sourceGeometry: intent.sourceGeometry,
           sourcePaint: intent.sourcePaint,
-          sourceSheen: intent.sourceSheen,
         } : null,
         cancelledEventIds,
         reset: false,

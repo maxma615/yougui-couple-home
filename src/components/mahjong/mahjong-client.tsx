@@ -2,6 +2,7 @@
 
 import {blankTableAction} from "./blank-table-action";
 import {useHandHover} from "./use-hand-hover";
+import {useDoraSheenClock} from "./use-dora-sheen-clock";
 import {useBlankTableDoubleTap} from "./use-blank-table-double-tap";
 import {useAutomaticPlay} from "./use-automatic-play";
 import {useMahjongActionPlacement} from "./use-action-placement";
@@ -441,6 +442,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   onChoice: (choice: Choice, intent?: DiscardMotionIntent | null) => void; onFinish: () => void; onRematch: () => void; onLeave: () => void;
 }) {
   const game = room.game;
+  useDoraSheenClock(connected && room.status === "playing" && Boolean(game));
   const tableScreen = useTableScreen();
   const feedback = useTableFeedback(game, room.members, ownSeat, room.id, {connected, canAnimate: motionCanAnimate});
   const [inspectedSeat, setInspectedSeat] = useState<number | null>(null);
@@ -612,7 +614,6 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         sourceRect: sourceGeometry.rect,
         sourceGeometry: sourceGeometry.geometry,
         sourcePaint: sourceGeometry.paint,
-        sourceSheen: sourceGeometry.sheen,
         environmentEpoch: discardMotion.environmentEpoch(),
       }
       : null;
