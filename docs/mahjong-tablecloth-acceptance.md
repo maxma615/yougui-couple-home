@@ -1,6 +1,6 @@
 # 原创桌布与外观选择
 
-2026-10-09。本地候选已验证，尚未发布；线上仍523eab7 / Build OJjZ_JAAesal86lvHjheE。完整体验目标active。
+2026-10-09。本步已实际发布：c0ec700 / Build -HkhHy-_wR7Q5hiJ0o61v，入口 https://8.133.186.15/mahjong。完整体验目标active。
 
 ## 实现
 
@@ -18,4 +18,14 @@
 
 浏览器验证发现完成按钮仅42px及关闭后焦点未恢复，产品已分别补齐44px和显式焦点返回。后续44px入口探针发现测试HTML未声明UTF-8，中文属性CSS选择器被错误解析；补齐测试页charset后通过，未放宽尺寸或几何断言。所有失败日志保留在`.local/audit/tablecloth-browser-*-r*.log`。
 
-候选完成后立即提交并普通快进推送main和开发分支，核对远端SHA。Linux同镜像/ECS发布尚未执行；真实Android、完整厂商素材/装扮流程、语音试听、生产认证WSS与私有牌山协议仍待验。本步不是完整体验完成声明。
+源提交c0ec700已立即普通快进推送main和开发分支，远端SHA一致。同镜像Linux/ECS发布现已实际完成，详见下节；真实Android、完整厂商素材/装扮流程、语音试听、生产认证WSS与私有牌山协议仍待验。本步不是完整体验完成声明。
+
+
+## ECS 发布与核对
+
+- 冻结归档37,735,842字节、SHA256 e52aadec33419b1cdf62fd8a5273f5a04975735a2176db2d1d29a561be80ac4a；718源码/449构建逐文件一致。Manifest摘要8092be80f089e07865bf722715a02f2c08e16597070754edb1884050bddaac8b。镜像sha256:86115565cd092af98b9e9e168d477ab4b127ef2f95b9f298d6994f7184d10fd5，标签yougui-app:c0ec700-ecs；继承父镜像及依赖层核对通过。
+- Linux选择740项/43文件在本机及同一冻结镜像的ECS半核、384MiB、只读、禁网络容器实际通过。构建PID1685503、Linux PID1688315、发布PID1693981均实际退出0；Linux r01仍运行，r02才为成功终态，未重启任务。
+- 发布屏障内确认无真人活动牌局，排空请求后切换，健康后入口恢复。十三远端阶段实际通过；可信TLS健康200、145公网资源逐摘要一致，新增织物及来源NOTICE均明确纳入公网核对。
+- 十二张持久表发布前后摘要均9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41。清理器容器及镜像保持；应用1CPU/768MiB，Running且无OOM。禁备份标记、masked/inactive定时器、inactive服务和不存在的备份路径保持，无备份或真实资料下载。
+
+证据在忽略目录`.local/ecs-deploy/tablecloth-published-closeout-r01.json`、`late-response-c0ec700-r01-frozen.json`、绑定命令的远端captures与公网proof。根实际核对，非独立审查。发布记录完成后立即提交推送两分支；以上运行/资源验证不能代替真实Android与完整厂商体验验收。
