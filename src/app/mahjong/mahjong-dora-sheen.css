@@ -1,5 +1,5 @@
 /* Original light treatment, confined to visible player faces. */
-.mahjong-table :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face]::before {
+:is(.mahjong-table, .mahjong-discard-flight) :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face]::before {
   content: var(--dora-sheen-content, none);
   position: absolute;
   inset: 0;
@@ -11,51 +11,51 @@
   animation: var(--dora-sheen-animation, none);
 }
 
-.mahjong-table :is(.mahjong-table__surface, .mahjong-hand) :is([data-tile-face="m0"], [data-tile-face="p0"], [data-tile-face="s0"]) {
+:is(.mahjong-table, .mahjong-discard-flight) :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) :is([data-tile-face="m0"], [data-tile-face="p0"], [data-tile-face="s0"]) {
   --dora-sheen-content: "";
   --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite;
 }
-.mahjong-table[data-dora-tiles~="m1"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m2"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m3"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m4"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m5"] :is(.mahjong-table__surface, .mahjong-hand) :is([data-tile-face="m5"], [data-tile-face="m0"]) { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m6"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m7"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m8"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m8"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="m9"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="m9"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p1"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p2"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p3"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p4"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p5"] :is(.mahjong-table__surface, .mahjong-hand) :is([data-tile-face="p5"], [data-tile-face="p0"]) { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p6"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p7"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p8"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p8"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="p9"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="p9"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s1"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s2"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s3"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s4"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s5"] :is(.mahjong-table__surface, .mahjong-hand) :is([data-tile-face="s5"], [data-tile-face="s0"]) { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s6"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s7"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s8"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s8"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="s9"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="s9"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="z1"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="z1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="z2"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="z2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="z3"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="z3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="z4"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="z4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="z5"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="z5"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="z6"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="z6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
-.mahjong-table[data-dora-tiles~="z7"] :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face="z7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m1"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m2"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m3"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m4"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m5"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) :is([data-tile-face="m5"], [data-tile-face="m0"]) { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m6"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m7"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m8"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m8"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="m9"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="m9"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p1"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p2"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p3"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p4"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p5"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) :is([data-tile-face="p5"], [data-tile-face="p0"]) { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p6"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p7"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p8"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p8"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="p9"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="p9"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s1"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s2"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s3"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s4"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s5"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) :is([data-tile-face="s5"], [data-tile-face="s0"]) { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s6"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s7"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s8"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s8"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="s9"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="s9"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="z1"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="z1"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="z2"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="z2"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="z3"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="z3"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="z4"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="z4"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="z5"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="z5"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="z6"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="z6"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
+:is(.mahjong-table, .mahjong-discard-flight)[data-dora-tiles~="z7"] :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face="z7"] { --dora-sheen-content: ""; --dora-sheen-animation: mahjong-dora-sheen 2.4s linear infinite; }
 
 @keyframes mahjong-dora-sheen {
   0%, 14% { background-position: 120% 120%; }
   62%, 100% { background-position: -20% -20%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mahjong-table :is(.mahjong-table__surface, .mahjong-hand) [data-tile-face]::before {
+  :is(.mahjong-table, .mahjong-discard-flight) :is(.mahjong-table__surface, .mahjong-hand, .mahjong-discard-flight__card) [data-tile-face]::before {
     animation: none;
     background-position: 48% 48%;
     opacity: .35;

@@ -116,6 +116,7 @@ export function useNukiMotion({ room, ownSeat, connected, canAnimate, tableRef }
           setFlight({
             event: { ...event, roomId: room.id, gameInstanceId: room.game!.gameInstanceId!, handId: room.game!.handId!, tile: "z4" },
             source: "own", sourceTileId: sourceId, sourcePaint: source.paint, targetPaint: destination.paint,
+            sourceSheen: source.sheen, targetFace: target,
             from: rectToFlight(source.rect, source.geometry), to: rectToFlight(destination.rect, destination.geometry),
           });
         } else {

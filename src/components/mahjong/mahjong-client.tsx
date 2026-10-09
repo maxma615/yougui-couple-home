@@ -612,6 +612,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         sourceRect: sourceGeometry.rect,
         sourceGeometry: sourceGeometry.geometry,
         sourcePaint: sourceGeometry.paint,
+        sourceSheen: sourceGeometry.sheen,
         environmentEpoch: discardMotion.environmentEpoch(),
       }
       : null;
@@ -820,9 +821,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     {game.settlement ? <MahjongSettlementPanel leadInMs={drawLead} game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}
     {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog returnFocus={pendingCallTrigger.current} type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
     {inspectedSeat !== null ? <PublicMeldDialog player={game.players.find(p => p.seat === inspectedSeat)} member={room.members.find(m => m.seat === inspectedSeat)} onClose={() => setInspectedSeat(null)}/> : null}
-    {publicCallMotion.flight ? <DiscardFlightLayer kind="call" flight={publicCallMotion.flight} onFinish={finishCallAudio}/> : null}
-    {nukiMotion.flight ? <DiscardFlightLayer kind="nuki" flight={nukiMotion.flight} onFinish={finishNukiAudio}/> : null}
-    {discardMotion.flight ? <DiscardFlightLayer flight={discardMotion.flight} onFinish={finishDiscardAudio}/> : null}
+    {publicCallMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(game.doraIndicators, room.variant).join(" ")} kind="call" flight={publicCallMotion.flight} onFinish={finishCallAudio}/> : null}
+    {nukiMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(game.doraIndicators, room.variant).join(" ")} kind="nuki" flight={nukiMotion.flight} onFinish={finishNukiAudio}/> : null}
+    {discardMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(game.doraIndicators, room.variant).join(" ")} flight={discardMotion.flight} onFinish={finishDiscardAudio}/> : null}
   </section>;
 }
 

@@ -2,8 +2,12 @@
 // This checks animation geometry; real Socket submission is tested separately.
 import { projectedSampleScript } from "./projected-samples";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { build } from "esbuild";
+import {createHash} from "node:crypto";
+const out=".local/audit/sheen-flight-motion-regression-"+Date.now();mkdirSync(out,{recursive:true});
+const proofSources=["tests/browser/mahjong-discard-motion.tsx","src/components/mahjong/mahjong-client.tsx","src/components/mahjong/use-discard-motion.tsx","src/components/mahjong/discard-motion.ts","src/components/mahjong/tile-sheen-motion.ts",...[...readFileSync("src/app/mahjong/page.tsx","utf8").matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)].map(m=>"src/app/mahjong/"+m[1])];
+const hashSources=()=>Object.fromEntries(proofSources.map(p=>[p,createHash("sha256").update(readFileSync(p)).digest("hex")]));const sourceHashes=hashSources();
 import { chromium, webkit, type Page } from "@playwright/test";
 import Majiang from "@kobalab/majiang-core";
 import { RiichiGame } from "../../src/modules/mahjong/engine";
@@ -59,20 +63,24 @@ const root=createRoot(document.getElementById('root'));flushSync(()=>root.render
 window.motionApi.update=room=>flushSync(()=>setRoom(room));window.motionApi.connected=value=>flushSync(()=>setConnected(value));window.motionApi.quietUpdate=room=>flushSync(()=>{setCanAnimate(false);setRoom(room)});`;
 const bundle = await build({ stdin: { contents: harness, resolveDir: process.cwd(), loader: "tsx" }, bundle: true,
   platform: "browser", format: "iife", write: false, jsx: "automatic", define: { "process.env.NODE_ENV": '"development"' } });
-const css = ["mahjong.css", "mahjong-river.css", "mahjong-meld.css", "mahjong-interaction.css", "mahjong-discard-motion.css", "mahjong-table-center.css", "mahjong-table-edge.css", "mahjong-camera.css"]
-  .map(file => readFileSync("src/app/mahjong/" + file, "utf8")).join("\n");
+const css = [...readFileSync("src/app/mahjong/page.tsx","utf8").matchAll(/import "\.\/(mahjong[^"\n]*\.css)";/g)]
+  .map(match => readFileSync("src/app/mahjong/" + match[1], "utf8")).join("\n");
 const script = "globalThis.__name=(target,value)=>Object.defineProperty(target,\"name\",{value,configurable:true});globalThis.process={env:{NODE_ENV:\"development\"}};\n" + bundle.outputFiles[0].text;
 async function mount(page: Page, fixture: ReturnType<typeof scene>, width: number) {
+  await page.route("https://mahjong.local/fonts/**",route=>route.fulfill({body:readFileSync("public"+new URL(route.request().url()).pathname),contentType:"font/woff2"}));
   await page.evaluate(()=>(window as any).motionApi?.dispose?.());
   await page.goto("about:blank"); // Each scene gets a fresh React document and pointer plugins.
   await page.setViewportSize({ width, height: width === 667 ? 375 : width === 844 ? 390 : 810 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setContent(`<base href="https://mahjong.local/"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*{box-sizing:border-box}${css}</style><div id="root"></div>`);
+  // setContent replaces the document. Initialize its native pointer only afterwards.
+  await page.mouse.move(10, 10);
   await page.evaluate(f => { (window as any).motionFixture = f; }, fixture);
   await page.addScriptTag({ content: script });
   await page.addScriptTag({ content: projectedSampleScript });
   await page.getByTestId("mahjong-board").waitFor({state:"visible",timeout:2000});
   await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>("img.mahjong-tile__art")].every(i => i.complete && i.naturalWidth === 300));
+  await page.evaluate(()=>document.fonts.ready);
   await page.waitForTimeout(260); // Initial draw/selection effects must have settled before measuring.
   assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0, "first snapshot must not replay a discard");
 }
@@ -107,7 +115,7 @@ async function captureFlight(page: Page, fixture: ReturnType<typeof scene>) {
 const center = (b: { x: number; y: number; w: number; h: number }) => [b.x + b.w / 2, b.y + b.h / 2];
 async function holdFlight(page: Page, fixture: ReturnType<typeof scene>) {
   const tile=page.getByTestId("mahjong-hand").locator('[data-tile-face="p1"]').nth(1);
-  await tile.click(); await page.waitForTimeout(120); await tile.click();
+  await tile.tap(); await page.waitForTimeout(120); await tile.tap();
   return page.evaluate(async after=>{
     (window as any).motionApi.update(after);
     for(let i=0;i<10;i++){
@@ -123,7 +131,7 @@ let passed = 0, cancellations = 0;
 for (const engine of [chromium, webkit]) {
   const browser = await engine.launch({ headless: true });
   try {
-    const page = await browser.newPage();
+    const page = await browser.newPage({hasTouch:true});
     page.on("pageerror", error => console.error("BROWSER_RUNTIME",error.message));
     await page.route("https://mahjong.local/images/**", route => {
       const file = new URL(route.request().url()).pathname;
@@ -133,16 +141,19 @@ for (const engine of [chromium, webkit]) {
       for (let actor = 0; actor < (variant === "sanma" ? 3 : 4); actor++) for (const riichi of [false, true]) {
         const fixture = scene(variant, actor, riichi); await mount(page, fixture, width);
         let source: {x: number; y: number; width: number; height: number} | null = null;
-        const rack = actor !== 0 ? await page.getByTestId(`player-${actor}`).locator(".mahjong-opponent-rack").boundingBox() : null;
+        const rack = actor !== 0 ? await page.getByTestId(`player-${actor}`).locator(".mahjong-opponent-rack").evaluate(el=>{
+          const boxes=[...el.querySelectorAll('[data-motion-surface]')].map(e=>e.getBoundingClientRect());if(!boxes.length)throw Error('actual rack back faces required');
+          const x=Math.min(...boxes.map(b=>b.x)),y=Math.min(...boxes.map(b=>b.y));return {x,y,width:Math.max(...boxes.map(b=>b.right))-x,height:Math.max(...boxes.map(b=>b.bottom))-y};
+        }) : null;
         const sourceSelector = fixture.discardIsDrawn ? "i.is-drawn" : "i:not(.is-drawn)";
-        const sourceCorners = actor !== 0 ? await page.locator(`[data-motion-rack-seat="${actor}"] > ${sourceSelector}`).last().evaluate(el => (window as any).mahjongPhysicalSamples(el,[[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[]) : null;
+        const sourceCorners = actor !== 0 ? await page.locator(`[data-motion-rack-seat="${actor}"] > ${sourceSelector}`).last().evaluate(el => (window as any).mahjongPhysicalSamples(el.querySelector('[data-motion-surface]')??el,[[0,0],[1,0],[1,1],[0,1]]) as {x:number;y:number}[]) : null;
         if (actor === 0) {
           if (riichi) await page.getByRole("button", { name: "立直", exact: true }).click();
           const tile = riichi ? page.locator('.is-drawn[data-choice-type="riichi"]')
             : page.getByTestId("mahjong-hand").locator('[data-tile-face="p1"]').nth(1);
-          await tile.click(); await tile.waitFor({ state: "visible" }); await page.waitForTimeout(120);
+          await tile.tap(); await tile.waitFor({ state: "visible" }); await page.waitForTimeout(120);
           source = await tile.boundingBox(); assert.ok(source);
-          await tile.click();
+          await tile.tap();
           assert.equal((await page.evaluate(() => (window as any).motionApi.lastChoice)).id, fixture.choice!.id);
           assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0, "input alone must not animate");
         }
@@ -167,35 +178,14 @@ for (const engine of [chromium, webkit]) {
         assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0);
         await page.evaluate(after => (window as any).motionApi.update(structuredClone(after)), fixture.after);
         await page.waitForTimeout(40); assert.equal(await page.getByTestId("mahjong-discard-flight").count(), 0, "duplicate snapshot must not replay");
-        if (actor === 0 && riichi && width === 844) await page.screenshot({ path: `.local/mahjong-motion-${engine.name()}-${variant}-final.png` });
+        if (actor === 0 && riichi && width === 844) await page.screenshot({ path: `${out}/mahjong-motion-${engine.name()}-${variant}-final.png` });
         passed++; console.log(`PASS ${engine.name()} ${variant} ${width} actor=${actor} riichi=${riichi}: source, path, rotated footprint, dedupe`);
       }
     }
     {
       const fixture=scene("sanma",0,false);await mount(page,fixture,844);
       const tile=page.getByTestId("mahjong-hand").locator('[data-tile-face="p1"]').nth(1);
-      await tile.hover();await page.waitForTimeout(160);
-      const source=await tile.boundingBox(),target=await page.locator(".mahjong-table__center").boundingBox();assert.ok(source&&target);
-      await page.mouse.move(source.x+source.width/2,source.y+source.height/2);await page.mouse.down();
-      await page.mouse.move(target.x+target.width/2,target.y+target.height/2,{steps:8});
-      await page.waitForTimeout(50);
-      await page.waitForFunction(()=>document.querySelector('[data-testid="mahjong-board"]')?.classList.contains('is-discard-target'));
-      await page.waitForTimeout(100);
-      const dragged=await tile.evaluate(el=>{const r=el.getBoundingClientRect(),m=new DOMMatrixReadOnly(getComputedStyle(el).transform);return{x:r.x,y:r.y,w:r.width,h:r.height,angle:Math.atan2(m.b,m.a)*180/Math.PI};});
-      const hit=await page.evaluate(({x,y})=>{const e=document.elementFromPoint(x,y);return{hit:e?.className,drag:document.querySelector('.is-dragging')?.className,drop:document.querySelector('[data-testid="mahjong-board"]')?.className};},{x:target.x+target.width/2,y:target.y+target.height/2});
-      await page.mouse.up();
-      const submitted=await page.evaluate(()=>(window as any).motionApi.lastChoice);
-      assert.ok(submitted,JSON.stringify({source,target,dragged,hit,fixtureChoice:fixture.choice}));
-      assert.equal((await page.evaluate(()=>(window as any).motionApi.lastChoice)).id,fixture.choice!.id);
-      const f=await captureFlight(page,fixture),from=center(dragged),actual=center(f.start);
-      assert.ok(Math.hypot(from[0]-actual[0],from[1]-actual[1])<3,"drag flight must start at the released physical tile");
-      assert.ok(Math.abs(f.start.w-dragged.w)<2&&Math.abs(f.start.h-dragged.h)<2&&Math.abs(f.startAngle-dragged.angle)<1,"drag flight must preserve the released tile dimensions and rotation");
-      await page.waitForTimeout(40);console.log(`PASS ${engine.name()} actual pointer drag pose`);cancellations++;
-    }
-    {
-      const fixture=scene("sanma",0,false);await mount(page,fixture,844);
-      const tile=page.getByTestId("mahjong-hand").locator('[data-tile-face="p1"]').nth(1);
-      await tile.click();await page.waitForTimeout(120);await tile.click();
+      await tile.tap();await page.waitForTimeout(120);await tile.tap();
       await page.setViewportSize({width:846,height:390});await page.waitForTimeout(60);
       await page.evaluate(after=>(window as any).motionApi.update(after),fixture.after);
       await page.waitForTimeout(60);
@@ -225,7 +215,42 @@ for (const engine of [chromium, webkit]) {
       if(reason==="visibility")await page.evaluate(()=>{Reflect.deleteProperty(document,"visibilityState");document.dispatchEvent(new Event("visibilitychange"));});
       console.log(`PASS ${engine.name()} cancellation=${reason} event=${id}`);cancellations++;
     }
+    {
+      await page.context().close(); // End the touch scenes before the native mouse proof.
+      // Use a fresh mouse browser so this proof has its own input lifecycle.
+      const mouseBrowser=await engine.launch({headless:true});
+      try {
+      const page=await mouseBrowser.newPage();
+      await page.route("https://mahjong.local/images/**",route=>{const file=new URL(route.request().url()).pathname;return route.fulfill({status:200,contentType:file.endsWith(".svg")?"image/svg+xml":"image/webp",body:readFileSync("public"+file)});});
+      const fixture=scene("sanma",0,false);await mount(page,fixture,844);
+      const tile=page.getByTestId("mahjong-hand").locator('[data-tile-face="p1"]').nth(1);
+      await page.locator(".mahjong-automatic summary").click();
+      const confirm=page.getByRole("button",{name:/^桌面二次点击出牌/});
+      if(await confirm.getAttribute("aria-pressed")!=="true")await confirm.click();
+      assert.equal(await confirm.getAttribute("aria-pressed"),"true");
+      await page.locator(".mahjong-automatic summary").click();
+      await tile.click();await page.waitForTimeout(160);
+      assert.equal(await page.evaluate(()=>(window as any).motionApi.lastChoice),null,"first explicit selection must not submit");
+      assert.equal(await tile.getAttribute("aria-pressed"),"true","drag fixture requires an explicitly selected physical tile");
+      const source=await tile.boundingBox(),target=await page.locator(".mahjong-table__center").boundingBox();assert.ok(source&&target);
+      await page.mouse.move(source.x+source.width/2,source.y+source.height/2);await page.mouse.down();
+      await page.mouse.move(target.x+target.width/2,target.y+target.height/2,{steps:8});
+      await page.waitForTimeout(50);
+      await page.waitForFunction(()=>document.querySelector('[data-testid="mahjong-board"]')?.classList.contains('is-discard-target'));
+      await page.waitForTimeout(100);
+      const dragged=await tile.evaluate(el=>{const r=el.getBoundingClientRect(),m=new DOMMatrixReadOnly(getComputedStyle(el).transform);return{x:r.x,y:r.y,w:r.width,h:r.height,angle:Math.atan2(m.b,m.a)*180/Math.PI};});
+      const hit=await page.evaluate(({x,y})=>{const e=document.elementFromPoint(x,y);return{hit:e?.className,drag:document.querySelector('.is-dragging')?.className,drop:document.querySelector('[data-testid="mahjong-board"]')?.className};},{x:target.x+target.width/2,y:target.y+target.height/2});
+      await page.mouse.up();
+      const submitted=await page.evaluate(()=>(window as any).motionApi.lastChoice);
+      assert.ok(submitted,JSON.stringify({source,target,dragged,hit,fixtureChoice:fixture.choice}));
+      assert.equal((await page.evaluate(()=>(window as any).motionApi.lastChoice)).id,fixture.choice!.id);
+      const f=await captureFlight(page,fixture),from=center(dragged),actual=center(f.start);
+      assert.ok(Math.hypot(from[0]-actual[0],from[1]-actual[1])<3,"drag flight must start at the released physical tile");
+      assert.ok(Math.abs(f.start.w-dragged.w)<2&&Math.abs(f.start.h-dragged.h)<2&&Math.abs(f.startAngle-dragged.angle)<1,"drag flight must preserve the released tile dimensions and rotation");
+      await page.waitForTimeout(40);console.log(`PASS ${engine.name()} actual pointer drag pose`);cancellations++;
+      } finally {await mouseBrowser.close();}
+    }
   } finally { await browser.close(); }
 }
-writeFileSync('.local/mahjong-motion-browser-proof.json', JSON.stringify({ cases: passed, extraCases: cancellations, kinds: ['authority snapshot', 'physical source', 'rotated target', 'dedupe'], realSocket: false }, null, 2) + '\n');
-console.log(`${passed}/84 real-engine snapshot animation geometry cases and ${cancellations} drag/pending/cancellation cases passed.`);
+assert.deepEqual(hashSources(),sourceHashes);writeFileSync(out+'/proof.json', JSON.stringify({sources:sourceHashes, cases: passed, extraCases: cancellations, kinds: ['authority snapshot', 'physical source', 'rotated target', 'dedupe'], realSocket: false }, null, 2) + '\n');
+console.log(`${passed}/84 real-engine snapshot animation geometry cases and ${cancellations} drag/pending/cancellation cases passed. ${out}`);
