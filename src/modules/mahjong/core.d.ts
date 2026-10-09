@@ -21,6 +21,7 @@ declare module "@kobalab/majiang-core" {
     get_gang_mianzi(tile?: string): string[] | null;
   }
   class Shan {
+    static zhenbaopai(tile: string): string;
     constructor(rule: Rule);
     _pai: string[];
     _baopai: string[];

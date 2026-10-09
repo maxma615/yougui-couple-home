@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
+import type {GameVariant} from "@/modules/mahjong/types";
 
 const honorNames: Record<string, string> = {
   z1: "东风",
@@ -38,6 +39,19 @@ export function tileMatchKey(value: string | null | undefined): string | null {
   if (!tile || !/^(?:[mps][0-9]|z[1-7])[_*+\-=]*$/.test(tile)) return null;
   const key = tile.slice(0, 2);
   return key[1] === "0" ? `${key[0]}5` : key;
+}
+
+/** Only exposed indicators contribute; hidden ura never enters table visuals. */
+export function indicatorBonus(value: string, variant: GameVariant) {
+  const key = tileKey(value), suit = key[0], rank = Number(key[1] === "0" ? 5 : key[1]);
+  if (suit === "m" && variant === "sanma") return rank === 1 ? "m9" : "m1";
+  if (suit === "z") return `z${rank <= 4 ? rank % 4 + 1 : (rank - 4) % 3 + 5}`;
+  return `${suit}${rank % 9 + 1}`;
+}
+
+export function visibleDoraFamilies(indicators: readonly string[], variant: GameVariant): string[] {
+  return [...new Set(indicators.filter(tile => tileMatchKey(tile) !== null
+    && (variant !== "sanma" || !/^m[02-8]/.test(tileKey(tile)))).map(tile => indicatorBonus(tile, variant)))];
 }
 
 export function tileName(value: string) {
