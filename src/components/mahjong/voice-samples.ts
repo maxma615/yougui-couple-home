@@ -1,16 +1,22 @@
 export type DeclarationVoiceKind = 'riichi' | 'ron' | 'tsumo';
-export type VoiceBuffers = Partial<Record<DeclarationVoiceKind, AudioBuffer>>;
+export type ActionVoiceKind = 'chi' | 'pon' | 'kan' | 'north';
+export type MahjongVoiceKind = DeclarationVoiceKind | ActionVoiceKind;
+export type VoiceBuffers = Partial<Record<MahjongVoiceKind, AudioBuffer>>;
 export type VoiceBufferLoader = (context: AudioContext, signal: AbortSignal) => Promise<VoiceBuffers>;
 
-export const declarationVoicePaths: Record<DeclarationVoiceKind, string> = {
+export const mahjongVoicePaths: Record<MahjongVoiceKind, string> = {
  riichi: '/audio/mahjong/voices/riichi.wav',
  ron: '/audio/mahjong/voices/ron.wav',
  tsumo: '/audio/mahjong/voices/tsumo.wav',
+ chi: '/audio/mahjong/voices/chi.wav',
+ pon: '/audio/mahjong/voices/pon.wav',
+ kan: '/audio/mahjong/voices/kan.wav',
+ north: '/audio/mahjong/voices/north.wav',
 };
 
 // Fixed, locally hosted clips. The browser decodes these once; no inference,
 // microphone permission, or remote speech service is used during a game.
-export const loadDeclarationVoices: VoiceBufferLoader = async (context, signal) => {
+export const loadMahjongVoices: VoiceBufferLoader = async (context, signal) => {
  const request = new AbortController();
  const cancel = () => request.abort();
  signal.addEventListener('abort', cancel, {once: true});
@@ -23,7 +29,7 @@ export const loadDeclarationVoices: VoiceBufferLoader = async (context, signal) 
   if (request.signal.aborted) rejectAborted();
  });
  try {
- const entries = await Promise.race([aborted, Promise.all(Object.entries(declarationVoicePaths).map(async ([kind, path]) => {
+ const entries = await Promise.race([aborted, Promise.all(Object.entries(mahjongVoicePaths).map(async ([kind, path]) => {
   if (request.signal.aborted) throw Error('Declaration voice load cancelled');
   const response = await fetch(path, {signal: request.signal, cache: 'force-cache'});
   if (!response.ok) throw Error('Declaration voice unavailable');

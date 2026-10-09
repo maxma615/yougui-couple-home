@@ -1,12 +1,12 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {loadDeclarationVoices} from '@/components/mahjong/voice-samples';
+import {loadMahjongVoices} from '@/components/mahjong/voice-samples';
 const folder='public/audio/mahjong/voices/';
 const provenance=JSON.parse(readFileSync(folder+'provenance.json','utf8'));
 afterEach(()=>{vi.unstubAllGlobals();vi.useRealTimers();});
 describe('distributed declaration voice assets',()=>{
- for(const kind of ['riichi','ron','tsumo'])it(`${kind} is finite, audible, unclipped PCM with matching provenance`,()=>{
+ for(const kind of ['riichi','ron','tsumo','chi','pon','kan','north'])it(`${kind} is finite, audible, unclipped PCM with matching provenance`,()=>{
   const row=provenance.samples.find((s:{kind:string})=>s.kind===kind),bytes=readFileSync(folder+kind+'.wav');
   expect(createHash('sha256').update(bytes).digest('hex')).toBe(row.sha256);
   expect(bytes.toString('ascii',0,4)).toBe('RIFF');expect(bytes.toString('ascii',8,16)).toBe('WAVEfmt ');
@@ -27,21 +27,21 @@ describe('distributed declaration voice assets',()=>{
 it('bounds stalled network loading and cancels all sibling requests',async()=>{
  vi.useFakeTimers();const signals:AbortSignal[]=[];
  vi.stubGlobal('fetch',vi.fn((_path:string,options:{signal:AbortSignal})=>{signals.push(options.signal);return new Promise(()=>{});}));
- const pending=loadDeclarationVoices({} as AudioContext,new AbortController().signal);
+ const pending=loadMahjongVoices({} as AudioContext,new AbortController().signal);
  const result=expect(pending).rejects.toThrow('cancelled');await vi.advanceTimersByTimeAsync(10000);await result;
- expect(signals).toHaveLength(3);expect(signals.every(s=>s.aborted)).toBe(true);
+ expect(signals).toHaveLength(7);expect(signals.every(s=>s.aborted)).toBe(true);
 });
 it('bounds a stalled decoder after successful fetch',async()=>{
  vi.useFakeTimers();vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(100)})));
- const decoder=vi.fn(()=>new Promise(()=>{}));const pending=loadDeclarationVoices({decodeAudioData:decoder} as unknown as AudioContext,new AbortController().signal);
- const result=expect(pending).rejects.toThrow('cancelled');await vi.advanceTimersByTimeAsync(10000);await result;expect(decoder).toHaveBeenCalledTimes(3);
+ const decoder=vi.fn(()=>new Promise(()=>{}));const pending=loadMahjongVoices({decodeAudioData:decoder} as unknown as AudioContext,new AbortController().signal);
+ const result=expect(pending).rejects.toThrow('cancelled');await vi.advanceTimersByTimeAsync(10000);await result;expect(decoder).toHaveBeenCalledTimes(7);
 });
 it('a disposed player can abort preload immediately, including before fetching',async()=>{
  const controller=new AbortController();controller.abort();const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
- await expect(loadDeclarationVoices({} as AudioContext,controller.signal)).rejects.toThrow('cancelled');expect(fetcher).not.toHaveBeenCalled();
+ await expect(loadMahjongVoices({} as AudioContext,controller.signal)).rejects.toThrow('cancelled');expect(fetcher).not.toHaveBeenCalled();
 });
 for(const invalid of ['http','size','stereo','duration'])it(`rejects ${invalid} assets without usable buffers`,async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>({ok:invalid!=='http',arrayBuffer:async()=>new ArrayBuffer(invalid==='size'?129000:100)})));
  const decoder=vi.fn(async()=>({duration:invalid==='duration'?10:.6,numberOfChannels:invalid==='stereo'?2:1}));
- await expect(loadDeclarationVoices({decodeAudioData:decoder} as unknown as AudioContext,new AbortController().signal)).rejects.toThrow();
+ await expect(loadMahjongVoices({decodeAudioData:decoder} as unknown as AudioContext,new AbortController().signal)).rejects.toThrow();
 });

@@ -22,6 +22,8 @@ export function MahjongCallAnnouncement({ feedback, members, ownSeat }: {
     role="status"
     aria-label="牌桌动作"
     data-feedback-seat={feedback.seat}
+    data-feedback-decision={feedback.key}
+    data-action-voice-kind={feedback.actionLabel === "吃" ? "chi" : feedback.actionLabel === "碰" ? "pon" : feedback.actionLabel === "杠" ? "kan" : feedback.actionLabel === "拔北" ? "north" : undefined}
   >
     {avatar !== undefined ? <span className="mahjong-call-announcement__portrait" aria-hidden="true" data-avatar={avatar}/> : null}
     <strong className="mahjong-call-announcement__label" aria-hidden="true">{feedback.actionLabel}</strong>

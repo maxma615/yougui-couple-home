@@ -7,7 +7,7 @@ Model: https://huggingface.co/hexgrad/Kokoro-82M
 Software: https://github.com/hexgrad/kokoro
 Voice documentation: https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
 
-The clips contain the standard Japanese declarations for riichi, ron, and tsumo.
+The clips contain the standard Japanese declarations for riichi, ron, tsumo, chi, pon, kan, and north extraction.
 Their edges were trimmed, faded, and normalized locally. No Mahjong Soul audio
 recording or actor voice clone was used. See /audio/mahjong/voices/provenance.json
 for text, phonemes, generation settings and file hashes.

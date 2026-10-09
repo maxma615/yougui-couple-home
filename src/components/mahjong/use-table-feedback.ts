@@ -2,11 +2,12 @@
 
 import {useEffect, useRef, useState} from "react";
 import type {GameView, RoomMember} from "@/modules/mahjong/types";
+import {pendingActionKind} from './action-voices';
 import {tileName} from "./mahjong-tile";
 
 export type TableActionLabel = "吃" | "碰" | "杠" | "拔北" | "立直" | "自摸" | "荣和" | "和牌" | "流局";
 export type TableFeedback = {key:string; kind:"draw"|"discard"|"call"|"riichi"|"nuki"|"win"; text:string; seat?:number; actionLabel?:TableActionLabel};
-type Snapshot = {room:string; gameInstanceId?:string; handId?:number; round:string; decision:string; settlementIdentity:string|null; players:{seat:number;nuki:number;riichi:boolean;discards:string[];melds:string[]}[]};
+type Snapshot = {game:GameView;room:string; gameInstanceId?:string; handId?:number; round:string; decision:string; settlementIdentity:string|null; players:{seat:number;nuki:number;riichi:boolean;discards:string[];melds:string[]}[]};
 type FeedbackSource = {connected:boolean; canAnimate:boolean};
 
 function callActionLabel(meld:string):TableActionLabel|undefined {
@@ -30,7 +31,7 @@ export function useTableFeedback(game:GameView|null, members:RoomMember[], ownSe
   const [feedback,setFeedback]=useState<TableFeedback|null>(null);
   useEffect(() => {
     if (!game) {if(timer.current) clearTimeout(timer.current); timer.current=null; activeKind.current=null; previous.current=null; setFeedback(null); return;}
-    const next:Snapshot={room:roomId,gameInstanceId:game.gameInstanceId,handId:game.handId,round:`${game.roundWind}:${game.roundNumber}:${game.honba}`,decision:game.decisionId,settlementIdentity:game.settlement ? `${game.settlement.kind}:${game.settlement.winnerSeat ?? ""}` : null,
+    const next:Snapshot={game:{...game,players:game.players.map(p=>({...p,melds:p.melds.slice(),discards:p.discards.slice()}))},room:roomId,gameInstanceId:game.gameInstanceId,handId:game.handId,round:`${game.roundWind}:${game.roundNumber}:${game.honba}`,decision:game.decisionId,settlementIdentity:game.settlement ? `${game.settlement.kind}:${game.settlement.winnerSeat ?? ""}` : null,
       players:game.players.map(p=>({seat:p.seat,nuki:p.nuki??0,riichi:p.riichi,discards:p.discards.slice(),melds:p.melds.slice()}))};
     const old=previous.current;
     previous.current=next;
@@ -63,16 +64,18 @@ export function useTableFeedback(game:GameView|null, members:RoomMember[], ownSe
       const actionLabel = game.settlement.kind==="draw" ? "流局" : game.settlement.winMethod === "tsumo" ? "自摸" : game.settlement.winMethod === "ron" ? "荣和" : "和牌";
       event={kind:"win",text:game.settlement.kind==="win" ? `${winner===undefined ? "" : `${actor(winner)} · `}${actionLabel}` : actionLabel,seat:winner,actionLabel};
     }
+    const pending=pendingActionKind(old.game,game);
+    if(!event&&pending){const actionLabel=pending==='north'?'拔北':'杠';event={kind:pending==='north'?'nuki':'call',text:`${actor(game.turnSeat)} · ${actionLabel}`,seat:game.turnSeat,actionLabel};}
     if (!event) for(const p of next.players) {
       const before=old.players.find(o=>o.seat===p.seat);
-      if (before && p.nuki>before.nuki) {event={kind:"nuki",text:`${actor(p.seat)} · 拔北`,seat:p.seat,actionLabel:"拔北"};break;}
+      if (before && p.nuki>before.nuki && old.game.phase!=="nuki") {event={kind:"nuki",text:`${actor(p.seat)} · 拔北`,seat:p.seat,actionLabel:"拔北"};break;}
       if (before && p.riichi && !before.riichi) {event={kind:"riichi",text:`${actor(p.seat)} · 立直`,seat:p.seat,actionLabel:"立直"};break;}
     }
     if (!event) for(const p of next.players) {
       const before=old.players.find(o=>o.seat===p.seat);
       if (!before) continue;
       const meld=p.melds.find((m,i)=>m!==before.melds[i]);
-      if (meld) {const actionLabel=callActionLabel(meld);event={kind:"call",text:`${actor(p.seat)} · ${actionLabel??legacyCallLabel(meld)}`,seat:p.seat,...(actionLabel?{actionLabel}:{})};break;}
+      if (meld && old.game.phase!=="gang") {const actionLabel=callActionLabel(meld);event={kind:"call",text:`${actor(p.seat)} · ${actionLabel??legacyCallLabel(meld)}`,seat:p.seat,...(actionLabel?{actionLabel}:{})};break;}
     }
     if (!event) for(const p of next.players) {
       const before=old.players.find(o=>o.seat===p.seat);

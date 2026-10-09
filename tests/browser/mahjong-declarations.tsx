@@ -32,7 +32,7 @@ for(const engine of [chromium,webkit]){
    const soundKind=kind.startsWith('rob-nuki')?'ron':kind;
    const render=(room:RoomView,connected=true,canAnimate=true)=>page.evaluate(({room,connected,canAnimate})=>(window as any).api.render(room,connected,canAnimate),{room,connected,canAnimate});
    await render(after,true,false);await page.waitForTimeout(400);assert.equal(await page.locator('[data-declaration-event]').count(),0,'cold result has no catch-up declaration');
-   await render(before,true,false);await page.locator('.mahjong-game').click({position:{x:422,y:90}});await page.waitForFunction(()=>(window as any).unlocked);await page.waitForFunction(()=>(window as any).nativeDecoded.length===3);await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>r())));
+   await render(before,true,false);await page.locator('.mahjong-game').click({position:{x:422,y:90}});await page.waitForFunction(()=>(window as any).unlocked);await page.waitForFunction(()=>(window as any).nativeDecoded.length===7);await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>r())));
    await page.evaluate(()=>(window as any).api.reset());await render(after);
    const started=await page.evaluate(()=>(window as any).renderAt as number),expected=after.game?.settlementFlow?.winDeclarations?.length??1;
    await page.waitForFunction(n=>document.querySelectorAll('[data-declaration-event]').length===n,expected);

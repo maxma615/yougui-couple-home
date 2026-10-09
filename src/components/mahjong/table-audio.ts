@@ -1,11 +1,12 @@
 import type {TableSoundEvent} from './table-sounds';
-import type {DeclarationVoiceKind,VoiceBufferLoader} from './voice-samples';
+import type {MahjongVoiceKind,VoiceBufferLoader} from './voice-samples';
 
 type SoundKind=TableSoundEvent['kind'];
-const durations:Record<SoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38,yaku:.09,'hand-value':.24,'score-roll':.99,'rank-first':.26,'rank-row':.12};
+type SynthSoundKind=Exclude<SoundKind,'chi'|'pon'|'kan'|'north'>;
+const durations:Record<SynthSoundKind,number>={draw:.1,discard:.14,nuki:.13,call:.19,riichi:.28,ron:.34,tsumo:.38,yaku:.09,'hand-value':.24,'score-roll':.99,'rank-first':.26,'rank-row':.12};
 
 /** Original short resin/cloth transients, generated locally without samples. */
-export function makeTileSoundBuffer(context:BaseAudioContext,kind:SoundKind):AudioBuffer{
+export function makeTileSoundBuffer(context:BaseAudioContext,kind:SynthSoundKind):AudioBuffer{
  const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*durations[kind]),context.sampleRate);
  if(kind==='rank-first'||kind==='rank-row'){
   const samples=buffer.getChannelData(0),notes=kind==='rank-first'?[880,1108.73,1318.51]:[659.25];
@@ -77,7 +78,7 @@ export class TableAudioPlayer{
  private seen=new Set<string>();
  private buffers=new Map<SoundKind,AudioBuffer>();
  private active=new Set<AudioBufferSourceNode>();
- private voiceBuffers=new Map<DeclarationVoiceKind,AudioBuffer>();
+ private voiceBuffers=new Map<MahjongVoiceKind,AudioBuffer>();
  private loadingVoices:Promise<void>|null=null;
  private voiceAbort=new AbortController();
  constructor(private create:()=>AudioContext,private loadVoices?:VoiceBufferLoader){}
@@ -86,7 +87,7 @@ export class TableAudioPlayer{
   if(!context||!this.loadVoices||this.loadingVoices||this.disposed)return;
   this.loadingVoices=Promise.resolve().then(()=>this.loadVoices!(context,this.voiceAbort.signal)).then(buffers=>{
    if(this.disposed||this.context!==context)return;
-   for(const kind of ['riichi','ron','tsumo'] as const){
+   for(const kind of ['riichi','ron','tsumo','chi','pon','kan','north'] as const){
     const buffer=buffers[kind];
     if(buffer&&Number.isFinite(buffer.duration)&&buffer.duration>=.1&&buffer.duration<=1.5)this.voiceBuffers.set(kind,buffer);
    }
@@ -114,13 +115,16 @@ export class TableAudioPlayer{
   const context=this.context;
   if(this.disposed||!this.enabled||!this.ready||!context||context.state!=='running'||!this.master)return false;
   try{
-   const voice=this.voiceBuffers.get(cue.kind as DeclarationVoiceKind);
+   const voice=this.voiceBuffers.get(cue.kind as MahjongVoiceKind);
+   // Unloaded action voices are consumed silently; their existing tile impacts
+   // still play at landing. Never queue a declaration behind a download.
+   if(!voice&&['chi','pon','kan','north'].includes(cue.kind))return false;
    let buffer=voice??this.buffers.get(cue.kind);
-   if(!buffer){buffer=makeTileSoundBuffer(context,cue.kind);this.buffers.set(cue.kind,buffer);}
+   if(!buffer){buffer=makeTileSoundBuffer(context,cue.kind as SynthSoundKind);this.buffers.set(cue.kind,buffer);}
 
    // Resume a late score-roll callback at its current visual position. Do not
    // restart the full roll after the visible count has almost finished.
-   if(!Number.isFinite(offsetSeconds)||offsetSeconds<0||offsetSeconds>=(voice?voice.duration:durations[cue.kind]))return false;
+   if(!Number.isFinite(offsetSeconds)||offsetSeconds<0||offsetSeconds>=(voice?voice.duration:durations[cue.kind as SynthSoundKind]))return false;
    if(this.active.size>=8)this.release(this.active.values().next().value!,true);
    const source=context.createBufferSource();source.buffer=buffer;source.connect(this.master);
    this.active.add(source);source.onended=()=>this.release(source,false);

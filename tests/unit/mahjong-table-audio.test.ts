@@ -72,3 +72,12 @@ it('concurrent unlocks load voices once and keep the existing eight-source cap',
  expect(load).toHaveBeenCalledOnce();expect(f.create).toHaveBeenCalledOnce();for(let n=0;n<12;n++)expect(p.play({id:'voice-'+n,kind:'tsumo',seat:0})).toBe(true);
  expect(f.sources.filter(s=>!s.stop.mock.calls.length)).toHaveLength(8);expect(f.sources.every(s=>s.buffer===voice)).toBe(true);await p.dispose();expect(f.sources.every(s=>s.disconnect.mock.calls.length)).toBe(true);
 });
+
+it('unloaded action voice stays silent and is consumed, while physical impacts still play',async()=>{
+ const f=context(),voice={duration:.45} as AudioBuffer;let finish!:(b:{pon:AudioBuffer})=>void;
+ const p=new TableAudioPlayer(f.create,()=>new Promise(r=>{finish=r;}));await p.unlock();await Promise.resolve();
+ expect(p.play({id:'early-pon',kind:'pon',seat:1})).toBe(false);expect(f.sources).toHaveLength(0);
+ expect(p.play({id:'physical-pon',kind:'call',seat:1})).toBe(true);expect(f.sources).toHaveLength(1);
+ finish({pon:voice});await new Promise(r=>setTimeout(r,0));expect(f.sources).toHaveLength(1);expect(p.play({id:'early-pon',kind:'pon',seat:1})).toBe(false);
+ expect(p.play({id:'fresh-pon',kind:'pon',seat:1})).toBe(true);expect(f.sources[1].buffer).toBe(voice);await p.dispose();
+});

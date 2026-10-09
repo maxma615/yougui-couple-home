@@ -4,15 +4,15 @@ import {createHash} from 'node:crypto';
 import {build} from 'esbuild';
 import {chromium,webkit} from '@playwright/test';
 const out=`.local/audit/declaration-voices-${Date.now()}`;mkdirSync(out,{recursive:true});
-const files=['riichi','ron','tsumo'].map(kind=>({kind,bytes:readFileSync(`public/audio/mahjong/voices/${kind}.wav`)}));
+const files=['riichi','ron','tsumo','chi','pon','kan','north'].map(kind=>({kind,bytes:readFileSync(`public/audio/mahjong/voices/${kind}.wav`)}));
 const code=`import {TableAudioPlayer} from './src/components/mahjong/table-audio';
-import {loadDeclarationVoices} from './src/components/mahjong/voice-samples';
+import {loadMahjongVoices} from './src/components/mahjong/voice-samples';
 window.decoded=[];window.started=[];window.unlocked=false;
 window.player=new TableAudioPlayer(()=>{
  const c=new AudioContext();window.audioContext=c;
  const decode=c.decodeAudioData.bind(c);c.decodeAudioData=async bytes=>{const length=bytes.byteLength;const b=await decode(bytes);window.decoded.push({length,buffer:b});return b;};
  const source=c.createBufferSource.bind(c);c.createBufferSource=()=>{const s=source();const start=s.start.bind(s);s.start=(...args)=>{window.started.push({buffer:s.buffer,duration:s.buffer.duration,time:c.currentTime});return start(...args);};return s;};return c;
-},loadDeclarationVoices);
+},loadMahjongVoices);
 window.play=(id,kind)=>window.player.play({id,kind,seat:0});
 window.inspect=()=>({decoded:window.decoded.map(x=>({length:x.length,duration:x.buffer.duration,channels:x.buffer.numberOfChannels})),started:window.started.map(x=>({duration:x.duration,decodedBytes:window.decoded.find(d=>d.buffer===x.buffer)?.length??null})),state:window.audioContext?.state});
 window.wave=async length=>{const b=window.decoded.find(x=>x.length===length).buffer;const c=new OfflineAudioContext(1,b.length+Math.ceil(b.sampleRate*.1),b.sampleRate);const s=c.createBufferSource(),g=c.createGain();g.gain.value=.32;s.buffer=b;s.connect(g);g.connect(c.destination);s.start();const a=(await c.startRendering()).getChannelData(0);let peak=0,sum=0;for(const v of a){peak=Math.max(peak,Math.abs(v));sum+=v*v;}return {peak,rms:Math.sqrt(sum/a.length),tail:Array.from(a.slice(-100)).every(x=>x===0)};};
@@ -34,25 +34,25 @@ for(const engine of [chromium,webkit]){
   assert.equal(await page.evaluate(()=>(window as any).play('locked','ron')),false);assert.equal(requests,0);
   await page.getByRole('button',{name:'开启声音'}).click();await page.waitForFunction(()=>(window as any).unlocked);await page.waitForFunction(()=>!!(window as any).audioContext);
   if(scenario==='ready'){
-   await page.waitForFunction(()=>(window as any).decoded.length===3);
+   await page.waitForFunction(()=>(window as any).decoded.length===7);
    // Flush the decode continuation naturally; playback itself verifies cached buffer identity.
    await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>r())));
   }else{
    if(scenario==='muted')await page.evaluate(()=>(window as any).player.setEnabled(false));
    if(scenario==='paused')await page.evaluate(()=>(window as any).player.pause());
    if(scenario==='disposed')await page.evaluate(()=>(window as any).player.dispose());
-   for(const kind of ['riichi','ron','tsumo']){
+   for(const kind of ['riichi','ron','tsumo','chi','pon','kan','north']){
     const accepted=await page.evaluate(k=>(window as any).play('before-'+k,k),kind);
-    assert.equal(accepted,scenario==='late'||scenario==='retry');
+    assert.equal(accepted,(scenario==='late'||scenario==='retry')&&['riichi','ron','tsumo'].includes(kind));
    }
    const before=await page.evaluate(()=>(window as any).inspect());
-   if(scenario==='retry'){assert.equal(requests,3);fail=false;await page.getByRole('button',{name:'开启声音'}).click();}
+   if(scenario==='retry'){assert.equal(requests,7);fail=false;await page.getByRole('button',{name:'开启声音'}).click();}
    blocked=false;release();
    if(scenario!=='disposed'){
-    await page.waitForFunction(()=>(window as any).decoded.length===3);await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>r())));
+    await page.waitForFunction(()=>(window as any).decoded.length===7);await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>r())));
    }else await page.waitForFunction(()=>(window as any).audioContext.state==='closed');
    const after=await page.evaluate(()=>(window as any).inspect());assert.equal(after.started.length,before.started.length,'late decode must not autoplay or replay');
-   for(const kind of ['riichi','ron','tsumo'])assert.equal(await page.evaluate(k=>(window as any).play('before-'+k,k),kind),false);
+   for(const kind of ['riichi','ron','tsumo','chi','pon','kan','north'])assert.equal(await page.evaluate(k=>(window as any).play('before-'+k,k),kind),false);
    if(scenario==='muted')await page.evaluate(()=>(window as any).player.setEnabled(true));
    if(scenario==='muted'||scenario==='paused'){await page.getByRole('button',{name:'开启声音'}).click();await page.waitForFunction(()=>(window as any).unlocked&&(window as any).audioContext.state==='running');}
   }

@@ -2,13 +2,14 @@
 import {useCallback,useEffect,useRef,useState,type RefObject} from 'react';
 import type {RoomView} from '@/modules/mahjong/types';
 import {TableAudioPlayer} from './table-audio';
-import {loadDeclarationVoices} from './voice-samples';
+import {loadMahjongVoices} from './voice-samples';
 import {tableSoundTransition,type PendingKakanSound,type TableSoundEvent} from './table-sounds';
+import {acceptedActionVoices} from './action-voices';
 import {acceptedDeclarationSounds} from './declaration-sounds';
 import {acceptedRankingSounds} from './ranking-sounds';
 import {acceptedSettlementSounds,settlementSoundPhase,type SettlementSoundEvent} from './settlement-sounds';
 
-type Pending={cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number;declarationGroup?:string;declarationOffset?:number;notBefore?:number;settlement?:SettlementSoundEvent;settlementAt?:number};
+type Pending={action?:{decision:string;kind:string;end:number};cue:TableSoundEvent;parent?:string;epoch:number;declarationEnd?:number;declarationGroup?:string;declarationOffset?:number;notBefore?:number;settlement?:SettlementSoundEvent;settlementAt?:number};
 const storageKey='yougui.mahjong.sound';
 const scope=(r:RoomView)=>JSON.stringify([r.id,r.variant,r.mySeat,r.game?.gameInstanceId,r.game?.handId]);
 
@@ -59,6 +60,12 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
     if(!root.querySelector(cue.selector)){scheduleRef.current(id);return;}
     land(id);return;
    }
+   if(entry.action){
+    if(performance.now()>=entry.action.end){pending.current.delete(id);return;}
+    const marker=[...root.querySelectorAll<HTMLElement>('[data-action-voice-kind]')].find(node=>node.dataset.actionVoiceKind===entry.action!.kind&&node.dataset.feedbackDecision===entry.action!.decision&&Number(node.dataset.feedbackSeat)===entry.cue.seat);
+    if(!marker){scheduleRef.current(id);return;}
+    land(id);return;
+   }
    if(entry.declarationEnd!==undefined){
     if(performance.now()>=entry.declarationEnd){pending.current.delete(id);return;}
     if(entry.notBefore!==undefined&&performance.now()<entry.notBefore){scheduleRef.current(id);return;}
@@ -105,7 +112,7 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   const instance=new TableAudioPlayer(()=>{
    const Constructor=window.AudioContext??(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
    if(!Constructor)throw Error('WebAudio unavailable');return new Constructor();
-  },loadDeclarationVoices);
+  },loadMahjongVoices);
   player.current=instance;
   let stored=true;try{stored=window.localStorage.getItem(storageKey)!=='off';}catch{/* Local settings may be unavailable. */}
   enabledRef.current=stored;setEnabled(stored);instance.setEnabled(stored);
@@ -141,6 +148,10 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    pending.current.set(cue.id,{cue,epoch:epoch.current,settlement:cue,settlementAt:performance.now()-cue.elapsedMs});
    const timer=setTimeout(()=>{timers.current.delete(timer);if(pending.current.has(cue.id))schedule(cue.id);},Math.max(0,cue.atMs-cue.elapsedMs));
    timers.current.add(timer);
+  }
+  for(const cue of acceptedActionVoices(old.room,room)){
+   pending.current.set(cue.id,{cue,epoch:epoch.current,action:{decision:cue.decisionId,kind:cue.kind,end:performance.now()+900}});
+   schedule(cue.id);
   }
   const transition=tableSoundTransition(old.room,room,pendingKan.current);pendingKan.current=transition.pending;
   const cues=transition.cues;
