@@ -3,8 +3,12 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import type {Choice,RoomView} from '@/modules/mahjong/types';
 import {automaticChoice,automaticOff,type AutomaticPreferences} from './automatic-choice';
 
+// A new qipai resets transient auto-play options; reconnecting to the same
+// hand keeps them. Include the authoritative hand ID even on dealer repeats.
+const automaticScope=(room:RoomView,ownSeat:number)=>JSON.stringify([room.id,ownSeat,room.game?.gameInstanceId,room.game?.handId]);
+
 export function useAutomaticPlay({room,ownSeat,connected,busy,onChoice}:{room:RoomView;ownSeat:number;connected:boolean;busy:boolean;onChoice:(choice:Choice)=>void}){
- const scope=JSON.stringify([room.id,ownSeat,room.game?.gameInstanceId]);
+ const scope=automaticScope(room,ownSeat);
  const [state,setState]=useState({scope,options:{...automaticOff}});
  const options=state.scope===scope?state.options:automaticOff;
  const [visibleEpoch,setVisibleEpoch]=useState(0);
@@ -30,7 +34,7 @@ export function useAutomaticPlay({room,ownSeat,connected,busy,onChoice}:{room:Ro
   const id=candidate.id;
   timer.current=setTimeout(()=>{
    timer.current=null;const current=latest.current,g=current.room.game;
-   if(!current.connected||current.busy||current.room.status!=='playing'||!g||document.visibilityState==='hidden'||JSON.stringify([JSON.stringify([current.room.id,ownSeat,g.gameInstanceId]),g.decisionId])!==decision||consumed.current===decision)return;
+   if(!current.connected||current.busy||current.room.status!=='playing'||!g||document.visibilityState==='hidden'||JSON.stringify([automaticScope(current.room,ownSeat),g.decisionId])!==decision||consumed.current===decision)return;
    const choice=automaticChoice(g,options);if(choice?.id!==id)return;
    consumed.current=decision;current.onChoice(choice);
   },candidate.type==='ron'||candidate.type==='tsumo'?800:0);

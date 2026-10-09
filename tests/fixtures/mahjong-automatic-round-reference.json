@@ -1,0 +1,19 @@
+{
+  "referenceUrl": "https://game.maj-soul.com/1/v0.11.252.w/code.js",
+  "rawSha256": "63ae7207dcef9cef6b7c0e18855ad81499e1723b9da590634885ee90b632189b",
+  "decodedSha256": "5308fe6d3ab8bb8b0c8ab283e75176f839de9723d67179d00abeb15e6a39ff4f",
+  "action": "ActionNewRound.play",
+  "orderedResetCalls": [
+    "setAutoHule",
+    "setAutoMoQie",
+    "setAutoBaBei",
+    "setAutoNoFulu"
+  ],
+  "options": {
+    "win": false,
+    "drawnDiscard": false,
+    "north": false,
+    "noCalls": false
+  },
+  "scope": "Default new-round option reset only; no vendor code or asset included."
+}
