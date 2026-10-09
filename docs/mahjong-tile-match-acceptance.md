@@ -1,6 +1,6 @@
 # 选牌时的同类明牌提示
 
-日期：2026-10-09。连续目标保持active。本步是本地候选，线上仍为d55b35f／Build hkYXOsOKAt0TWe8Q0Nrmk，尚未把本地验证称为ECS上线。
+日期：2026-10-09。连续目标保持active。同牌提示已实际发布：源6b4ad67／Build g66GdSo-A5cX8mGahOZtv，入口https://8.133.186.15/mahjong。
 
 ## 行为与参考
 
@@ -21,6 +21,16 @@
 
 证据在应用忽略目录 `.local/audit/tile-match-browser-1791509891949/proof.json`、`.local/audit/tile-match-final/{native-proof-index.json,review.json,linux-local.json}` 及 tile-match-red/target/full/type/build/secrets/native 的各轮日志。实际查看短横屏含赤碰牌场景，提示覆盖选中五筒及公开碰牌；根任务审查不称为独立审查。已有输入、相机及音效证据没有冒称此次全部重新验收。
 
+## ECS实际发布
+
+- 提交6b4ad67已普通快进同步GitHub开发分支与main。同一冻结候选镜像sha256:fe165403a763658299123281bf965aecaff40da38921d97aaa73269b19b092dc，manifest SHA256为513bccca4bdbb4791e757866fbd758c1a479c106cd9f2ae1b13e654bc76324be。
+- 上传归档37,550,870字节，远端SHA256核对250a3f4c292b5f46d50447e454faa0b0ad9e0e05d4b3e62957a0bf63caed925e；699源码／449构建逐文件一致，固定父镜像及继承层一致。受限Linux半核／384MiB／禁网络／只读容器41文件／688项通过，实际PID1592102、退出0、287.86秒，没有以观察超时重启测试。
+- build首次状态仍running，Linux命令生成器因此拒绝，保留失败；随后核对同一build PID1591376实际退出0再生成。Linux r01–r06为运行状态证据，r07才是最终通过证据，没有把远程观察器退出0误作测试完成。
+- 发布器PID1594448实际退出0；保护门确认无真人牌局、排空请求、切换并恢复入口。13个远端阶段实际退出0，最终健康及可信TLS为200，143项公网资源摘要全部一致。
+- 12张持久表逐行摘要发布前后均为9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41；7用户、3空间、5成员、29照片、7迁移保持。照片清理器身份及运行状态、应用1CPU／768MiB和禁备份标记/服务状态保持，不生成备份或下载真实资料。
+
+完整发布证据在应用忽略目录`.local/ecs-deploy/tile-match-published-closeout-r01.json`、`late-response-6b4ad67-r01-frozen.json`与command-bound远端captures。发布记录属于根任务核对，不称为独立审查。
+
 ## 仍待验证
 
-同一冻结镜像的受限Linux、授权ECS切换及公网摘要还需执行，保持禁备份、真人牌桌保护和资源限制。真实Android、完整当前厂商音画/规则、角色语音人工试听、生产认证WSS故障及私有牌山协议仍未全部验收，整体目标保持active。
+真实Android、完整当前厂商音画/规则、角色语音人工试听、生产认证WSS故障及私有牌山协议仍未全部验收，整体目标保持active。
