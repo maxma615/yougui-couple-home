@@ -32,6 +32,14 @@ export function tileKey(value: string) {
   return value.trim().slice(0, 2).toLowerCase();
 }
 
+/** Visible red fives and ordinary fives belong to the same tile family. */
+export function tileMatchKey(value: string | null | undefined): string | null {
+  const tile = value?.trim().toLowerCase();
+  if (!tile || !/^(?:[mps][0-9]|z[1-7])[_*+\-=]*$/.test(tile)) return null;
+  const key = tile.slice(0, 2);
+  return key[1] === "0" ? `${key[0]}5` : key;
+}
+
 export function tileName(value: string) {
   const key = tileKey(value);
   if (honorNames[key]) return honorNames[key];

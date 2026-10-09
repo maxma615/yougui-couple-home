@@ -550,3 +550,19 @@ for (const [dx,dy,dragged] of [[0,-12,false],[0,-19,false],[0,-20,false],[12,-16
   expect(tile.classList.contains('is-dragging')).toBe(false);
  });
 }
+
+it('marks the current legal selected tile family and clears it on a completed choice',()=>{
+ const view=fixtureGame().view(0),discard=view.choices.find(c=>c.type==='discard'&&!c.value?.endsWith('_'))!;
+ const onChoice=show(view),tile=document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!,board=screen.getByTestId('mahjong-board');
+ expect(board.hasAttribute('data-matching-tile')).toBe(false);
+ fireEvent.click(tile);expect(board.getAttribute('data-matching-tile')).toBe(discard.value!.slice(0,2));expect(onChoice).not.toHaveBeenCalled();
+ fireEvent.click(tile);expect(board.hasAttribute('data-matching-tile')).toBe(false);expect(onChoice).toHaveBeenCalledExactlyOnceWith(discard);
+});
+for(const interruption of ['disconnect','busy','decision'] as const)it('never retains matching-tile hints after '+interruption,()=>{
+ const view=fixtureGame().view(0),discard=view.choices.find(c=>c.type==='discard'&&!c.value?.endsWith('_'))!,onChoice=vi.fn();
+ const props={room:room(view),busy:false,host:true,ownSeat:0,connected:true,onChoice,onFinish:()=>{},onRematch:()=>{},onLeave:()=>{}};
+ const result=render(<GameRoom {...props}/>),tile=document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
+ fireEvent.click(tile);expect(screen.getByTestId('mahjong-board').hasAttribute('data-matching-tile')).toBe(true);
+ result.rerender(<GameRoom {...props} connected={interruption!=='disconnect'} busy={interruption==='busy'} room={interruption==='decision'?room({...view,decisionId:view.decisionId+'next'}):props.room}/>);
+ expect(screen.getByTestId('mahjong-board').hasAttribute('data-matching-tile')).toBe(false);expect(onChoice).not.toHaveBeenCalled();
+});

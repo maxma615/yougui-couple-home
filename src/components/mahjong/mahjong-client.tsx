@@ -25,7 +25,7 @@ import { useNukiMotion } from "./use-nuki-motion";
 import { useHandReflow } from "./use-hand-reflow";
 import type { DiscardMotionIntent } from "./discard-motion";
 import { MahjongRules } from "./mahjong-rules";
-import { TileFace, tileKey, tileName } from "./mahjong-tile";
+import { TileFace, tileKey, tileName, tileMatchKey } from "./mahjong-tile";
 import { MahjongRiver as River } from "./mahjong-river";
 import { MahjongMeld as MeldView } from "./mahjong-meld";
 import { useTableAudio } from "./use-table-audio";
@@ -733,6 +733,9 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const selectedWaits = canPreview ? showCurrentWaits ? peekWaits : previewChoiceId && allowedChoices.some(choice=>choice.id===previewChoiceId) ? waitCache.get(previewChoiceId) ?? [] : [] : [];
 
   const ownMember = room.members.find((member) => member.seat === ownSeat);
+  const matchingTile = connected && !busy && !choiceSubmitted && !game.settlement && !isFinished && selectedHandTile
+    ? tileMatchKey(allowedChoices.find(choice => choice.id === selectedHandTile.choiceId)?.value)
+    : null;
 
   const cancelNukiInput = (event: { target: EventTarget | null }) => {
     if (event.target instanceof Element && event.target.closest(".mahjong-hand, .mahjong-action-dock")) {
@@ -752,7 +755,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
 
     {isFinished && game.ranking ? <MahjongFinalRanking ranking={game.ranking} flow={game.rankingFlow} members={room.members} ownSeat={ownSeat} host={host} connected={connected} busy={busy} onRematch={onRematch} onFinish={onFinish}/> : null}
 
-    <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat}>
+    <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat} data-matching-tile={matchingTile ?? undefined}>
       {feedback && feedback.kind!=="riichi" && !(feedback.kind==="win"&&game.settlementFlow?.winDeclarations?.length) ? feedback.actionLabel && ["call", "riichi", "nuki", "win"].includes(feedback.kind)
         ? <MahjongCallAnnouncement key={feedback.key} feedback={feedback} members={room.members} ownSeat={ownSeat}/>
         : <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
