@@ -531,3 +531,22 @@ it.each(['blur','pagehide','orientationchange'])('cancelling a lifted press on %
  act(()=>window.dispatchEvent(new Event(event)));expect(tile.getAttribute('aria-pressed')).toBe('false');fireEvent.pointerUp(tile,{button:0,clientX:40,clientY:350});fireEvent.click(tile,{detail:1});expect(onChoice).not.toHaveBeenCalled();
  fireEvent.pointerDown(tile,{button:0,clientX:40,clientY:350});fireEvent.pointerUp(tile,{button:0,clientX:40,clientY:350});fireEvent.click(tile,{detail:1});expect(onChoice).not.toHaveBeenCalled();
 });
+
+// A small movement may cross the rack boundary without being a deliberate drag.
+for (const [dx,dy,dragged] of [[0,-12,false],[0,-19,false],[0,-20,false],[12,-16,false],[0,-21,true],[12,-17,true],[21,0,true]] as const) {
+ for (const releaseOnly of [false,true]) it(`requires a deliberate drag at (${dx},${dy}), release-only=${releaseOnly}`,()=>{
+  vi.stubGlobal('PointerEvent',MouseEvent);
+  const view=fixtureGame().view(0),discard=view.choices.find(c=>c.type==='discard'&&!c.value?.endsWith('_'))!;
+  const onChoice=show(view),tile=document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
+  Object.defineProperty(screen.getByTestId('mahjong-hand'),'getBoundingClientRect',{configurable:true,value:()=>({top:320})});
+  Object.defineProperty(document,'elementFromPoint',{configurable:true,value:()=>screen.getByTestId('mahjong-table-surface')});
+  fireEvent.pointerDown(tile,{isPrimary:true,button:0,pointerType:'touch',clientX:80,clientY:330});
+  if(!releaseOnly){fireEvent.pointerMove(tile,{clientX:80+dx,clientY:330+dy});expect(tile.classList.contains('is-dragging')).toBe(dragged);}
+  fireEvent.pointerUp(tile,{clientX:80+dx,clientY:330+dy});
+  fireEvent.click(tile,{detail:1});
+  const shouldDiscard=dragged&&330+dy<320;
+  expect(onChoice).toHaveBeenCalledTimes(shouldDiscard?1:0);
+  if(shouldDiscard)expect(onChoice.mock.calls[0][0]).toEqual(discard);
+  expect(tile.classList.contains('is-dragging')).toBe(false);
+ });
+}

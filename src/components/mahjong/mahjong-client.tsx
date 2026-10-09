@@ -673,7 +673,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     const active = activeTilePointerRef.current;
     if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
     const dx = event.clientX - active.startX, dy = event.clientY - active.startY;
-    if (!active.dragged && Math.hypot(dx, dy) >= 12) active.dragged = true;
+    if (!active.dragged && dx * dx + dy * dy > 400) active.dragged = true;
     if (active.dragged) {
       setDragPreview({ tileId, x: dx, y: dy });
       setOverDiscardTarget(isPlayableDiscardRelease(active.rackTop, event.clientX, event.clientY));
@@ -683,7 +683,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     const active = activeTilePointerRef.current;
     if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
     const dx = event.clientX - active.startX, dy = event.clientY - active.startY;
-    const dragged = active.dragged || Math.hypot(dx, dy) >= 12;
+    const dragged = active.dragged || dx * dx + dy * dy > 400;
     const landedInTable = isPlayableDiscardRelease(active.rackTop, event.clientX, event.clientY);
     activeTilePointerRef.current = null;
     setDragPreview(null);
