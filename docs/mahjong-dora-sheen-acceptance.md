@@ -1,6 +1,6 @@
 # 宝牌与赤宝牌的牌面光泽
 
-日期：2026-10-09。当前为本地候选，线上仍6b4ad67／Build g66GdSo-A5cX8mGahOZtv，连续体验目标保持active。
+日期：2026-10-09。宝牌光泽已实际发布，源f64bacb／Build Tld_EB940jJVUm3pDJI87，入口https://8.133.186.15/mahjong。连续体验目标保持active。
 
 ## 行为与参考
 
@@ -20,7 +20,17 @@
 - 首轮运动探针在光带14%初始停留阶段内取样180ms，错误认为未推进，保留失败；改为跨过明确336ms停留后取样600ms，没有修改产品或放宽超时。后续像素探针首次getAnimations未包含伪元素，显式subtree后最终完整44重跑；未删除断言。类型首次发现本地声明缺少上游已有静态方法，补齐core.d.ts并保留错误。
 - 最终类型、Build Tld_EB940jJVUm3pDJI87和374构建文件秘密扫描通过。本机单线程Linux目标集合42文件/728项通过；不代替ECS受限容器检查。
 
-证据在应用忽略目录`.local/audit/dora-sheen-browser-1791512913406/proof.json`、`.local/audit/tile-match-browser-1791512654799/proof.json`、`.local/audit/dora-sheen-final/`与各轮日志。根任务复核，没有称为独立审查。对应ECS冻结、受限Linux与保护发布仍需执行。
+证据在应用忽略目录`.local/audit/dora-sheen-browser-1791512913406/proof.json`、`.local/audit/tile-match-browser-1791512654799/proof.json`、`.local/audit/dora-sheen-final/`与各轮日志。根任务复核，没有称为独立审查。ECS证据见下节。
+
+## ECS实际发布
+
+- f64bacb已普通快进推送GitHub开发分支与main。固定镜像sha256:5d528c36376a72971ef2405436a61d50506016526aef1f12bc108166eef61d7e，manifest SHA256为7d4230a038005ac49f8769673b6e108481071d072012a8b42efe646b082eaece。
+- 37,560,800字节发布归档，远端SHA256核对92f40e7782b49217e5319cca4185ac2a66edf0f2ec060cf65815a0a43ba10003；704源码与449构建逐文件一致，固定父镜像及继承层保持。
+- 同一冻结镜像受限Linux半核／384MiB／禁网络／只读容器42文件/728项全部通过，PID1608228、实际退出0、287.88秒。r01/r02状态仍running，r03才是最终通过证据，没有因观察超时重新启动或放宽测试门槛。
+- 发布器PID1610840实际退出0；保护门确认无真人牌局、排空请求、切换并恢复入口。13个远端阶段实际退出0，最终健康及可信TLS为200，143项公网资源摘要一致。
+- 12张持久表逐行摘要发布前后均为9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41，7用户、3空间、5成员、29照片及7迁移保持；清理器身份与运行状态、应用1CPU/768MiB和禁备份状态保持。不生成备份或下载真实资料。
+
+证据在应用忽略目录`.local/ecs-deploy/dora-sheen-published-closeout-r01.json`、`late-response-f64bacb-r01-frozen.json`、源绑定的远端captures及公网proof。此发布核对由根任务执行，不称为独立审查。
 
 ## 仍待验证
 
