@@ -1,4 +1,6 @@
 "use client";
+import {acceptedRoundOpening,openingTileCount} from "@/modules/mahjong/round-opening";
+import {useRoundOpening} from "./use-round-opening";
 
 import {blankTableAction} from "./blank-table-action";
 import {useHandHover} from "./use-hand-hover";
@@ -99,6 +101,7 @@ function MahjongRoot() {
   const [notice, setNotice] = useState("");
   const [connected, setConnected] = useState(false);
   const [motionCanAnimate, setMotionCanAnimate] = useState(false);
+  const [openingIntent,setOpeningIntent]=useState<string|null>(null);
   const [motionIntent, setMotionIntent] = useState<DiscardMotionIntent | null>(null);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const finishDialog = useRef<HTMLDialogElement>(null);
@@ -134,6 +137,9 @@ function MahjongRoot() {
       setConnected(false);
       setSocketEpoch(epoch => epoch + 1);
     }
+    const opening=next.room ? acceptedRoundOpening(current?.room??null,next.room,motion.canAnimate) : null;
+    if(opening) setOpeningIntent(opening);
+    else if(!sameMotionSnapshot && (!motion.canAnimate || current?.room?.game?.decisionId!==next.room?.game?.decisionId)) setOpeningIntent(null);
     responseRef.current = next;
     const failed = failedChoiceRecovery.current;
     if (failed && pendingMutation.current === null) {
@@ -337,6 +343,7 @@ function MahjongRoot() {
         ownSeat={ownSeat}
         connected={connected}
         motionCanAnimate={motionCanAnimate}
+        openingIntent={openingIntent}
         motionIntent={motionIntent}
         choiceRecoveryEpoch={choiceRecoveryEpoch}
         onChoice={(choice, intent) => room.game && void send({ action: "respond", decisionId: room.game.decisionId, choiceId: choice.id }, intent ?? null)}
@@ -437,12 +444,13 @@ function SeatCard({ member, seat, isMe, waiting = false, player, active = false,
   </article>;
 }
 
-export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimate = connected, motionIntent = null, choiceRecoveryEpoch = 0, onChoice, onFinish, onRematch, onLeave }: {
+export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimate = connected, openingIntent = null, motionIntent = null, choiceRecoveryEpoch = 0, onChoice, onFinish, onRematch, onLeave }: {
   room: RoomView; busy: boolean; host: boolean; ownSeat: number; connected: boolean;
-  motionCanAnimate?: boolean; motionIntent?: DiscardMotionIntent | null; choiceRecoveryEpoch?: number;
+  motionCanAnimate?: boolean; openingIntent?: string|null; motionIntent?: DiscardMotionIntent | null; choiceRecoveryEpoch?: number;
   onChoice: (choice: Choice, intent?: DiscardMotionIntent | null) => void; onFinish: () => void; onRematch: () => void; onLeave: () => void;
 }) {
   const game = room.game;
+  const opening=useRoundOpening({room,ownSeat,connected,intent:openingIntent});
   useDoraSheenClock(connected && room.status === "playing" && Boolean(game));
   const tableScreen = useTableScreen();
   const tablecloth = useTablecloth();
@@ -466,17 +474,24 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   useMahjongActionPlacement(audioRootRef,Boolean(game)&&room.status!=="finished",`${room.id}:${room.variant}:${ownSeat}:${game?.decisionId}:${room.version}:${riichiMode}:${pendingCallType}`);
 
   const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef});
+  const dealtSound=useRef<string|null>(null);
+  useEffect(()=>{
+    if(opening.age===null||opening.age>=1200)return;
+    const wave=Math.floor(opening.age/300),id=JSON.stringify([openingIntent,wave]);
+    if(dealtSound.current===id)return;dealtSound.current=id;
+    if(opening.age-wave*300<100)audio.dealWave(id,ownSeat);
+  },[opening.age,openingIntent,ownSeat,audio.dealWave]);
   const nukiMotion = useNukiMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const drawArrival = useDrawArrival(game, room.id, ownSeat, {connected, canAnimate: motionCanAnimate, heldDecisionId: nukiMotion.heldDecisionId});
-  const automatic = useAutomaticPlay({room,ownSeat,connected,busy: busy || nukiMotion.heldDecisionId === game?.decisionId || drawArrival.arriving,onChoice: choice => {
+  const automatic = useAutomaticPlay({room,ownSeat,connected,busy: opening.holding || busy || nukiMotion.heldDecisionId === game?.decisionId || drawArrival.arriving,onChoice: choice => {
     if (choice.type === "discard") {
       const source = [...(audioRootRef.current?.querySelectorAll<HTMLButtonElement>(".mahjong-hand button[data-choice-id]") ?? [])].find(button => button.dataset.choiceId === choice.id);
       if (source) { submitHandChoice(choice, source); return; }
     }
     onChoice(choice);
   }});
-  const tableShortcut = useBlankTableDoubleTap({recoveryEpoch:choiceRecoveryEpoch,scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
+  const tableShortcut = useBlankTableDoubleTap({recoveryEpoch:choiceRecoveryEpoch,scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:opening.holding||busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
     if (!game || submittedChoiceRef.current) return false;
     const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType));
     if (!action) return false;
@@ -527,7 +542,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   }, []);
   const handHover = useHandHover({
     scope: JSON.stringify([room.id, ownSeat, game?.gameInstanceId, game?.decisionId, riichiMode, game?.choices.map(choice=>choice.id)]),
-    disabled: busy || !connected || choiceSubmitted || room.status !== "playing" || Boolean(game?.settlement) || drawArrival.arriving || nukiMotion.heldDecisionId === game?.decisionId,
+    disabled: opening.holding || busy || !connected || choiceSubmitted || room.status !== "playing" || Boolean(game?.settlement) || drawArrival.arriving || nukiMotion.heldDecisionId === game?.decisionId,
     onSelect: selection => { selectedHandTileRef.current=selection; setSelectedHandTile(selection); },
     onClear: clearHandSelection,
   });
@@ -594,7 +609,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   }, [busy, connected, clearHandSelection]);
 
   const submitHandChoice = (choice: Choice, source: HTMLButtonElement) => {
-    if (busy || !connected || submittedChoiceRef.current) return;
+    if (opening.holding || busy || !connected || submittedChoiceRef.current) return;
     publicCallMotion.cancel();
     handReflow.captureBeforeInput();
     submittedChoiceRef.current = true;
@@ -624,7 +639,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     else onChoice(choice);
   };
   const activateHandTile = (tileId: string, choice: Choice, event: ReactMouseEvent<HTMLButtonElement>) => {
-    if (busy || !connected || submittedChoiceRef.current) return;
+    if (opening.holding || busy || !connected || submittedChoiceRef.current) return;
     handReflow.captureBeforeInput();
     drawArrival.cancel();
     const pressed = pressedHandChoiceRef.current;
@@ -644,7 +659,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     setSelectedHandTile(next);
   };
   const startHandPointer = (tileId: string, choice: Choice, event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (busy || !connected || submittedChoiceRef.current || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
+    if (opening.holding || busy || !connected || submittedChoiceRef.current || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
     handHover.press(event.pointerType);
     const selected = selectedHandTileRef.current;
     pressedHandChoiceRef.current = {tileId,choiceId:choice.id,confirmed:selected?.tileId===tileId && selected.choiceId===choice.id};
@@ -732,7 +747,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   if (previewChoiceId && allowedChoices.some(choice=>choice.id===previewChoiceId) && !waitCache.has(previewChoiceId)) {
     waitCache.set(previewChoiceId, discardWaits(game,ownSeat,room.variant,previewChoiceId));
   }
-  const canPreview = connected && !busy && !choiceSubmitted && !isFinished && !game.settlement;
+  const canPreview = !opening.holding && connected && !busy && !choiceSubmitted && !isFinished && !game.settlement;
   const peekWaits = currentHandWaits.length ? currentHandWaits : singleDiscardPeek;
   const selectedWaits = canPreview ? showCurrentWaits ? peekWaits : previewChoiceId && allowedChoices.some(choice=>choice.id===previewChoiceId) ? waitCache.get(previewChoiceId) ?? [] : [] : [];
 
@@ -759,7 +774,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
       if (inside && escape) menu.querySelector<HTMLElement>("summary")?.focus();
     }
   };
-  return <section data-tablecloth={tablecloth.cloth} ref={audioRootRef} onFocusCapture={closeAutomaticMenu} onPointerDownCapture={event=>{closeAutomaticMenu(event);tableShortcut.down(event);cancelNukiInput(event);}} onPointerUp={tableShortcut.up} onPointerCancel={tableShortcut.reset} onClickCapture={cancelNukiInput} onKeyDownCapture={event=>{closeAutomaticMenu(event,event.key === "Escape");tableShortcut.reset();cancelNukiInput(event);}} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
+  return <section data-opening-sorted={opening.age!==null&&opening.age>=1200?"true":undefined} data-round-opening={opening.age===null?undefined:Math.floor(opening.age)} data-tablecloth={tablecloth.cloth} ref={audioRootRef} onFocusCapture={closeAutomaticMenu} onPointerDownCapture={event=>{closeAutomaticMenu(event);tableShortcut.down(event);cancelNukiInput(event);}} onPointerUp={tableShortcut.up} onPointerCancel={tableShortcut.reset} onClickCapture={cancelNukiInput} onKeyDownCapture={event=>{closeAutomaticMenu(event,event.key === "Escape");tableShortcut.reset();cancelNukiInput(event);}} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
     <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions"><TableclothPicker cloth={tablecloth.cloth} onChoose={tablecloth.choose} onOpen={clearHandSelection}/>{canPreview && peekWaits.length > 0 ? <WaitPeekButton held={showCurrentWaits} onHold={setShowCurrentWaits}/> : null}{!isFinished ? <details className="mahjong-automatic"><summary onClick={event=>event.currentTarget.focus()}>便捷操作</summary><div role="group" aria-label="自动操作">{([['win','自动和牌'],['noCalls','不鸣牌'],['drawnDiscard','自动摸切'],...(room.variant==='sanma' ? [['north','自动拔北']] : [])] as [keyof typeof automatic.options,string][]).map(([key,label])=><button type="button" key={key} aria-pressed={automatic.options[key]} onClick={()=>automatic.toggle(key)}>{label}<span>{automatic.options[key] ? '开' : '关'}</span></button>)}<button type="button" aria-pressed={handHover.twoClicks} title="关闭时鼠标悬停预选后单击出牌；触屏始终两次点按" onClick={()=>{clearHandSelection();handHover.toggle();}}>桌面二次点击出牌<span>{handHover.twoClicks ? "开" : "关"}</span></button><button type="button" aria-pressed={tableShortcut.enabled} title="双击桌布过牌或切出最后一张牌；选牌时先返回" onClick={tableShortcut.toggle}>双击过牌／摸切<span>{tableShortcut.enabled ? "开" : "关"}</span></button></div></details> : null}<button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
 
     {tableScreen.hint ? <div className="mahjong-screen-hint" role="status" aria-label="屏幕方向提示" title={tableScreen.hint}>请旋转手机</div> : null}
@@ -768,7 +783,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
 
     {isFinished && game.ranking ? <MahjongFinalRanking ranking={game.ranking} flow={game.rankingFlow} members={room.members} ownSeat={ownSeat} host={host} connected={connected} busy={busy} onRematch={onRematch} onFinish={onFinish}/> : null}
 
-    <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat} data-matching-tile={matchingTile ?? undefined} data-dora-tiles={visibleDoraFamilies(game.doraIndicators, room.variant).join(" ")}>
+    <div ref={tableRef} className={`mahjong-table${overDiscardTarget ? " is-discard-target" : ""}`} data-testid="mahjong-board" data-turn-seat={game.turnSeat} data-matching-tile={matchingTile ?? undefined} data-dora-tiles={visibleDoraFamilies(opening.doraVisible?game.doraIndicators:[], room.variant).join(" ")}>
       {feedback && feedback.kind!=="riichi" && !(feedback.kind==="win"&&game.settlementFlow?.winDeclarations?.length) ? feedback.actionLabel && ["call", "riichi", "nuki", "win"].includes(feedback.kind)
         ? <MahjongCallAnnouncement key={feedback.key} feedback={feedback} members={room.members} ownSeat={ownSeat}/>
         : <div key={feedback.key} className={`mahjong-table-feedback is-${feedback.kind}`} role="status" aria-label="牌桌动作" data-feedback-seat={feedback.seat}>{feedback.text}</div> : null}
@@ -781,7 +796,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         {Array.from({ length: capacity - 1 }, (_, index) => index + 1).map(offset => {
           const player = byRelative(offset);
           const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
-          return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel revealKey={game.settlementFlow?.id} revealAge={game.settlementFlow?.stage === "draw" && game.settlement ? Math.max(0,drawPresentation.elapsed-drawRevealAt(game.settlement)) : 300} revealedHand={revealedHands.find(hand => hand.seat === player?.seat)?.hand} player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
+          return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerPanel revealKey={game.settlementFlow?.id} revealAge={game.settlementFlow?.stage === "draw" && game.settlement ? Math.max(0,drawPresentation.elapsed-drawRevealAt(game.settlement)) : 300} revealedHand={revealedHands.find(hand => hand.seat === player?.seat)?.hand} player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} openingAge={opening.age} includeIdentity={false} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
         })}
         <div className="mahjong-table__own-public"><PlayerPanel player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} includeIdentity={false}/></div>
         <div className="mahjong-table__center" aria-label="场况台">
@@ -796,21 +811,21 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
         const position = offset === 1 ? "east" : capacity === 3 || offset === 3 ? "west" : "north";
         return <div key={offset} className={`mahjong-table__position mahjong-table__position--${position}`}><PlayerIdentity player={player} member={room.members.find(member => member.seat === player?.seat)} ownSeat={ownSeat} active={game.turnSeat === player?.seat} offset={offset} capacity={capacity} onInspect={() => player && setInspectedSeat(player.seat)}/></div>;
       })}
-      <div className="mahjong-table__dora" role="group" aria-label="宝牌指示牌" data-testid="mahjong-dora"><span>宝牌指示牌</span><div>{game.doraIndicators.map((tile, index) => <TileFace key={`${tile}-${index}`} value={tile}/>)}{Array.from({length: Math.max(0, 5 - game.doraIndicators.length)}, (_, index) => <i className="mahjong-indicator-back" aria-hidden="true" key={`back-${index}`}/>)}</div><small>宝牌 <b>{game.doraIndicators.map(tile => tileName(indicatorBonus(tile, room.variant))).join(" · ")}</b></small><div className="mahjong-table__counters" role="group" aria-label="场况计数"><span className="mahjong-table__counter" aria-label={`本场 ${game.honba}`}><small>本场</small><b>{game.honba}</b></span><span className="mahjong-table__counter" aria-label={`立直棒 ${game.riichiSticks}`}><i className="mahjong-table__stick" aria-hidden="true"/><small>立直棒</small><b>{game.riichiSticks}</b></span></div></div>
+      <div className="mahjong-table__dora" role="group" aria-label="宝牌指示牌" data-testid="mahjong-dora"><span>宝牌指示牌</span><div>{(opening.doraVisible?game.doraIndicators:[]).map((tile, index) => <TileFace key={`${tile}-${index}`} value={tile}/>)}{Array.from({length: Math.max(0, 5 - (opening.doraVisible?game.doraIndicators.length:0))}, (_, index) => <i className="mahjong-indicator-back" aria-hidden="true" key={`back-${index}`}/>)}</div><small>宝牌 <b>{(opening.doraVisible?game.doraIndicators:[]).map(tile => tileName(indicatorBonus(tile, room.variant))).join(" · ")}</b></small><div className="mahjong-table__counters" role="group" aria-label="场况计数"><span className="mahjong-table__counter" aria-label={`本场 ${game.honba}`}><small>本场</small><b>{game.honba}</b></span><span className="mahjong-table__counter" aria-label={`立直棒 ${game.riichiSticks}`}><i className="mahjong-table__stick" aria-hidden="true"/><small>立直棒</small><b>{game.riichiSticks}</b></span></div></div>
       <div className="mahjong-table__own"><PlayerIdentity player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
         <div className="mahjong-hand-block">{selectedWaits.length ? <aside className="mahjong-wait-preview" role="status" aria-label="待牌预览"><span>待牌</span><div>{selectedWaits.map(wait=><span className="mahjong-wait-preview__item" key={wait.tile}><TileFace value={wait.tile}/><small>{wait.ronYaku ? `${wait.remaining} 张` : null}</small>{wait.furiten ? <b>振听</b> : null}{!wait.ronYaku ? <b>无役</b> : null}</span>)}</div></aside> : null}<div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
           {hand.map((tile, index) => {
             const tileId = `hand:${index}:${tile}`;
             const choices = allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(tile) && !choice.value.endsWith("_"));
             const choice = choices[0];
-            return <HandActionTile key={tileId} tileId={tileId} value={tile} choices={choices} disabled={busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onHover={hoverHandTile} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
+            return <HandActionTile key={tileId} tileId={tileId} value={tile} dealVisible={index<openingTileCount(opening.age,game.hand.length)} dealWave={opening.age===null?undefined:Math.floor(index/4)} choices={choices} disabled={opening.holding || busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onHover={hoverHandTile} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
           })}
-          {game.drawnTile ? <span className={`mahjong-drawn-wrap${nukiMotion.heldDecisionId === game.decisionId ? " is-nuki-held" : ""}`}><i>摸</i><HandActionTile key={game.decisionId} tileId={`drawn:${game.decisionId}:${game.drawnTile}`} value={game.drawnTile} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={busy || !connected || choiceSubmitted} drawn arriving={drawArrival.arriving} selected={Boolean(selectedHandTile?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` && selectedHandTile.choiceId === allowedChoices.find(choice => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))?.id)} drag={dragPreview?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` ? dragPreview : null} onHover={hoverHandTile} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/></span> : null}
+          {game.drawnTile ? <span className={`mahjong-drawn-wrap${nukiMotion.heldDecisionId === game.decisionId ? " is-nuki-held" : ""}`}><i>摸</i><HandActionTile key={game.decisionId} tileId={`drawn:${game.decisionId}:${game.drawnTile}`} value={game.drawnTile} dealVisible={hand.length<openingTileCount(opening.age,game.hand.length)} dealWave={opening.age===null?undefined:Math.floor(hand.length/4)} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={opening.holding || busy || !connected || choiceSubmitted} drawn arriving={drawArrival.arriving} selected={Boolean(selectedHandTile?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` && selectedHandTile.choiceId === allowedChoices.find(choice => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))?.id)} drag={dragPreview?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` ? dragPreview : null} onHover={hoverHandTile} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/></span> : null}
         </div></div></div>
       </div>
     </div>
 
-    {!isFinished && (otherChoices.length > 0 || riichiChoices.length > 0 || game.settlement) ? <div className="mahjong-action-dock" aria-label="可执行操作">
+    {!opening.holding && !isFinished && (otherChoices.length > 0 || riichiChoices.length > 0 || game.settlement) ? <div className="mahjong-action-dock" aria-label="可执行操作">
       {tsumoChoice && !game.settlement ? <button type="button" className="mahjong-button mahjong-button--win mahjong-button--tsumo" disabled={busy || !connected || !tsumoChoice} data-choice-id={tsumoChoice?.id} data-choice-type={tsumoChoice?.type} title={tsumoChoice ? "点击自摸和牌" : game.turnSeat !== ownSeat ? "等待你的摸牌回合" : "当前没有合法自摸选项"} onClick={() => connected && !busy && tsumoChoice && onChoice(tsumoChoice)}>自摸</button> : null}
       {riichiChoices.length > 0 && !game.settlement ? <button type="button" className={`mahjong-button mahjong-button--riichi${riichiMode ? " is-selected" : ""}`} aria-pressed={riichiMode} disabled={busy || !connected || !riichiChoices.length} title={riichiChoices.length ? "选择高亮牌切出并宣告立直" : ownPlayer?.riichi ? "已经立直" : "当前没有合法立直选项"} onClick={() => connected && !busy && setRiichiMode((value) => !value)}>{riichiMode ? "选择立直牌" : "立直"}</button> : null}
       {[...callGroups].map(([type, choices]) => <button key={type} type="button"
@@ -833,13 +848,13 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
     {game.settlement ? <MahjongSettlementPanel leadInMs={drawLead} game={game} room={room} connected={connected} busy={busy} onChoice={choice => { publicCallMotion.cancel(); onChoice(choice); }}/> : null}
     {pendingCallType && pendingCalls.length > 1 ? <CallChoiceDialog returnFocus={pendingCallTrigger.current} type={pendingCallType} choices={pendingCalls} busy={busy} connected={connected} onClose={() => setPendingCallType(null)} onChoice={choice => { setPendingCallType(null); if (connected && !busy) { publicCallMotion.cancel(); onChoice(choice); } }}/> : null}
     {inspectedSeat !== null ? <PublicMeldDialog player={game.players.find(p => p.seat === inspectedSeat)} member={room.members.find(m => m.seat === inspectedSeat)} onClose={() => setInspectedSeat(null)}/> : null}
-    {publicCallMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(game.doraIndicators, room.variant).join(" ")} kind="call" flight={publicCallMotion.flight} onFinish={finishCallAudio}/> : null}
-    {nukiMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(game.doraIndicators, room.variant).join(" ")} kind="nuki" flight={nukiMotion.flight} onFinish={finishNukiAudio}/> : null}
-    {discardMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(game.doraIndicators, room.variant).join(" ")} flight={discardMotion.flight} onFinish={finishDiscardAudio}/> : null}
+    {publicCallMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(opening.doraVisible?game.doraIndicators:[], room.variant).join(" ")} kind="call" flight={publicCallMotion.flight} onFinish={finishCallAudio}/> : null}
+    {nukiMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(opening.doraVisible?game.doraIndicators:[], room.variant).join(" ")} kind="nuki" flight={nukiMotion.flight} onFinish={finishNukiAudio}/> : null}
+    {discardMotion.flight ? <DiscardFlightLayer doraTiles={visibleDoraFamilies(opening.doraVisible?game.doraIndicators:[], room.variant).join(" ")} flight={discardMotion.flight} onFinish={finishDiscardAudio}/> : null}
   </section>;
 }
 
-type PlayerPanelProps = { revealKey?: string; revealAge?: number; revealedHand?: string; player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void; includeIdentity?: boolean };
+type PlayerPanelProps = { openingAge?:number|null; revealKey?: string; revealAge?: number; revealedHand?: string; player?: PublicPlayer; member?: RoomMember; ownSeat: number; active: boolean; offset: number; capacity: number; onInspect?: () => void; includeIdentity?: boolean };
 
 function PlayerIdentity({ player, member, ownSeat, offset, capacity, onInspect }: PlayerPanelProps) {
   if (!player) return null;
@@ -852,14 +867,14 @@ function PlayerIdentity({ player, member, ownSeat, offset, capacity, onInspect }
   </>;
 }
 
-function PlayerPanel({ revealKey, revealAge = 300, revealedHand, player, member, ownSeat, active, offset, capacity, onInspect, includeIdentity = true }: PlayerPanelProps) {
+function PlayerPanel({ openingAge=null, revealKey, revealAge = 300, revealedHand, player, member, ownSeat, active, offset, capacity, onInspect, includeIdentity = true }: PlayerPanelProps) {
   if (!player) return null;
   return <div className={`mahjong-player${active ? " is-turn" : ""}${offset === 0 ? " is-you" : ""}`} data-seat={player.seat} data-testid={`player-${player.seat}`}>
     {includeIdentity ? <PlayerIdentity player={player} member={member} ownSeat={ownSeat} active={active} offset={offset} capacity={capacity} onInspect={onInspect}/> : null}
     {offset !== 0 ? <div className="mahjong-opponent-rack"><div className="mahjong-player__hidden" data-motion-rack-seat={player.seat} aria-label={`${member?.displayName || "牌友"}的手牌数量：${player.handCount}`}>
       {revealedHand ? <MountedDrawRack key={revealKey} age={revealAge} hand={revealedHand} seat={player.seat} name={member?.displayName || "牌友"}/> : Array.from({ length: Math.min(player.handCount, 14) }, (_, index) => {
         const drawn = player.hasDrawnTile === true && index === Math.min(player.handCount, 14) - 1;
-        return <MahjongStandingTile key={index} drawn={drawn}/>;
+        return <MahjongStandingTile key={index} drawn={drawn} dealVisible={index<openingTileCount(openingAge,player.handCount)} dealWave={openingAge===null?undefined:Math.floor(index/4)}/>;
       }) }
       <span>{player.handCount}</span>
     </div>
@@ -919,7 +934,8 @@ function choiceDescription(value: string) {
   return [...match[2].replace(/\D/g, "")].map((number) => displayShortTile(`${match[1]}${number}`)).join(" ");
 }
 
-function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriving = false, selected = false, drag, onHover, onActivate, onPointerStart, onPointerMove, onPointerEnd, onPointerCancel }: {
+function HandActionTile({ dealVisible=true, dealWave, tileId, value, choices, disabled, drawn = false, arriving = false, selected = false, drag, onHover, onActivate, onPointerStart, onPointerMove, onPointerEnd, onPointerCancel }: {
+  dealVisible?:boolean;dealWave?:number;
   tileId: string; value: string; choices: Choice[]; disabled: boolean; drawn?: boolean; arriving?: boolean; selected?: boolean;
   drag: { tileId: string; x: number; y: number } | null;
   onHover: (tileId: string | null, choice: Choice | null) => void;
@@ -932,7 +948,7 @@ function HandActionTile({ tileId, value, choices, disabled, drawn = false, arriv
   const choice = choices[0];
   const dragging = Boolean(drag);
   const style = drag ? { "--mahjong-drag-x": `${drag.x}px`, "--mahjong-drag-y": `${drag.y}px` } as CSSProperties : undefined;
-  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onPointerEnter={event => event.pointerType === "mouse" && !disabled && choice && onHover(tileId, choice)} onPointerLeave={event => event.pointerType === "mouse" && onHover(null, null)} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)} onLostPointerCapture={event => onPointerCancel(tileId, event)}/>;
+  return <TileFace value={value} className={`${drawn ? "is-drawn" : ""}${arriving ? " is-draw-arriving" : ""}${choice ? " is-playable" : " is-locked"}${selected ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`} type="button" disabled={!choice || disabled} data-deal-visible={dealVisible?undefined:"false"} data-deal-wave={dealWave} data-hand-instance-id={tileId} data-choice-id={choice?.id} data-choice-type={choice?.type} aria-pressed={selected} aria-label={`${choice?.type === "riichi" ? "立直后切出" : "切出"} ${tileName(value)}`} style={style} onPointerEnter={event => event.pointerType === "mouse" && !disabled && choice && onHover(tileId, choice)} onPointerLeave={event => event.pointerType === "mouse" && onHover(null, null)} onClick={event => choice && onActivate(tileId, choice, event)} onPointerDown={event => choice && onPointerStart(tileId, choice, event)} onPointerMove={event => onPointerMove(tileId, event)} onPointerUp={event => onPointerEnd(tileId, event)} onPointerCancel={event => onPointerCancel(tileId, event)} onLostPointerCapture={event => onPointerCancel(tileId, event)}/>;
 }
 
 function MountedDrawRack({age,hand,seat,name}:{age:number;hand:string;seat:number;name:string}) {

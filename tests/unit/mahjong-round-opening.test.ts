@@ -1,0 +1,12 @@
+import {expect,it} from 'vitest';
+import {acceptedRoundOpening,isOpeningGame,openingKey,openingTileCount,ROUND_OPENING} from '@/modules/mahjong/round-opening';
+import {physicalEngine} from '../fixtures/mahjong-settlement-game';
+import ref from '../fixtures/mahjong-round-opening-reference.json';
+import type {RoomView} from '@/modules/mahjong/types';
+const room=(variant:'sanma'|'yonma'):RoomView=>({id:'room',code:'ABCDEFGH',hostUserId:'0',variant,mode:'east',status:'playing',version:4,mySeat:0,members:[],game:physicalEngine(variant,{0:'p123456789s123z2'},'z2').view(0)});
+it('matches the pinned ordinary live reference timeline for 13 and 14 tile hands',()=>{expect(ROUND_OPENING).toEqual({waves:ref.waves,tilesPerWave:ref.tilesPerWave,doraAndSortMs:ref.doraAndSortMs,operationsMs:ref.operationsMs});for(const total of [13,14])for(const [age,wave]of [[0,4],[299,4],[300,8],[599,8],[600,12],[899,12],[900,14],[1199,14],[1200,14],[1500,14]] as const)expect(openingTileCount(age,total)).toBe(Math.min(wave,total));});
+for(const variant of ['sanma','yonma'] as const){
+ it('accepts a live lobby start and dealer repeat with different authoritative handId '+variant,()=>{const r=room(variant);expect(acceptedRoundOpening({...r,status:'lobby',game:null,version:3},r,true)).toBe(openingKey(r));const next={...r,version:5,game:{...r.game!,handId:r.game!.handId!+1,honba:1}};expect(acceptedRoundOpening(r,next,true)).toBe(openingKey(next));});
+ it('rejects baseline, nonlive, duplicate, changed membership and progressed '+variant,()=>{const r=room(variant),lobby={...r,status:'lobby' as const,game:null,version:3};for(const before of [null,r])expect(acceptedRoundOpening(before,r,true)).toBeNull();expect(acceptedRoundOpening(lobby,r,false)).toBeNull();expect(acceptedRoundOpening(lobby,{...r,id:'other'},true)).toBeNull();expect(acceptedRoundOpening(lobby,{...r,mySeat:1},true)).toBeNull();expect(acceptedRoundOpening(lobby,{...r,game:{...r.game!,players:r.game!.players.map(p=>({...p,discards:p.seat===0?['z2']:[]}))}},true)).toBeNull();});
+ it('never interprets a nuki or meld-only position as new dealing '+variant,()=>{const r=room(variant);for(const changes of [{nuki:1},{melds:['p111-']},{riichi:true}])expect(isOpeningGame({...r.game!,players:r.game!.players.map(p=>({...p,...(p.seat===0?changes:{})}))},variant)).toBe(false);});
+}

@@ -1,3 +1,4 @@
+import {ROUND_OPENING,isOpeningGame} from "./round-opening";
 import { randomInt } from "node:crypto";
 import { Worker } from "node:worker_threads";
 import { fallbackBotChoice } from "./bot-strategy";
@@ -182,6 +183,7 @@ export class BotRunner {
     while (!this.closed && this.queue.length) {
       const job = this.queue.shift()!;
       if (!this.rooms.isBotDecisionCurrent(job)) continue;
+      const presentationStarted=performance.now();
       const active = { job, cancelled: false, wake: undefined as (() => void) | undefined };
       this.active = active;
       let choiceId: string;
@@ -202,7 +204,9 @@ export class BotRunner {
         choiceId = fallbackBotChoice(job.view);
       }
       if (fallback) this.metrics.fallbacks++;
-      const delay = this.options.visualDelayMs ?? randomInt(250, 451);
+      // Production opening animation must finish before a computer answers.
+      // Explicit visualDelayMs is the existing simulation/test override.
+      const delay = this.options.visualDelayMs ?? Math.max(randomInt(250, 451),isOpeningGame(job.view,job.variant)?ROUND_OPENING.operationsMs-(performance.now()-presentationStarted):0);
       if (delay > 0 && !active.cancelled && !this.closed) {
         await new Promise<void>(resolve => {
           const timer = setTimeout(resolve, delay);

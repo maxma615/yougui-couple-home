@@ -1,11 +1,12 @@
 const standingFaces = ["back", "front", "top", "left", "right", "bottom"] as const;
 
 /** A concealed opponent tile with public geometry and no concealed tile identity. */
-export function MahjongStandingTile({ drawn = false }: { drawn?: boolean }) {
+export function MahjongStandingTile({ drawn = false, dealVisible=true, dealWave }: { drawn?: boolean;dealVisible?:boolean;dealWave?:number }) {
   return (
     <i
       className={`mahjong-standing-tile${drawn ? " is-drawn" : ""}`}
       data-motion-drawn={drawn ? "true" : undefined}
+      data-deal-visible={dealVisible?undefined:"false"} data-deal-wave={dealWave}
     >
       <span className="mahjong-standing-tile__body" data-standing-body="true">
         {standingFaces.map(face => (

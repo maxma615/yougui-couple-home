@@ -1,0 +1,10 @@
+/* The footprint and shared 3D camera stay stable while each batch arrives. */
+.mahjong-game [data-deal-visible="false"] { visibility: hidden; pointer-events:none; }
+.mahjong-game [data-deal-wave]:not([data-deal-visible="false"]) { animation: mahjong-deal-arrive 160ms ease-out both; }
+.mahjong-game[data-round-opening]:not([data-opening-sorted]) .mahjong-drawn-wrap > .is-drawn { margin-left: 0; }
+@keyframes mahjong-deal-arrive { from { opacity:0; } to {opacity:1;} }
+@media(prefers-reduced-motion:reduce) { .mahjong-game [data-deal-wave] { animation:none; } }
+/* Opacity on a cuboid would flatten its six faces. Move the rigid tile instead. */
+.mahjong-game .mahjong-standing-tile[data-deal-wave]:not([data-deal-visible="false"]) { animation-name:mahjong-deal-rise; }
+.mahjong-game[data-round-opening]:not([data-opening-sorted]) .mahjong-player__hidden > .is-drawn { margin-inline-start:0; }
+@keyframes mahjong-deal-rise { from {transform:translateZ(6px);} to {transform:translateZ(0);} }

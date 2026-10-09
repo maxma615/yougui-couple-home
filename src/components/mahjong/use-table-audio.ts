@@ -168,5 +168,6 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    if(!parent)schedule(cue.id);
   }
  },[room,connected,canAnimate,clear,schedule]);
- return {enabled,toggle,land,invalidate};
+ const dealWave=useCallback((id:string,seat:number)=>{if(enabledRef.current&&document.visibilityState!=='hidden')player.current?.play({id,kind:'draw',seat});},[]);
+ return {enabled,toggle,land,invalidate,dealWave};
 }
