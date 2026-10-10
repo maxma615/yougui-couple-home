@@ -1,6 +1,6 @@
 # 换设备开发交接
 
-更新：2026-10-10。仓库根目录就是应用目录，克隆后不需要再进入 `couple-home/`。主分支包含现有网站、管理员、三/四人日本麻将、电脑补位、原创建模和授权素材、测试及部署配置。线上运行代码为 `2cc2f94`；后续交接文档提交不改变运行代码。
+更新：2026-10-10。仓库根目录就是应用目录，克隆后不需要再进入 `couple-home/`。主分支包含现有网站、管理员、三/四人日本麻将、电脑补位、原创建模和授权素材、测试及部署配置。线上运行代码为 `4a238f0`；后续交接文档提交不改变运行代码。
 
 ## 从空设备开始
 
@@ -49,7 +49,7 @@ npm run dev
 | 实体牌、相机、拖牌、动作选择、宣告、结算 | `src/components/mahjong`、`src/app/mahjong` |
 | 开局发牌、宝牌、自动操作、桌布与声音 | `round-opening.ts`、`use-round-opening.ts`、相关麻将组件和 CSS |
 | SQL 迁移、部署与运维 | `db/migrations`、`compose.yml`、`Dockerfile`、`deploy`、`docs/operations.md` |
-| 素材和许可证 | `public/mahjong`、`public/fonts`、相邻 NOTICE / LICENSE 文件 |
+| 素材和许可证 | `public/images`、`public/fonts`、`public/licenses` |
 
 日本麻将入口 `/mahjong`，普通成员登录后可建桌；不同空间的成员可以共同打牌。杭州和四川麻将未实现。麻将子进程按需启动，牌局只在内存，重启后不恢复；不依赖远端模型服务。网站的账号、生活记录与附件独立持久化。`MAHJONG_PORT` 默认 3100，是内部端口；外部通过网站代理 Socket.IO，不需要直接开放 3100。
 
@@ -75,7 +75,7 @@ PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx tsx tests/browser/mahjong-round-ope
 
 这些脚本生成 `.local/audit` 的测量与截图；它们使用本机适配，不替代生产认证 WSS 或真实安卓验收。受硬件渲染影响的 3D 投影要结合实际 GPU 浏览器检查。
 
-最新已发布运行代码 `2cc2f94` 的检查为 1235 项 / 105 文件、304 原生浏览器及联机场景、类型/构建/秘密扫描；同镜像 ECS Linux 820 项 / 49 文件。详见 [开局自动摸切发布](mahjong-opening-auto-acceptance.md)。这是该版本的实际证据，换设备后仍应按所改范围复跑。开局桌布双击与自动摸切现均选视觉末张，真实摸牌身份和合法操作保持；参考客户端开局摸切标记的协议语义仍待核对。优先未完成项是手机竖屏回退后的点按与拖牌、真实 Android／GPU、完整当前参考体验及生产认证 WSS 故障场景，详见 [麻将进度](mahjong-fidelity-progress.md)。
+最新已发布运行代码 `4a238f0` 的检查为1246项／106文件、274原生浏览器场景、类型／构建／秘密扫描；同镜像ECS受限Linux831项／50文件。手机竖屏自动横向展示、坐标拖牌、按钮布局、顶层弹窗和旋转时双击清除已发布，见[竖屏回退验收](mahjong-portrait-fallback-acceptance.md)。换设备后仍按变更范围复跑。当前参考的居中16:9画幅和完整世界尺度、真实Android／GPU、开局moqie协议及生产认证WSS故障仍未完成，见[麻将进度](mahjong-fidelity-progress.md)。
 
 ## 生产环境与提交约定
 
@@ -112,3 +112,8 @@ PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx tsx tests/browser/mahjong-round-ope
 ## 开局自动摸切已发布（2026-10-10）
 
 2cc2f94／Build LfozxECz__VKky_nnpGHp 已上线，1235／105完整、304原生场景、最终镜像受限Linux820／49、746源码／449构建、公网145资源及13终态通过。12表、清理器、资源与禁备份保持。参考开局moqie协议仍待核对。官方入口新读取为Unity WebGL4.0.47启动页，缓存旧Laya参考不能证明当前完整运行时；下一步核对当前版本、竖屏回退后的输入及真实Android／GPU。见[本轮验收](mahjong-opening-auto-acceptance.md)。
+
+
+## 手机竖屏横向回退已发布（2026-10-10）
+
+4a238f0／Build auQA0gv8tyRMJGWlGn_an已上线；1246／106完整、274原生、最终镜像受限Linux831／50、754源码／449构建、公网145资源及13终态通过。旋转后点按、拖牌、操作按钮与弹窗已验证；当前入口16:9画幅、实际Android／GPU及完整参考游戏仍待核对。见[发布验收](mahjong-portrait-fallback-acceptance.md)。
