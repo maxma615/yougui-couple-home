@@ -6,7 +6,7 @@
 
 深色电影感的自托管生活空间，包含照片、日历、纪念日、共同待办，以及日本麻将联机。
 
-[开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
+[如何使用](#使用入口) · [开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
 
 ![Node.js](https://img.shields.io/badge/Node.js-24%2B-43853D?logo=node.js&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-111111?logo=next.js)
@@ -35,6 +35,21 @@
 | 日本麻将 | 四人麻将、标准三麻、真人联机、电脑补位、东风／半庄 |
 
 管理员不占双人空间名额。普通成员不能访问其他空间的生活内容；管理员相册能力是独立的只读入口。
+
+## 使用入口
+
+| 想做什么 | 从哪里开始 |
+| --- | --- |
+| 登录 | `/login`，使用管理员配置的手机号或邮箱与密码 |
+| 上传照片 | 首页「添加照片」或相册新增记录；填写标题、日期，保存后继续添加 JPEG、PNG、WebP |
+| 邀请另一半 | 首页「邀请另一半」或「我们」里的配对入口，生成一次性邀请；对方打开后设置昵称、邮箱和密码，一次完成账号创建与加入 |
+| 修改名字、恋爱日期或密码 | `/settings`（我们），在对应弹窗中修改 |
+| 管理账号或添加另一对情侣 | 独立管理员登录 `/admin` 创建成员；未配对成员登录后创建自己的空间，再邀请或由管理员绑定第二位成员 |
+| 开始麻将 | 首页「麻将室」或 `/mahjong`，选择三人／四人、东风／半庄并创建牌桌 |
+
+网站没有公共注册入口。已配置账号直接登录；受邀成员通过邀请加入。每个生活空间最多两人，增加另一对情侣应创建另一个空间。
+
+麻将房主把 **8 位房间码**分享给朋友，朋友登录后输入房间码加入；人数不足时可选择「电脑补齐空位」。真人准备后，由房主开始牌局。电脑不需要另建账号。本机 `127.0.0.1` 的预览和邀请只能在当前电脑使用，跨设备需要共同可访问的部署地址。
 
 ## 麻将室
 
@@ -127,7 +142,7 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 | 类型、生产构建、构建秘密扫描 | 通过 |
 | ECS 同镜像受限 Linux 检查 | 772 项，46 文件通过 |
 | 发布后文件与公网资源 | 源码／构建摘要一致，145 项资源核验，健康接口 200 |
-| GitHub 干净克隆 | 全新依赖安装、类型检查、生产构建和秘密扫描通过 |
+| GitHub 干净克隆（`c7123f7` 历史版本） | 全新依赖安装、类型检查、生产构建和秘密扫描通过；未对 `1709ad8` 重新执行干净克隆验证 |
 
 这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[首局音频验收与发布](docs/mahjong-lobby-audio-acceptance.md)及[交接复核](docs/development-handoff.md)。
 
