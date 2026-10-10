@@ -52,3 +52,34 @@ for(const variant of ['sanma','yonma'] as const)it('shows real opening order the
  expect(draw.getAttribute('data-choice-id')).toBe(room.game!.choices.find(c=>c.type==='discard'&&c.value?.endsWith('_'))!.id);
  expect(t.onChoice).not.toHaveBeenCalled();
 });
+
+for(const variant of ['sanma','yonma'] as const)it('sorts all fourteen without confusing visual separation with the real draw '+variant,()=>{
+ room={...room,variant,game:physicalEngine(variant,{0:'p23987654s321z22'},'p1').view(0)};
+ const t=show(),physicalNodes=hand();
+ act(()=>vi.advanceTimersByTime(1200));
+ expect(hand().map(n=>n.getAttribute('data-tile-face'))).toEqual(['p1','p2','p3','p4','p5','p6','p7','p8','p9','s1','s2','s3','z2','z2']);
+ expect(hand().every(node=>physicalNodes.includes(node))).toBe(true);
+ expect(hand()[0].getAttribute('data-hand-instance-id')).toContain('drawn:');
+ expect(hand()[0].classList.contains('is-drawn')).toBe(false);
+ expect(hand().at(-1)!.classList.contains('is-drawn')).toBe(true);
+ act(()=>vi.advanceTimersByTime(300));
+ expect(hand()[0].getAttribute('data-tile-face')).toBe('p1');
+ fireEvent.click(hand()[0]);fireEvent.click(hand()[0]);
+ expect(t.onChoice.mock.calls[0][0].value).toBe('p1_');
+});
+
+it('keeps a real north draw in the middle usable for nuki sanma',()=>{
+ const variant='sanma' as const;
+ const engine=physicalEngine(variant,{0:'p123456789s12z57'},'z4');
+ room={...room,variant,game:engine.view(0)};const t=show();act(()=>vi.advanceTimersByTime(1500));
+ const north=hand().find(n=>n.getAttribute('data-hand-instance-id')?.startsWith('drawn:'))!;
+ expect(north.getAttribute('data-tile-face')).toBe('z4');expect(north.classList.contains('is-drawn')).toBe(false);
+ expect(hand().at(-1)!.getAttribute('data-tile-face')).toBe('z7');
+ fireEvent.click(screen.getByRole('button',{name:/^拔北$/}));
+ const chosen=t.onChoice.mock.calls[0][0];expect(chosen.type).toBe('nuki');
+ const before=engine.view(0);engine.respond(0,before.decisionId,chosen.id);
+ for(let i=0;i<4;i++)for(let seat=1;seat<3;seat++){const v=engine.view(seat),pass=v.choices.find(c=>c.type==='pass');if(pass)engine.respond(seat,v.decisionId,pass.id);}
+ const next=engine.view(0);expect(next.players[0].nuki).toBe(1);expect(next.initialDeal).toBeUndefined();
+ t.rerender(<GameRoom {...t.props} room={{...room,version:2,game:next}}/>);
+ expect(document.querySelector('[aria-label="公开拔北数量：1"]')).toBeTruthy();
+});

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import {render,cleanup,fireEvent} from '@testing-library/react';
 import {afterEach,expect,it,vi} from 'vitest';
-import {useOpeningSort,openingSortDuration} from '@/components/mahjong/use-opening-sort';
+import {useOpeningSort,openingSortDuration,rackLayoutX} from '@/components/mahjong/use-opening-sort';
 function Rack({age,scope='hand',connected=true}:{age:number|null;scope?:string;connected?:boolean}){
  const ref=useOpeningSort(age,scope,connected);
  const order=age!==null&&age<1200?['c','b','a']:['a','b','c'];
@@ -43,4 +43,10 @@ it('never animates an initial baseline or canceled opening',()=>{
 });
 it('scales distance by local pitch without viewport or frame-rate dependence',()=>{
  expect(openingSortDuration(84,42)).toBe(80);expect(openingSortDuration(-168,84)).toBe(80);expect(openingSortDuration(0,42)).toBe(0);expect(openingSortDuration(84,0)).toBe(0);
+});
+
+it('sums nested slot layout offsets without using transformed screen coordinates',()=>{
+ const rack=document.createElement('div'),slot=document.createElement('span'),tile=document.createElement('button');rack.append(slot);slot.append(tile);
+ for(const [node,left,parent] of [[rack,120,null],[slot,84,rack],[tile,3,slot]] as const)Object.defineProperties(node,{offsetLeft:{value:left},offsetParent:{value:parent}});
+ expect(rackLayoutX(tile)).toBe(207);
 });

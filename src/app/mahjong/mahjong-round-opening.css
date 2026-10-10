@@ -8,3 +8,10 @@
 .mahjong-game .mahjong-standing-tile[data-deal-wave]:not([data-deal-visible="false"]) { animation-name:mahjong-deal-rise; }
 .mahjong-game[data-round-opening]:not([data-opening-sorted]) .mahjong-player__hidden > .is-drawn { margin-inline-start:0; }
 @keyframes mahjong-deal-rise { from {transform:translateZ(6px);} to {transform:translateZ(0);} }
+
+/* Stable wrappers retain each physical button when all fourteen are reordered. */
+.mahjong-rack-slot { display:contents; }
+.mahjong-rack-slot.mahjong-drawn-wrap { display:inline-flex; }
+/* Reference separated offset .8 for normal pitch 2.55; the local pitch is
+   tile width plus the rack's two-pixel gap. Applies only to a real live opening. */
+.mahjong-game[data-opening-full-sort] .mahjong-hand .is-drawn { margin-left:calc((var(--hand-w,39px) + 2px) * .313725490196); }

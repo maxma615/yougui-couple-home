@@ -176,7 +176,7 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 
 | 方向 | 当前状态 |
 | --- | --- |
-| 开局发牌与理牌 | 真实 13 张起手顺序及理牌已发布；庄家完整 14 张视觉排序继续开发，尚未作为上线结果验收 |
+| 开局发牌与理牌 | 真实 13 张起手顺序及理牌已发布；庄家完整 14 张视觉排序已完成本地候选验证，尚未上线 |
 | 麻将视觉与交互 | 已有实体牌、副露、牌桌、宣告与结算；完整入场曲线及参考体验仍继续对齐 |
 | 设备与网络 | Chromium／WebKit 场景已有验证；真实 Android 与生产认证 WSS 故障场景仍待验收 |
 | 更多麻将规则 | 杭州、四川麻将尚未实现 |
@@ -219,6 +219,7 @@ npm run test:e2e
 - [管理员相册](docs/admin-albums-acceptance.md)
 - [麻将功能进度与待办](docs/mahjong-fidelity-progress.md)
 - [首局音频验收与上线](docs/mahjong-lobby-audio-acceptance.md)
+- [完整 14 张起手理牌（本地候选）](docs/mahjong-full-opening-rack-acceptance.md)
 - [真实起手牌序与理牌位移](docs/mahjong-initial-deal-acceptance.md)
 - [分批发牌与开局呈现](docs/mahjong-round-opening-acceptance.md)
 - [部署运维](docs/operations.md)
