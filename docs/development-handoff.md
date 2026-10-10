@@ -92,3 +92,8 @@ PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx tsx tests/browser/mahjong-round-ope
 2026-10-09 从 GitHub `main` 的 `c7123f7` 重新克隆到独立忽略目录，没有复用原工作目录的依赖、环境文件或构建。全新 `npm ci` 完成，`npm run typecheck`、`npm run build` 和 `npm run check:secrets` 均实际退出 0。这验证当前锁文件和公开源码可在本机重装并构建；本轮未重新执行整套数据库/浏览器验收，也未代表另一台设备或 Windows 已验收。
 
 同时逐文件核对本机主应用目录与已提交发布工作树：没有遗漏的 `src/`、`public/`、`tests/`、迁移、依赖锁文件或生产部署功能代码。两者的差异主要为旧说明、历史截图、本机生成的类型配置与未采用的域名草稿，当前接手以主分支和本指南为准。私人数据与临时日志保持排除。
+
+
+## 开局桌布双击视觉末张候选（2026-10-10）
+
+理牌后的桌布双击现从实际渲染 rack 选视觉末张，保留真实摸牌及合法 Choice 身份。1221／105 完整检查和208原生场景通过，候选尚未发布；当前 ECS 仍 d4aac3d。参考开局摸切标记语义与完整当前厂商体验继续待核对，见[验收](mahjong-opening-last-shortcut-acceptance.md)。

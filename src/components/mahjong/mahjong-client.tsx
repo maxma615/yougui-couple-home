@@ -500,7 +500,8 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
   }});
   const tableShortcut = useBlankTableDoubleTap({recoveryEpoch:choiceRecoveryEpoch,scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:opening.holding||busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
     if (!game || submittedChoiceRef.current) return false;
-    const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType));
+    const last=handRack(game,opening.age,openingIntent===openingKey(room,ownSeat)&&isOpeningGame(game,room.variant)).at(-1);
+    const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType),last?last.value+(last.logicalDraw?"_":""):undefined);
     if (!action) return false;
     automatic.manual();
     if (action.kind === "return-picker") { setPendingCallType(null); return false; }

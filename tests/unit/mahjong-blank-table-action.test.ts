@@ -36,3 +36,20 @@ for(const variant of ['sanma','yonma'] as const)it(variant+' discards the native
  const a=blankTableAction(called,1,false,false);expect(a?.kind).toBe('choice');
  if(a?.kind==='choice'){expect(a.choice.value).toBe(called.hand.at(-1));e.respond(1,called.decisionId,a.choice.id);expect(e.view(1).players[1].discards.length).toBe(1);}
 });
+
+for(const variant of ['sanma','yonma'] as const){
+ it(variant+' selects the displayed opening last tile with its offered hand-discard flag',()=>{
+  const e=physicalEngine(variant,{0:'p23987654s321z22'},'p1'),g=e.view(0);
+  const action=blankTableAction(g,0,false,false,'z2');
+  expect(action?.kind).toBe('choice');if(action?.kind!=='choice')throw Error('missing native last tile');
+  expect(action.choice.value).toBe('z2');expect(action.choice.id).toBe(g.choices.find(c=>c.type==='discard'&&c.value==='z2')!.id);
+  e.respond(0,g.decisionId,action.choice.id);expect(e.view(0).players[0].discards.at(-1)).toBe('z2');
+ });
+ it(variant+' never invents a drawn flag or falls back when the displayed last operation is unavailable',()=>{
+  const g=physicalEngine(variant,{0:'p23987654s321z22'},'p1').view(0);
+  expect(blankTableAction(g,0,false,false,'z2_')).toBeNull();
+  expect(blankTableAction(g,0,false,false,'m8')).toBeNull();
+  expect(blankTableAction(g,0,true,false,'z2')).toEqual({kind:'return-riichi'});
+  expect(blankTableAction(g,0,false,true,'z2')).toEqual({kind:'return-picker'});
+ });
+}

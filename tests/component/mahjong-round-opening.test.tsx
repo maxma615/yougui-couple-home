@@ -83,3 +83,18 @@ it('keeps a real north draw in the middle usable for nuki sanma',()=>{
  t.rerender(<GameRoom {...t.props} room={{...room,version:2,game:next}}/>);
  expect(document.querySelector('[aria-label="公开拔北数量：1"]')).toBeTruthy();
 });
+
+for(const variant of ['sanma','yonma'] as const)it('double felt tap discards the displayed opening last tile '+variant,()=>{
+ const pref='yougui.mahjong.doubleClick',previous=localStorage.getItem(pref);localStorage.setItem(pref,'1');
+ try{
+  room={...room,variant,game:physicalEngine(variant,{0:'p23987654s321z22'},'p1').view(0)};
+  const t=show();act(()=>vi.advanceTimersByTime(1500));
+  expect(hand().at(-1)!.getAttribute('data-tile-face')).toBe('z2');
+  vi.spyOn(hand().at(-1)!,'getBoundingClientRect').mockReturnValue(new DOMRect(100,200,40,60));
+  const felt=document.querySelector('.mahjong-table__surface')!;
+  const tap=()=>{for(const type of ['pointerdown','pointerup']){const event=new Event(type,{bubbles:true});Object.assign(event,{pointerId:1,button:0,isPrimary:true,clientX:100,clientY:100});fireEvent(felt,event);}};
+  tap();act(()=>vi.advanceTimersByTime(60));tap();
+  expect(t.onChoice).toHaveBeenCalledOnce();expect(t.onChoice.mock.calls[0][0].value).toBe('z2');
+  expect(t.onChoice.mock.calls[0][1].sourceTileId).toBe(hand().at(-1)!.getAttribute('data-hand-instance-id'));
+ }finally{if(previous===null)localStorage.removeItem(pref);else localStorage.setItem(pref,previous);}
+});
