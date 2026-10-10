@@ -1,6 +1,6 @@
 # 开局发牌的材质与落位
 
-日期：2026-10-10。本地候选，线上仍为 `3871589`；完整雀魂体验目标继续进行。
+日期：2026-10-10。已在授权 ECS 发布 `d4aac3d`，入口 <https://8.133.186.15/mahjong>；完整雀魂体验目标继续进行。
 
 ## 对齐范围
 
@@ -22,6 +22,16 @@
 
 证明入口位于忽略的 `.local/audit`：`deal-arrival-red-r01.log`、`deal-arrival-native-r04.log`、`deal-arrival-1791609978777/proof.json`、`deal-arrival-full-r01.log`、`deal-arrival-type-r02.log`、`deal-arrival-build-r01.log`、`deal-arrival-secrets-r01.log`。检查了桌面 Chromium 和窄横屏 WebKit 半程截图，软件渲染的既有透视偏差不用于调整已验证共享相机；没有把这些截图当作实际 GPU／Android 验收。
 
-根任务自行审查，不称为独立审查。候选同镜像 ECS 和发布尚待执行。父版本只读核对实际退出 0，现有运行代码、构建、照片清理器、禁备份策略与资源限制保持。
+根任务自行审查，不称为独立审查。同镜像 ECS 800 项 / 49 文件已在半核 CPU、384 MiB 内存、无网络、只读根文件系统容器内实际通过；发布进程实际退出 0。父版本只读核对实际退出 0，现有运行代码、构建、照片清理器、禁备份策略与资源限制保持。
 
 联机证明：`.local/audit/round-opening-network-1791609866436/proof.json`；日志 `deal-arrival-network-r01.log` 实际退出 0，两份当前源码绑定已复核。
+
+## 发布闭环
+
+运行源码 `d4aac3d4f8fe364ae7518a3e07716d4616a5cc5d`，Build `DWIyyZZk-QVhQ6QFfqDbU`，镜像 `sha256:750bb900ce8bcf5c2454417a2dc68b3c717d9184d5cf9e624a9af0ad3ba3f87e`。冻结清单 SHA-256 `afe40904313a26f2a549be693836ff4b9fcc4c7698195a6ce3447952af539eb1`，743 源文件 / 449 构建文件逐项一致。13 个阶段有明确成功终态，公网可信 TLS 健康 200、145 项资源摘要一致。屏障内无活动真人牌局，健康后恢复入口。
+
+十二表发布前后摘要均为 `9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`；账号 7、空间 3、成员关系 5、照片 29、迁移 7。应用维持 1 CPU / 768 MiB、无 OOM，清理器身份及镜像保持。禁备份标记不变，timer masked/inactive、service inactive，三个备份目录不存在；没有生成备份或下载真实资料。
+
+本机冻结和闭环：`.local/ecs-deploy/late-response-d4aac3d-r01-frozen.json`、`deal-arrival-published-closeout-r01.json`。构建 PID 2093699、Linux PID 2094301、发布 PID 2096862 均已由终态确认完成。Linux 没有因观察等待而重新启动，日志和资源观测持续指向同一个 PID。
+
+源码与发布文档分别立即普通快进推送 GitHub `main` 和工作分支。此轮只改 CSS 入场，不改服务端规则、电脑算法、账号或共享相机。后续待核对项包括开局双击桌布的视觉末张与参考 `last_tile` 语义、完整世界尺度、实际 GPU／Android、生产认证 WSS 故障，以及完整当前厂商规则与音画；不将归一化曲线通过视作整个目标完成。

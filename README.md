@@ -19,7 +19,7 @@
 
 </div>
 
-> 更新于 **2026-10-10**。生活空间、独立管理员、三／四人日本麻将与电脑补位均已上线。当前线上运行代码为 `3871589`，此 README 的更新不改变服务器运行版本。
+> 更新于 **2026-10-10**。生活空间、独立管理员、三／四人日本麻将与电脑补位均已上线。当前线上运行代码为 `d4aac3d`，此 README 的更新不改变服务器运行版本。
 
 ## 现在的有归
 
@@ -177,7 +177,7 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 | 方向 | 当前状态 |
 | --- | --- |
 | 开局发牌与理牌 | 真实 13 张起手顺序及理牌已发布；庄家完整 14 张视觉排序及视觉末张分隔也已发布，真实摸牌操作身份保留 |
-| 麻将视觉与交互 | 已有实体牌、副露、牌桌、宣告与结算；完整入场曲线及参考体验仍继续对齐 |
+| 麻将视觉与交互 | 已有实体牌、副露、牌桌、宣告与结算；200 ms 线性入场材质与相对高度已发布，完整视觉与真机体验仍继续对齐 |
 | 设备与网络 | Chromium／WebKit 场景已有验证；真实 Android 与生产认证 WSS 故障场景仍待验收 |
 | 更多麻将规则 | 杭州、四川麻将尚未实现 |
 
@@ -185,18 +185,18 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 
 ## 验证状态
 
-截至 2026-10-10，最新运行代码 `3871589` 已完成以下实际检查；之后的 README 与交接文档提交不改变网站运行代码。
+截至 2026-10-10，最新运行代码 `d4aac3d` 已完成以下实际检查；之后的 README 与交接文档提交不改变网站运行代码。
 
 | 范围 | 结果 |
 | --- | --- |
 | 完整单元／组件／集成检查 | 1215 项，105 文件通过 |
-| 本轮原生浏览器与联机场景 | 542 场景通过 |
+| 本轮原生浏览器与联机场景 | 248 场景通过 |
 | 类型、生产构建、构建秘密扫描 | 通过 |
 | ECS 同镜像受限 Linux 检查 | 800 项，49 文件通过 |
 | 发布后文件与公网资源 | 源码／构建摘要一致，145 项资源核验，健康接口 200 |
-| GitHub 干净克隆（`c7123f7` 历史版本） | 全新依赖安装、类型检查、生产构建和秘密扫描通过；未对 `3871589` 重新执行干净克隆验证 |
+| GitHub 干净克隆（`c7123f7` 历史版本） | 全新依赖安装、类型检查、生产构建和秘密扫描通过；未对 `d4aac3d` 重新执行干净克隆验证 |
 
-这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[完整起手理牌发布](docs/mahjong-full-opening-rack-acceptance.md)及[交接复核](docs/development-handoff.md)。
+这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[材质与落位发布](docs/mahjong-deal-arrival-acceptance.md)及[交接复核](docs/development-handoff.md)。
 
 常用检查：
 
@@ -219,7 +219,7 @@ npm run test:e2e
 - [管理员相册](docs/admin-albums-acceptance.md)
 - [麻将功能进度与待办](docs/mahjong-fidelity-progress.md)
 - [首局音频验收与上线](docs/mahjong-lobby-audio-acceptance.md)
-- [开局线性材质与落位（本地候选）](docs/mahjong-deal-arrival-acceptance.md)
+- [开局线性材质与落位](docs/mahjong-deal-arrival-acceptance.md)
 - [完整 14 张起手理牌](docs/mahjong-full-opening-rack-acceptance.md)
 - [真实起手牌序与理牌位移](docs/mahjong-initial-deal-acceptance.md)
 - [分批发牌与开局呈现](docs/mahjong-round-opening-acceptance.md)
