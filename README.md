@@ -118,18 +118,18 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 
 ## 验证状态
 
-截至 2026-10-09，最新运行代码 `0abd219` 已完成以下实际检查；之后的 README 与交接文档提交不改变网站运行代码。
+截至 2026-10-10，最新运行代码 `1709ad8` 已完成以下实际检查；之后的 README 与交接文档提交不改变网站运行代码。
 
 | 范围 | 结果 |
 | --- | --- |
-| 完整单元／组件／集成检查 | 1180 项，102 文件通过 |
-| 本轮原生浏览器与联机场景 | 336 场景通过 |
+| 完整单元／组件／集成检查 | 1187 项，102 文件通过 |
+| 本轮原生浏览器与联机场景 | 346 场景通过 |
 | 类型、生产构建、构建秘密扫描 | 通过 |
-| ECS 同镜像受限 Linux 检查 | 765 项，46 文件通过 |
+| ECS 同镜像受限 Linux 检查 | 772 项，46 文件通过 |
 | 发布后文件与公网资源 | 源码／构建摘要一致，145 项资源核验，健康接口 200 |
 | GitHub 干净克隆 | 全新依赖安装、类型检查、生产构建和秘密扫描通过 |
 
-这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[最新开局验收与发布](docs/mahjong-round-opening-acceptance.md)及[交接复核](docs/development-handoff.md)。
+这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[首局音频验收与发布](docs/mahjong-lobby-audio-acceptance.md)及[交接复核](docs/development-handoff.md)。
 
 常用检查：
 
@@ -151,7 +151,8 @@ npm run test:e2e
 - [管理员与手机号账号](docs/admin-phone-acceptance.md)
 - [管理员相册](docs/admin-albums-acceptance.md)
 - [麻将功能进度与待办](docs/mahjong-fidelity-progress.md)
-- [最新开局验收与上线](docs/mahjong-round-opening-acceptance.md)
+- [首局音频验收与上线](docs/mahjong-lobby-audio-acceptance.md)
+- [分批发牌与开局呈现](docs/mahjong-round-opening-acceptance.md)
 - [部署运维](docs/operations.md)
 
 ## License

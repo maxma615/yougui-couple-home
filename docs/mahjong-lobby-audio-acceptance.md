@@ -1,6 +1,6 @@
 # 大厅至首局音频授权验收
 
-日期：2026-10-10。本轮修复首局声音授权，当前为本地实现；线上仍为 0abd219，不将提交等同于部署。
+日期：2026-10-10。本轮首局声音授权修复已发布，线上为 1709ad8e5e6d9b10a83e9a100a13214268dd1aca，Build QCvI0VjH-ul7m_H76Pp_A。
 
 ## 实际问题与修复
 
@@ -20,4 +20,14 @@ WebKit 的 resume Promise 可能晚于第一批牌提交。新的真实浏览器
 - 初始 WebKit r01/r02 失败促成解锁时序修复；诊断 r03/r04 记录 native context 状态，r05 的 32 个开声场景通过。r06 扩展到静音后的全部场景经过，但末尾仍保留旧 32 数量断言；仅修正测试数量、证据文件名和干净目录创建，失败日志保留，不将其列为完整通过。
 - 首次完整 r01 的本机数据库未运行，r02 缺少 pg_dump PATH；启动本应用数据库并设置对应工具路径后重新完整执行，未修改产品以绕过数据库／恢复检查。
 
-最终 `.local/audit/lobby-audio-native-r07.log` 实际退出 0，64 场景全部通过，证据 `.local/audit/round-opening-network-1791603576484/proof.json`；提交前逐项验证源码摘要与音频启动记录。原音效生命周期 `.local/audit/lobby-audio-lifecycle-r01.log` 为 42 个真实 GameRoom 场景通过，证据 `.local/audit/table-audio-runtime-1791603570093/summary.json`。自动操作联机回归继续观察原任务，完成情况另记。真实 Android、扬声器人工听感、生产认证 WSS 故障和完整参考体验仍未全部验收，整体目标继续 active。
+最终 `.local/audit/lobby-audio-native-r07.log` 实际退出 0，64 场景全部通过，证据 `.local/audit/round-opening-network-1791603576484/proof.json`；提交前逐项验证源码摘要与音频启动记录。原音效生命周期 `.local/audit/lobby-audio-lifecycle-r01.log` 为 42 个真实 GameRoom 场景通过，证据 `.local/audit/table-audio-runtime-1791603570093/summary.json`。自动／手动操作联机回归 `.local/audit/lobby-audio-automatic-r01.log` 实际退出 0，240 场景通过，证据 `.local/audit/automatic-network-1791603630023/proof.json`；当前源码摘要逐项一致。本轮共 346 原生场景，不将之前的 336 场景计为本次重跑。真实 Android、扬声器人工听感、生产认证 WSS 故障和完整参考体验仍未全部验收，整体目标继续 active。
+
+## ECS 发布闭环
+
+同一冻结镜像 `sha256:22d21a7f664dc0d0bfb5873b14d16a2852124282654acf23825142f394cfc590` 在 ECS 以 0.5 CPU / 384 MiB、无网络及只读临时容器执行 46 文件 / 772 项检查，全部通过。构建 PID 2056538、Linux PID 2057367、发布 PID 2059795 均实际退出 0，没有因观察等待重启任务。Linux 日志进度读取 r02 在任务结束后因 kill -0 失败，随后的原状态命令 r07 证实同一任务已成功结束；不把进度读取失败当作测试失败或重启依据。
+
+733 源码 / 449 构建文件摘要一致，冻结清单摘要 `2ca5f7d75f7191ccaba1e00b811ec131ea7c1bcbfbee67bdf2ee71b48e8061e4`。十三阶段终态、公网 145 项资源摘要和可信 TLS 健康 200 均通过。发布权威检查无活跃真人牌桌，保护门已恢复。
+
+十二表前后摘要均为 `9a1223afc6951979ded1c169c5fa2ff3220f188236cc55a0ff3e15e4af316a41`，用户7／空间3／成员5／照片29／迁移7；清理器容器身份和镜像保持。应用1 CPU／768 MiB、运行正常且无 OOM；禁备份标记为空的普通文件，定时器 masked/inactive、服务 inactive，三个备份路径不存在。没有下载用户资料。
+
+完整闭环证据 `.local/ecs-deploy/lobby-audio-published-closeout-r01.json`。公网资源核验不替代生产真实账号的声音人工试听、Android、完整参考体验或认证 WSS 故障验收，整体目标保持 active。
