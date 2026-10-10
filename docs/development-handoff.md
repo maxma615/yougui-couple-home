@@ -75,7 +75,7 @@ PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx tsx tests/browser/mahjong-round-ope
 
 这些脚本生成 `.local/audit` 的测量与截图；它们使用本机适配，不替代生产认证 WSS 或真实安卓验收。受硬件渲染影响的 3D 投影要结合实际 GPU 浏览器检查。
 
-最新完整运行代码检查为 1215 项 / 105 文件、248 原生浏览器及联机场景、类型/构建/秘密扫描；同镜像 ECS Linux 800 项 / 49 文件。详见 [材质与落位发布](mahjong-deal-arrival-acceptance.md)。这是既有版本证据，换设备后仍应按所改范围复跑。当前源码完整程度和待办见 [麻将进度](mahjong-fidelity-progress.md)。首局声音手势授权已修复并发布，见 [本轮验收](mahjong-lobby-audio-acceptance.md)。优先未完成项包括真实 Android、完整世界尺度与入场呈现、开局桌布双击末张语义、生产认证 WSS 故障场景；不要把目标写成已经全部完成。
+最新已发布运行代码 `2cc2f94` 的检查为 1235 项 / 105 文件、304 原生浏览器及联机场景、类型/构建/秘密扫描；同镜像 ECS Linux 820 项 / 49 文件。详见 [开局自动摸切发布](mahjong-opening-auto-acceptance.md)。这是该版本的实际证据，换设备后仍应按所改范围复跑。开局桌布双击与自动摸切现均选视觉末张，真实摸牌身份和合法操作保持；参考客户端开局摸切标记的协议语义仍待核对。优先未完成项是手机竖屏回退后的点按与拖牌、真实 Android／GPU、完整当前参考体验及生产认证 WSS 故障场景，详见 [麻将进度](mahjong-fidelity-progress.md)。
 
 ## 生产环境与提交约定
 
@@ -94,7 +94,7 @@ PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx tsx tests/browser/mahjong-round-ope
 同时逐文件核对本机主应用目录与已提交发布工作树：没有遗漏的 `src/`、`public/`、`tests/`、迁移、依赖锁文件或生产部署功能代码。两者的差异主要为旧说明、历史截图、本机生成的类型配置与未采用的域名草稿，当前接手以主分支和本指南为准。私人数据与临时日志保持排除。
 
 
-## 开局桌布双击视觉末张候选（2026-10-10）
+## 历史候选记录：开局桌布双击视觉末张（2026-10-10）
 
 理牌后的桌布双击现从实际渲染 rack 选视觉末张，保留真实摸牌及合法 Choice 身份。1221／105 完整检查和208原生场景通过，候选尚未发布；当前 ECS 仍 d4aac3d。参考开局摸切标记语义与完整当前厂商体验继续待核对，见[验收](mahjong-opening-last-shortcut-acceptance.md)。
 
@@ -104,7 +104,7 @@ PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx tsx tests/browser/mahjong-round-ope
 7d5daf5／Build H9qssq6w2xCRo_MZRd3qr 已上线，1221／105完整检查、208原生场景、最终镜像受限Linux806／49、744源码／449构建、公网145资源及13阶段终态通过；12表摘要、资源、清理器和禁备份保持。参考开局摸切标记／自动操作、实际GPU／Android与生产认证WSS及完整当前厂商体验仍待核对，见[发布验收](mahjong-opening-last-shortcut-acceptance.md)。
 
 
-## 开局自动摸切候选（2026-10-10）
+## 历史候选记录：开局自动摸切（2026-10-10）
 
 候选统一实际渲染rack末张与自动弃牌，保留真实摸牌身份、合法Choice及特殊操作优先级。1235／105完整、304原生场景、类型／构建／374扫描通过，本机Linux选择820／49；ECS仍7d5daf5，候选同镜像／发布待验。见[验收](mahjong-opening-auto-acceptance.md)。
 
