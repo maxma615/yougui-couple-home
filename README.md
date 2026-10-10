@@ -21,7 +21,7 @@
 
 </div>
 
-> 更新于 **2026-10-10**。当前自用地址：[有归](https://8.133.186.15) · [麻将室](https://8.133.186.15/mahjong)。需要已配置的账号登录。线上运行代码为 `4a238f0`，源码提交与服务器发布分别记录。
+> 更新于 **2026-10-10**。当前自用地址：[有归](https://8.133.186.15) · [麻将室](https://8.133.186.15/mahjong)。需要已配置的账号登录。线上运行代码为 `2904c46`，源码提交与服务器发布分别记录。
 
 ## 从这里开始
 
@@ -30,7 +30,7 @@
 | 先看有哪些功能、怎么配对和打牌 | [功能一览](#现在的有归)、[使用入口](#使用入口)、[麻将操作](#牌桌怎么操作) |
 | 换一台设备继续开发 | [本地启动](#从另一台设备继续开发)、[开发交接](docs/development-handoff.md) |
 | 部署自己的实例 | [自托管部署](#自托管部署)、[运维手册](docs/operations.md) |
-| 接着完善麻将 | [当前进度与待办](docs/mahjong-fidelity-progress.md)、[最新上线验收](docs/mahjong-portrait-fallback-acceptance.md) |
+| 接着完善麻将 | [当前进度与待办](docs/mahjong-fidelity-progress.md)、[最新上线验收](docs/mahjong-fitted-frame-acceptance.md) |
 
 ### 最近的变化
 
@@ -41,7 +41,7 @@
 | 实体牌桌与动态反馈 | 牌河、副露、拔北展示、宝牌指示、书法宣告、声音与逐席结算 |
 | 手机竖屏横向展示 | 触屏竖屏时自动旋转牌桌，拖牌、操作按钮和弹窗使用对应坐标 |
 
-真实 Android 操作仍待验收；居中 16:9 画幅已有[本地候选](docs/mahjong-fitted-frame-acceptance.md)，尚未上线；完整参考体验继续开发。杭州和四川麻将尚未实现。版本证据见[最新上线验收](docs/mahjong-portrait-fallback-acceptance.md)。
+真实 Android 操作仍待验收；居中 16:9 画幅已[上线](docs/mahjong-fitted-frame-acceptance.md)；完整参考体验继续开发。杭州和四川麻将尚未实现。版本证据见[最新上线验收](docs/mahjong-portrait-fallback-acceptance.md)。
 
 ## 现在的有归
 
@@ -250,7 +250,7 @@ flowchart LR
 
 ## 后续开发
 
-接手优先阅读[麻将进度与待办](docs/mahjong-fidelity-progress.md)。当前继续完成 16:9 候选的服务器验证与发布，并完善整体尺度、完整音画反馈及开局摸切协议语义；真实 Android／GPU 和生产认证 WSS 故障场景仍待验收。杭州、四川麻将列为后续规则扩展。
+接手优先阅读[麻将进度与待办](docs/mahjong-fidelity-progress.md)。居中 16:9 画幅已发布，当前继续完善整体尺度、完整音画反馈及开局摸切协议语义；真实 Android／GPU 和生产认证 WSS 故障场景仍待验收。杭州、四川麻将列为后续规则扩展。
 
 从 `main` 建立自己的开发分支，按变更范围复跑检查。完成并验证后提交，普通推送工作分支；`main` 可快进时同步更新，并核对远端提交。服务器发布另行执行，文档提交不会改变线上运行版本。
 
@@ -260,18 +260,18 @@ GitHub 保存代码、迁移、锁文件、素材、测试和部署说明。生�
 
 以下记录对应**已发布版本**，不混入本地未提交改动的测试数量。
 
-截至 2026-10-10，最新运行代码 `4a238f0` 已完成以下实际检查；之后的 README 与交接文档提交不改变网站运行代码。
+截至 2026-10-10，最新运行代码 `2904c46` 已完成以下实际检查；之后的 README 与交接文档提交不改变网站运行代码。
 
 | 范围 | 结果 |
 | --- | --- |
-| 完整单元／组件／集成检查 | 1246 项，106 文件通过 |
-| 本轮原生浏览器与联机场景 | 274 场景通过 |
+| 完整单元／组件／集成检查 | 1259 项，107 文件通过 |
+| 本轮原生浏览器与联机场景 | 290 场景通过 |
 | 类型、生产构建、构建秘密扫描 | 通过 |
-| ECS 同镜像受限 Linux 检查 | 831 项，50 文件通过 |
+| ECS 同镜像受限 Linux 检查 | 844 项，51 文件通过 |
 | 发布后文件与公网资源 | 源码／构建摘要一致，145 项资源核验，健康接口 200 |
-| GitHub 干净克隆（`c7123f7` 历史版本） | 全新依赖安装、类型检查、生产构建和秘密扫描通过；未对 `4a238f0` 重新执行干净克隆验证 |
+| GitHub 干净克隆（`c7123f7` 历史版本） | 全新依赖安装、类型检查、生产构建和秘密扫描通过；未对 `2904c46` 重新执行干净克隆验证 |
 
-这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[竖屏回退发布](docs/mahjong-portrait-fallback-acceptance.md)及[交接复核](docs/development-handoff.md)。
+这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[16:9 牌桌发布](docs/mahjong-fitted-frame-acceptance.md)及[交接复核](docs/development-handoff.md)。
 
 常用检查：
 
@@ -292,7 +292,7 @@ npm run test:e2e
 | --- | --- |
 | [开发接手](docs/development-handoff.md) | 空设备配置、账号初始化、代码地图和跨平台说明 |
 | [麻将进度](docs/mahjong-fidelity-progress.md) | 功能状态、参考差异、未完成项和历次验收入口 |
-| [最新牌桌发布](docs/mahjong-portrait-fallback-acceptance.md) | 手机竖屏回退、拖牌坐标、按钮和弹窗验证 |
+| [最新牌桌发布](docs/mahjong-fitted-frame-acceptance.md) | 居中 16:9、坐标与留边、弹窗及开局音频验证 |
 | [整站界面](docs/cinematic-redesign-acceptance.md) | 深色电影感重构范围与验收 |
 | [管理员与手机号](docs/admin-phone-acceptance.md) | 账号、权限与空间配对 |
 | [管理员相册](docs/admin-albums-acceptance.md) | 跨空间相册只读与普通成员隔离 |
