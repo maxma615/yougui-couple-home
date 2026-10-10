@@ -109,9 +109,17 @@ for(const engine of [chromium,webkit].filter(e=>!process.env.MAHJONG_NATIVE_ENGI
     await page.clock.runFor(1);
    }
    else if(action==='blank-discard'){
-    const blank=await page.evaluate(()=>{const b=document.querySelector('.mahjong-table')!.getBoundingClientRect();for(let y=b.top+b.height*.12;y<b.top+b.height*.75;y+=12)for(let x=b.left+b.width*.15;x<b.left+b.width*.85;x+=12)if(document.elementFromPoint(x,y)?.matches('.mahjong-table__surface'))return{x,y};throw Error('no directly hittable felt');});
+    const blank=await page.evaluate(()=>{
+     const b=document.querySelector('.mahjong-table')!.getBoundingClientRect();
+     const controls=[...document.querySelectorAll('button,a,input,summary,[role="button"]')].map(el=>el.getBoundingClientRect()).filter(r=>r.width>0&&r.height>0);
+     for(let y=b.top+b.height*.12;y<b.top+b.height*.75;y+=12)for(let x=b.left+b.width*.15;x<b.left+b.width*.85;x+=12){
+      const clear=controls.every(r=>Math.hypot(Math.max(r.left-x,0,x-r.right),Math.max(r.top-y,0,y-r.bottom))>=32);
+      if(clear&&document.elementFromPoint(x,y)?.matches('.mahjong-table__surface'))return{x,y};
+     }throw Error('no touch-clear directly hittable felt');
+    });
+    await page.evaluate(()=>{(window as any).__blankPointerTargets=[];document.addEventListener('pointerdown',e=>(window as any).__blankPointerTargets.push((e.target as Element)?.matches('.mahjong-table__surface')),true);});
     const tap=async()=>hasTouch?await page.touchscreen.tap(blank.x,blank.y):await page.mouse.click(blank.x,blank.y);
-    await tap();await page.clock.runFor(60);await tap();
+    await tap();await page.clock.runFor(60);await tap();assert.deepEqual(await page.evaluate(()=>(window as any).__blankPointerTargets),[true,true],'both native touches must target felt rather than a nearby tile');
    }
    else if(action==='nuki')await page.getByRole('button',{name:'拔北',exact:true}).click();
    else if(action==='tsumo')await page.getByRole('button',{name:'自摸',exact:true}).click();

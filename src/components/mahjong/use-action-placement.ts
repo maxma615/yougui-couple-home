@@ -13,18 +13,18 @@ export function useMahjongActionPlacement(root:RefObject<HTMLElement|null>,enabl
   const original=new Map<HTMLElement,Map<string,string>>();let frame=0,stopped=false;
   const restore=()=>{for(const [button,values]of original)for(const [name,value]of values)value?button.style.setProperty(name,value):button.style.removeProperty(name);game.querySelector('.mahjong-action-dock')?.removeAttribute('data-action-layout');};
   const layout=()=>{
-   if(stopped||!game.isConnected||(game.dataset.tableRotated!=='true'&&window.matchMedia&&!window.matchMedia('(orientation: landscape)').matches))return;
+   if(stopped||!game.isConnected||(game.dataset.tableFitted!=='true'&&game.dataset.tableRotated!=='true'&&window.matchMedia&&!window.matchMedia('(orientation: landscape)').matches))return;
    const dock=game.querySelector<HTMLElement>('.mahjong-action-dock');if(!dock)return;
    const buttons=[...dock.querySelectorAll<HTMLElement>(':scope > button')];if(!buttons.length)return;
    restore();
    const space=tableSpace(game);
-   const localRect=(el:Element)=>space.rotated?tableRect(space,el.getBoundingClientRect()):rect(el);
+   const localRect=(el:Element)=>(space.rotated||game.dataset.tableFitted==='true')?tableRect(space,el.getBoundingClientRect()):rect(el);
    const actions=buttons.map((button,i)=>({id:String(i),...localRect(button)})).filter(a=>a.w>0&&a.h>0);
    const obstacles=[...shell.querySelectorAll(actionPlacementProtectedSelector)].filter(el=>!el.closest('.mahjong-action-dock')).map(localRect).filter(r=>r.w>0&&r.h>0);
    const style=getComputedStyle(game),inset=(name:string)=>Math.max(8,parseFloat(style.getPropertyValue(name))||0);
    const left=inset('--action-safe-left'),top=inset('--action-safe-top'),right=inset('--action-safe-right'),bottom=inset('--action-safe-bottom');
    game.dataset.actionLayoutRuns=String((Number(game.dataset.actionLayoutRuns)||0)+1);
-   const before=performance.now(),placed=placeMahjongActions(actions,obstacles,{x:left,y:top,w:(space.rotated?space.width:innerWidth)-left-right,h:(space.rotated?space.height:innerHeight)-top-bottom});
+   const before=performance.now(),placed=placeMahjongActions(actions,obstacles,{x:left,y:top,w:(game.dataset.tableFitted==='true'||space.rotated?space.width:innerWidth)-left-right,h:(game.dataset.tableFitted==='true'||space.rotated?space.height:innerHeight)-top-bottom});
    game.dataset.actionLayoutMs=String(performance.now()-before);
    game.dataset.actionLayoutState=placed?'ready':'unplaced';
    if(!placed)return; // Preserve every original action if no clear packing exists.

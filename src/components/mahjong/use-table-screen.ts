@@ -2,13 +2,15 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 
+import { fitTableViewport } from "./fit-table-viewport";
+
 type LockableOrientation = ScreenOrientation & { lock?: (orientation: "landscape") => Promise<void> };
 
 const landscape = () => window.matchMedia ? window.matchMedia("(orientation: landscape)").matches : window.innerWidth >= window.innerHeight;
 const rotationHint = "当前浏览器无法自动横屏，请旋转手机后继续。";
 
 export function useTableScreen(enabled = true) {
-  const [rotated, setRotated] = useState(false);
+  const [frame, setFrame] = useState<ReturnType<typeof fitTableViewport>>(null);
   const [hint, setHint] = useState("");
   const [pending, setPending] = useState(false);
   const lifecycle = useRef({ mounted: true, fullscreen: false, orientation: false, orientationSession: null as Element | null, pending: false });
@@ -18,7 +20,9 @@ export function useTableScreen(enabled = true) {
     const media = window.matchMedia?.("(orientation: landscape)");
     const touch = window.matchMedia?.("(pointer: coarse)");
     const refresh = () => {
-      setRotated(Boolean(touch?.matches && window.innerWidth <= 1024 && window.innerHeight > window.innerWidth));
+      const rotated = Boolean(touch?.matches && window.innerWidth <= 1024 && window.innerHeight > window.innerWidth);
+      const next = fitTableViewport(window.innerWidth, window.innerHeight, rotated);
+      setFrame(previous => previous?.width === next?.width && previous?.height === next?.height && previous?.rotated === next?.rotated ? previous : next);
       if (landscape()) setHint("");
     };
     refresh();
@@ -86,5 +90,5 @@ export function useTableScreen(enabled = true) {
       if (state.mounted) setPending(false);
     }
   }
-  return { enter, hint, pending, rotated: enabled && rotated };
+  return { enter, hint, pending, frame: enabled ? frame : null, rotated: enabled && Boolean(frame?.rotated) };
 }

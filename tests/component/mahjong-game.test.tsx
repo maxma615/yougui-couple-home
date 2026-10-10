@@ -566,3 +566,25 @@ for(const interruption of ['disconnect','busy','decision'] as const)it('never re
  result.rerender(<GameRoom {...props} connected={interruption!=='disconnect'} busy={interruption==='busy'} room={interruption==='decision'?room({...view,decisionId:view.decisionId+'next'}):props.room}/>);
  expect(screen.getByTestId('mahjong-board').hasAttribute('data-matching-tile')).toBe(false);expect(onChoice).not.toHaveBeenCalled();
 });
+
+it("establishes the initial fitted table observation without canceling audio, while subsequent resize still cancels", () => {
+  const observations: {target:Element;notify:()=>void}[]=[];
+  vi.stubGlobal("ResizeObserver",class {
+    constructor(private callback:()=>void) {}
+    observe(target:Element){observations.push({target,notify:this.callback});}
+    disconnect(){}
+  });
+  const invalidate=vi.fn();
+  render(<GameRoom room={room(fixtureGame().view(0))} ownSeat={0} host connected busy={false}
+    tableAudio={{enabled:true,toggle:vi.fn(),land:vi.fn(),invalidate,dealWave:vi.fn()}}
+    onChoice={vi.fn()} onFinish={vi.fn()} onLeave={vi.fn()} onRematch={vi.fn()}/>);
+  const observer=observations.find(o=>o.target.classList.contains('mahjong-table'))!;
+  expect(observer).toBeDefined();
+  let dimensions=DOMRect.fromRect({width:666,height:375});
+  Object.defineProperty(observer.target,'getBoundingClientRect',{configurable:true,value:()=>dimensions});
+  act(()=>observer.notify());expect(invalidate).not.toHaveBeenCalled();
+  act(()=>observer.notify());expect(invalidate).not.toHaveBeenCalled();
+  dimensions=DOMRect.fromRect({width:693,height:390});
+  act(()=>observer.notify());expect(invalidate).toHaveBeenCalledOnce();
+  act(()=>observer.notify());expect(invalidate).toHaveBeenCalledOnce();
+});

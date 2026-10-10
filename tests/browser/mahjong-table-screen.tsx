@@ -16,10 +16,11 @@ writeFileSync(`${out}/manifest.json`,JSON.stringify({css:sha(css),bundle:sha(bun
 const results:unknown[]=[];
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true});
- try{for(const width of [375,390])for(const variant of ['sanma','yonma'] as const){
+ try{for(const width of [375,390,412,768])for(const variant of ['sanma','yonma'] as const){
   const game=physicalEngine(variant,{0:'p123456789s124z2'},'s2');const view=game.view(0);
   const room:RoomView={id:'screen',code:'ABCDEFGH',hostUserId:'0',variant,mode:'east',status:'playing',version:1,mySeat:0,game:view,members:view.players.map(p=>({userId:String(p.seat),seat:p.seat,displayName:['甲','乙','丙','丁'][p.seat],kind:'human',ready:true,connected:true}))};
-  const context=await browser.newContext({viewport:{width,height:844},hasTouch:true,isMobile:true});const page=await context.newPage();const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  const height=width===412?915:width===768?1024:844;const fittedLength=width===375?666:width===390?693:width===412?732:1024;const fittedBreadth=width===768?576:width;
+  const context=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true});const page=await context.newPage();const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   for(const path of ['images','fonts'])await page.route(`https://mahjong.local/${path}/**`,r=>{const p=new URL(r.request().url()).pathname;return r.fulfill({contentType:p.endsWith('.woff2')?'font/woff2':p.endsWith('.svg')?'image/svg+xml':'image/webp',body:readFileSync('public'+p)});});
   await page.setContent(`<base href="https://mahjong.local/"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;line-height:1.65;--font-body:sans-serif;--font-display:serif}*,*:before,*:after{box-sizing:border-box}${css}</style><div id="root"></div>`);
   await page.addScriptTag({content:`globalThis.__name=(t,v)=>Object.defineProperty(t,'name',{value:v,configurable:true});`});
@@ -37,7 +38,7 @@ for(const engine of [chromium,webkit]){
   const gate=page.getByRole('complementary',{name:'请横屏打牌'});
   const table=page.locator('.mahjong-game');await table.locator(':scope[data-table-rotated="true"]').waitFor();
   assert.equal(await gate.count(),0);
-  const frame=(await table.boundingBox())!;assert.ok(Math.abs(frame.x)<1&&Math.abs(frame.y)<1&&Math.abs(frame.width-width)<1&&Math.abs(frame.height-844)<1,JSON.stringify(frame));
+  const frame=(await table.boundingBox())!;assert.ok(Math.abs(frame.x-(width-fittedBreadth)/2)<1&&Math.abs(frame.y-(height-fittedLength)/2)<1&&Math.abs(frame.width-fittedBreadth)<1&&Math.abs(frame.height-fittedLength)<1,JSON.stringify(frame));
   const tile=page.locator('.mahjong-hand button[data-choice-id]:enabled').nth(5);
   const id=await tile.getAttribute('data-choice-id');await tile.tap();
   assert.equal(await page.evaluate(()=>(window as any).screenChoices.length),0);await tile.tap();
@@ -45,15 +46,16 @@ for(const engine of [chromium,webkit]){
   await page.screenshot({path:`${out}/${engine.name()}-${variant}-${width}-portrait.png`});
   await page.getByRole('button',{name:'更换桌布'}).tap();
   const clothDialog=page.getByRole('dialog',{name:'桌布',exact:true});await clothDialog.waitFor();
-  const modal=(await clothDialog.boundingBox())!;assert.ok(modal.x>=-.5&&modal.y>=-.5&&modal.x+modal.width<=width+.5&&modal.y+modal.height<=844+.5,JSON.stringify(modal));
+  const modal=(await clothDialog.boundingBox())!;assert.ok(modal.x>=-.5&&modal.y>=-.5&&modal.x+modal.width<=width+.5&&modal.y+modal.height<=height+.5,JSON.stringify(modal));
   await clothDialog.locator('button[data-tablecloth="graphite"]').tap();assert.equal(await table.getAttribute('data-tablecloth'),'graphite');
   await clothDialog.getByRole('button',{name:'完成',exact:true}).tap();assert.equal(await clothDialog.count(),0);
 
   await page.getByRole('button',{name:'全屏横屏',exact:true}).tap();
   await page.waitForFunction(()=>(window as any).screenBoundary.locks===1);
   assert.equal(await table.getAttribute('data-table-rotated'),'true');assert.equal(await gate.count(),0);
-  await page.setViewportSize({width:844,height:width});await page.waitForFunction(()=>!document.querySelector('[data-table-rotated="true"]'));
+  await page.setViewportSize({width:height,height:width});await page.waitForFunction(()=>!document.querySelector('[data-table-rotated="true"]'));
   await page.waitForFunction(()=>!document.querySelector('[aria-label="屏幕方向提示"]'));
+  const natural=(await table.boundingBox())!;assert.ok(Math.abs(natural.x-(height-fittedLength)/2)<1&&Math.abs(natural.y-(width-fittedBreadth)/2)<1&&Math.abs(natural.width-fittedLength)<1&&Math.abs(natural.height-fittedBreadth)<1,JSON.stringify(natural));
   assert.equal(await page.getByTestId('mahjong-hand').locator('[data-tile-face]').count(),view.hand.length);
   // Unsupported lock while already landscape must leave the normal table clear.
   await page.getByRole('button',{name:'全屏横屏',exact:true}).tap();
@@ -61,7 +63,7 @@ for(const engine of [chromium,webkit]){
   assert.equal(await page.locator('[aria-label="屏幕方向提示"]').count(),0);
   await page.screenshot({path:`${out}/${engine.name()}-${variant}-${width}-landscape.png`});
   // Return to portrait: the old failed-attempt warning does not reappear.
-  await page.setViewportSize({width,height:844});await page.waitForFunction(()=>document.querySelector('[data-table-rotated="true"]'));
+  await page.setViewportSize({width,height});await page.waitForFunction(()=>document.querySelector('[data-table-rotated="true"]'));
   assert.equal(await gate.getByText('当前浏览器无法自动横屏，请旋转手机后继续。',{exact:true}).count(),0);
   await page.getByRole('button',{name:'结束并解散牌桌'}).tap();await page.getByText('已解散',{exact:true}).waitFor();
   const boundary=await page.evaluate(()=>(window as any).screenBoundary);assert.equal(boundary.requests,1);assert.equal(boundary.exits,1);assert.equal(boundary.full,null);assert.deepEqual(errors,[]);
