@@ -1,0 +1,15 @@
+{
+  "referenceUrl": "https://game.maj-soul.com/1/v0.11.252.w/code.js",
+  "decodedSha256": "5308fe6d3ab8bb8b0c8ab283e75176f839de9723d67179d00abeb15e6a39ff4f",
+  "scope": "Ordinary HandPaiPlane AnimNewTile/Update, numeric material alpha and local rise only; no vendor code or assets.",
+  "durationMs": 200,
+  "easing": "linear",
+  "normalPitch": 2.55,
+  "samples": [
+    {"timeMs": 0, "alpha": 0, "height": 0.5},
+    {"timeMs": 50, "alpha": 0.25, "height": 0.375},
+    {"timeMs": 100, "alpha": 0.5, "height": 0.25},
+    {"timeMs": 150, "alpha": 0.75, "height": 0.125},
+    {"timeMs": 200, "alpha": 1, "height": 0}
+  ]
+}

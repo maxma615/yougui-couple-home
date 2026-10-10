@@ -219,6 +219,7 @@ npm run test:e2e
 - [管理员相册](docs/admin-albums-acceptance.md)
 - [麻将功能进度与待办](docs/mahjong-fidelity-progress.md)
 - [首局音频验收与上线](docs/mahjong-lobby-audio-acceptance.md)
+- [开局线性材质与落位（本地候选）](docs/mahjong-deal-arrival-acceptance.md)
 - [完整 14 张起手理牌](docs/mahjong-full-opening-rack-acceptance.md)
 - [真实起手牌序与理牌位移](docs/mahjong-initial-deal-acceptance.md)
 - [分批发牌与开局呈现](docs/mahjong-round-opening-acceptance.md)
