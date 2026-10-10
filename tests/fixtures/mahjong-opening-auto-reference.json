@@ -1,0 +1,10 @@
+{
+  "referenceUrl": "https://game.maj-soul.com/1/v0.11.252.w/code.js",
+  "decodedSha256": "5308fe6d3ab8bb8b0c8ab283e75176f839de9723d67179d00abeb15e6a39ff4f",
+  "action": "DesktopMgr._PendingAuto",
+  "ordinaryDiscardTarget": "mainrole.last_tile",
+  "ordinaryDiscardMoqie": true,
+  "autoWinDelayMs": 800,
+  "selfSpecialsPauseDiscard": true,
+  "scope": "Observed fixed cached ordinary auto-discard path, physical target and operation priority only; no vendor code or assets, no claim about vendor server semantics or latest runtime."
+}

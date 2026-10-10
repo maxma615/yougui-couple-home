@@ -98,3 +98,19 @@ for(const variant of ['sanma','yonma'] as const)it('double felt tap discards the
   expect(t.onChoice.mock.calls[0][1].sourceTileId).toBe(hand().at(-1)!.getAttribute('data-hand-instance-id'));
  }finally{if(previous===null)localStorage.removeItem(pref);else localStorage.setItem(pref,previous);}
 });
+
+for(const variant of ['sanma','yonma'] as const)for(const live of [true,false])it('automatic cut uses the actual displayed last physical instance '+variant+' live='+live,()=>{
+ room={...room,variant,game:physicalEngine(variant,{0:'p23887654s421z22'},'p1').view(0)};const t=show(room,live?key(room):null);
+ act(()=>vi.advanceTimersByTime(1500));const last=hand().at(-1)!;
+ vi.spyOn(last,'getBoundingClientRect').mockReturnValue(new DOMRect(100,200,40,60));
+ fireEvent.click(screen.getByRole('button',{name:/^自动摸切\s*关$/}));act(()=>vi.advanceTimersByTime(0));
+ expect(t.onChoice).toHaveBeenCalledOnce();expect(t.onChoice.mock.calls[0][0].value).toBe(live?'z2':'p1_');
+ expect(t.onChoice.mock.calls[0][1].sourceTileId).toBe(last.getAttribute('data-hand-instance-id'));
+});
+
+for(const variant of ['sanma','yonma'] as const)it('holds an enabled automatic cut until opening completion '+variant,()=>{
+ room={...room,variant,game:physicalEngine(variant,{0:'p23887654s421z22'},'p1').view(0)};const t=show();
+ fireEvent.click(screen.getByRole('button',{name:/^自动摸切\s*关$/}));act(()=>vi.advanceTimersByTime(1499));expect(t.onChoice).not.toHaveBeenCalled();
+ const last=hand().at(-1)!;vi.spyOn(last,'getBoundingClientRect').mockReturnValue(new DOMRect(100,200,40,60));
+ act(()=>vi.advanceTimersByTime(1));act(()=>vi.advanceTimersByTime(0));expect(t.onChoice).toHaveBeenCalledOnce();expect(t.onChoice.mock.calls[0][0].value).toBe('z2');
+});

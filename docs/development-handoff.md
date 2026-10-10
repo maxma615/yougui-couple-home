@@ -102,3 +102,8 @@ PLAYWRIGHT_BROWSERS_PATH=.local/browsers npx tsx tests/browser/mahjong-round-ope
 ## 开局桌布视觉末张已发布（2026-10-10）
 
 7d5daf5／Build H9qssq6w2xCRo_MZRd3qr 已上线，1221／105完整检查、208原生场景、最终镜像受限Linux806／49、744源码／449构建、公网145资源及13阶段终态通过；12表摘要、资源、清理器和禁备份保持。参考开局摸切标记／自动操作、实际GPU／Android与生产认证WSS及完整当前厂商体验仍待核对，见[发布验收](mahjong-opening-last-shortcut-acceptance.md)。
+
+
+## 开局自动摸切候选（2026-10-10）
+
+候选统一实际渲染rack末张与自动弃牌，保留真实摸牌身份、合法Choice及特殊操作优先级。1235／105完整、304原生场景、类型／构建／374扫描通过，本机Linux选择820／49；ECS仍7d5daf5，候选同镜像／发布待验。见[验收](mahjong-opening-auto-acceptance.md)。

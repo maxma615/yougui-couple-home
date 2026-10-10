@@ -8,7 +8,7 @@ import type {RoomView} from '@/modules/mahjong/types';
 let room:RoomView;
 beforeEach(()=>{vi.useFakeTimers();room={id:'table',code:'ABCDEFGH',hostUserId:'0',variant:'yonma',mode:'east',status:'playing',version:1,mySeat:0,members:[],game:physicalEngine('yonma',{0:'p123456789s123z2'},'z2').view(0)};});
 afterEach(()=>{cleanup();vi.useRealTimers();vi.restoreAllMocks();});
-const setup=()=>{const onChoice=vi.fn(),initial={room,ownSeat:0,connected:true,busy:false,onChoice};return {...renderHook(p=>useAutomaticPlay(p),{initialProps:initial}),onChoice,initial};};
+const setup=()=>{const onChoice=vi.fn(),initial={room,ownSeat:0,connected:true,busy:false,onChoice,lastDiscardValue:undefined as string|undefined};return {...renderHook(p=>useAutomaticPlay(p),{initialProps:initial}),onChoice,initial};};
 it('defaults off then wins at 800ms once, not on repeated snapshots',()=>{
  const t=setup();act(()=>vi.advanceTimersByTime(1000));expect(t.onChoice).not.toHaveBeenCalled();act(()=>t.result.current.toggle('win'));act(()=>vi.advanceTimersByTime(799));expect(t.onChoice).not.toHaveBeenCalled();act(()=>vi.advanceTimersByTime(1));expect(t.onChoice).toHaveBeenCalledOnce();expect(t.onChoice.mock.calls[0][0].type).toBe('tsumo');t.rerender({...t.initial,room:{...room,version:2}});act(()=>vi.advanceTimersByTime(1000));expect(t.onChoice).toHaveBeenCalledOnce();
 });
@@ -48,3 +48,17 @@ it('retains options for a new decision, identical snapshot, and reconnect within
  t.rerender({...t.initial,room:{...next,version:3}});expect(t.result.current.options.noCalls).toBe(true);
  t.rerender({...t.initial,room:next,connected:false});t.rerender({...t.initial,room:next});expect(t.result.current.options.noCalls).toBe(true);
 });
+
+for(const variant of ['sanma','yonma'] as const){
+ it('uses displayed last value for a '+variant+' automatic opening cut exactly once',()=>{
+  room={...room,variant,game:physicalEngine(variant,{0:'p23887654s421z22'},'p1').view(0)};const t=setup();
+  t.rerender({...t.initial,lastDiscardValue:'z2'});act(()=>t.result.current.toggle('drawnDiscard'));act(()=>vi.advanceTimersByTime(0));
+  expect(t.onChoice).toHaveBeenCalledOnce();expect(t.onChoice.mock.calls[0][0].value).toBe('z2');
+  t.rerender({...t.initial,lastDiscardValue:'z2',room:{...room,version:2}});act(()=>vi.advanceTimersByTime(1));expect(t.onChoice).toHaveBeenCalledOnce();
+ });
+ it('cancels an obsolete displayed-last '+variant+' timer before dispatch',()=>{
+  room={...room,variant,game:physicalEngine(variant,{0:'p23887654s421z22'},'p1').view(0)};const t=setup();
+  t.rerender({...t.initial,lastDiscardValue:'z2'});act(()=>t.result.current.toggle('drawnDiscard'));
+  t.rerender({...t.initial,lastDiscardValue:'z2_'});act(()=>vi.advanceTimersByTime(1));expect(t.onChoice).not.toHaveBeenCalled();
+ });
+}

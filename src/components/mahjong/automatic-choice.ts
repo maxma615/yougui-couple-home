@@ -4,7 +4,7 @@ export const automaticOff: AutomaticPreferences = { win:false, noCalls:false, dr
 
 // Only select an option offered by the authoritative engine. A visible win
 // keeps the response open even when the player elected not to make calls.
-export function automaticChoice(game: GameView, options: AutomaticPreferences): Choice | null {
+export function automaticChoice(game: GameView, options: AutomaticPreferences, lastDiscardValue?: string): Choice | null {
  if(game.settlement || game.ranking) return null;
  const choices=game.choices, win=choices.find(c=>c.type==='ron')??choices.find(c=>c.type==='tsumo');
  if(win) return options.win ? win : null;
@@ -15,5 +15,5 @@ export function automaticChoice(game: GameView, options: AutomaticPreferences): 
  const north=choices.find(c=>c.type==='nuki');
  if(north) return options.north ? north : null;
  if(!options.drawnDiscard || !game.drawnTile) return null;
- return choices.find(c=>c.type==='discard' && c.value===game.drawnTile+'_')??null;
+ return choices.find(c=>c.type==='discard' && c.value===(lastDiscardValue??game.drawnTile+'_'))??null;
 }

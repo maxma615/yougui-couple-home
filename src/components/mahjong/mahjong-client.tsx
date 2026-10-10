@@ -457,6 +457,10 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
 }) {
   const game = room.game;
   const opening=useRoundOpening({room,ownSeat,connected,intent:openingIntent});
+  const liveOpening=Boolean(game)&&openingIntent===openingKey(room,ownSeat)&&isOpeningGame(game,room.variant);
+  const rack=game?handRack(game,opening.age,liveOpening):[];
+  const lastRackTile=rack.at(-1);
+  const lastDiscardValue=lastRackTile?lastRackTile.value+(lastRackTile.logicalDraw?"_":""):undefined;
   const openingRack=useOpeningSort(opening.age,JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.handId,game?.decisionId]),connected);
   useDoraSheenClock(connected && room.status === "playing" && Boolean(game));
   const tableScreen = useTableScreen();
@@ -491,17 +495,16 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
   const nukiMotion = useNukiMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const publicCallMotion = usePublicCallMotion({room, ownSeat, connected, canAnimate: motionCanAnimate, tableRef});
   const drawArrival = useDrawArrival(game, room.id, ownSeat, {connected, canAnimate: motionCanAnimate, heldDecisionId: nukiMotion.heldDecisionId});
-  const automatic = useAutomaticPlay({room,ownSeat,connected,busy: opening.holding || busy || nukiMotion.heldDecisionId === game?.decisionId || drawArrival.arriving,onChoice: choice => {
+  const automatic = useAutomaticPlay({room,ownSeat,connected,lastDiscardValue,busy: opening.holding || busy || nukiMotion.heldDecisionId === game?.decisionId || drawArrival.arriving,onChoice: choice => {
     if (choice.type === "discard") {
-      const source = [...(audioRootRef.current?.querySelectorAll<HTMLButtonElement>(".mahjong-hand button[data-choice-id]") ?? [])].find(button => button.dataset.choiceId === choice.id);
+      const source = [...(audioRootRef.current?.querySelectorAll<HTMLButtonElement>(".mahjong-hand button[data-choice-id]") ?? [])].filter(button => button.dataset.choiceId === choice.id).at(-1);
       if (source) { submitHandChoice(choice, source); return; }
     }
     onChoice(choice);
   }});
   const tableShortcut = useBlankTableDoubleTap({recoveryEpoch:choiceRecoveryEpoch,scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:opening.holding||busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
     if (!game || submittedChoiceRef.current) return false;
-    const last=handRack(game,opening.age,openingIntent===openingKey(room,ownSeat)&&isOpeningGame(game,room.variant)).at(-1);
-    const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType),last?last.value+(last.logicalDraw?"_":""):undefined);
+    const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType),lastDiscardValue);
     if (!action) return false;
     automatic.manual();
     if (action.kind === "return-picker") { setPendingCallType(null); return false; }
@@ -740,8 +743,6 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
   const relativeSeat = (seat: number) => (seat - ownSeat + capacity) % capacity;
   const byRelative = (offset: number) => game.players.find((player) => relativeSeat(player.seat) === offset);
   const ownPlayer = game.players.find((player) => player.seat === ownSeat);
-  const liveOpening=openingIntent===openingKey(room,ownSeat)&&isOpeningGame(game,room.variant);
-  const rack=handRack(game,opening.age,liveOpening);
   const fullOpeningSorted=liveOpening&&validOpeningDeal(game)&&rack.length===14&&(opening.age===null||opening.age>=1200);
   const discardChoices = game.choices.filter((choice) => choice.type === "discard");
   const riichiChoices = game.choices.filter((choice) => choice.type === "riichi");

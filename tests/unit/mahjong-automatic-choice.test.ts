@@ -39,3 +39,17 @@ it('passes only calls, not acknowledgments or self kan',()=>{
  expect(automaticChoice({...g,choices:[{id:'ack',type:'ack'}]},all)).toBeNull();
  expect(automaticChoice({...g,settlement:{} as GameView['settlement']},all)).toBeNull();
 });
+
+for(const variant of ['sanma','yonma'] as const){
+ it(variant+' automatic cut selects the displayed opening last native hand tile',()=>{
+  const engine=physicalEngine(variant,{0:'p23887654s421z22'},'p1'),g=engine.view(0);
+  const c=automaticChoice(g,all,'z2')!;expect(c.value).toBe('z2');
+  engine.respond(0,g.decisionId,c.id);expect(engine.view(0).players[0].discards.at(-1)).toBe('z2');
+ });
+ it(variant+' rejects an unavailable displayed cut without inventing draw flags',()=>{
+  const g=physicalEngine(variant,{0:'p23887654s421z22'},'p1').view(0);
+  expect(automaticChoice(g,all,'z2_')).toBeNull();expect(automaticChoice(g,all,'m8')).toBeNull();
+  expect(automaticChoice(g,{...all,drawnDiscard:false},'z2')).toBeNull();
+  expect(automaticChoice({...g,drawnTile:null},all,'z2')).toBeNull();
+ });
+}

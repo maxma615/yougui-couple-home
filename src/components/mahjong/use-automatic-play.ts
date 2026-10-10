@@ -7,16 +7,16 @@ import {automaticChoice,automaticOff,type AutomaticPreferences} from './automati
 // hand keeps them. Include the authoritative hand ID even on dealer repeats.
 const automaticScope=(room:RoomView,ownSeat:number)=>JSON.stringify([room.id,ownSeat,room.game?.gameInstanceId,room.game?.handId]);
 
-export function useAutomaticPlay({room,ownSeat,connected,busy,onChoice}:{room:RoomView;ownSeat:number;connected:boolean;busy:boolean;onChoice:(choice:Choice)=>void}){
+export function useAutomaticPlay({room,ownSeat,connected,busy,onChoice,lastDiscardValue}:{room:RoomView;ownSeat:number;connected:boolean;busy:boolean;onChoice:(choice:Choice)=>void;lastDiscardValue?:string}){
  const scope=automaticScope(room,ownSeat);
  const [state,setState]=useState({scope,options:{...automaticOff}});
  const options=state.scope===scope?state.options:automaticOff;
  const [visibleEpoch,setVisibleEpoch]=useState(0);
- const latest=useRef({room,connected,busy,onChoice});latest.current={room,connected,busy,onChoice};
+ const latest=useRef({room,connected,busy,onChoice,lastDiscardValue});latest.current={room,connected,busy,onChoice,lastDiscardValue};
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null), consumed=useRef<string|null>(null);
  useEffect(()=>{setState(old=>old.scope===scope?old:{scope,options:{...automaticOff}});consumed.current=null;},[scope]);
  const decision=JSON.stringify([scope,room.game?.decisionId]);
- const candidate=room.status==='playing'&&room.game?automaticChoice(room.game,options):null;
+ const candidate=room.status==='playing'&&room.game?automaticChoice(room.game,options,lastDiscardValue):null;
  const clear=useCallback(()=>{if(timer.current!==null)clearTimeout(timer.current);timer.current=null;},[]);
  const manual=useCallback(()=>{clear();consumed.current=decision;},[clear,decision]);
  const toggle=useCallback((key:keyof AutomaticPreferences)=>{
@@ -35,7 +35,7 @@ export function useAutomaticPlay({room,ownSeat,connected,busy,onChoice}:{room:Ro
   timer.current=setTimeout(()=>{
    timer.current=null;const current=latest.current,g=current.room.game;
    if(!current.connected||current.busy||current.room.status!=='playing'||!g||document.visibilityState==='hidden'||JSON.stringify([automaticScope(current.room,ownSeat),g.decisionId])!==decision||consumed.current===decision)return;
-   const choice=automaticChoice(g,options);if(choice?.id!==id)return;
+   const choice=automaticChoice(g,options,current.lastDiscardValue);if(choice?.id!==id)return;
    consumed.current=decision;current.onChoice(choice);
   },candidate.type==='ron'||candidate.type==='tsumo'?800:0);
   return clear;
