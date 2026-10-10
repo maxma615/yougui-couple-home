@@ -6,7 +6,7 @@
 
 深色电影感的自托管生活空间，包含照片、日历、纪念日、共同待办，以及日本麻将联机。
 
-[功能一览](#现在的有归) · [如何使用](#使用入口) · [本地启动](#从另一台设备继续开发) · [开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
+[功能一览](#现在的有归) · [如何使用](#使用入口) · [麻将操作](#牌桌怎么操作) · [本地启动](#从另一台设备继续开发) · [开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
 
 ![Node.js](https://img.shields.io/badge/Node.js-24%2B-43853D?logo=node.js&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-111111?logo=next.js)
@@ -19,13 +19,13 @@
 
 </div>
 
-> 更新于 **2026-10-10**。生活空间、独立管理员、三／四人日本麻将与电脑补位均已上线。当前线上运行代码为 `d4aac3d`，此 README 的更新不改变服务器运行版本。
+> 更新于 **2026-10-10**。当前自用地址：[有归](https://8.133.186.15) · [麻将室](https://8.133.186.15/mahjong)。需要已配置的账号登录。线上运行代码为 `d4aac3d`，源码提交与服务器发布分别记录。
 
 ## 现在的有归
 
 有归已经从双人记录工具发展为带管理员面板和麻将室的情侣空间。一个部署可以容纳多对情侣，每个生活空间仍只属于两位成员；相册和生活记录按空间隔离。麻将室独立于空间成员关系，来自不同空间的朋友可以坐在同一张牌桌上。
 
-项目提供可自行部署的完整源码。当前有个人使用的 ECS 实例，不提供公共注册或共享演示账号。仓库 `main` 是继续开发的入口，生产运行版本另见发布记录。
+项目提供可自行部署的完整源码，当前形态是浏览器网站，可在手机和电脑访问；没有独立 Android App 或微信小程序。个人 ECS 实例不提供公共注册或共享演示账号。仓库 `main` 是继续开发的入口，生产运行版本另见发布记录。
 
 | 部分 | 已有功能 |
 | --- | --- |
@@ -69,7 +69,7 @@
 三人桌与四人桌都能加入真人或用电脑补位。三麻移除二至八万，支持拔北；四麻使用固定版本的 `@kobalab/majiang-core`，三麻规则和计分由本项目适配。
 
 - **牌桌呈现**：共享透视相机、实体牌与副露、牌河、拔出的北牌和计数、宝牌指示、可切换的三款原创织物桌布。
-- **出牌与操作**：点选／双击、拖牌出牌、键盘操作；吃、碰、杠、拔北、立直、自摸、荣和与跳过按当前合法选择显示，鸣牌选项包含对应牌面。
+- **出牌与操作**：桌面悬停预选后点击、触屏二次点按、拖牌出牌、键盘操作；吃、碰、杠、拔北、立直、自摸、荣和与跳过按当前合法选择显示，鸣牌选项包含对应牌面。
 - **动作反馈**：真实起手牌序、开局分批发牌与线性理牌、摸牌和弃牌动效、鸣牌与和牌宣告、书法字体、原创提示音与固定日语语音、静音控制。
 - **结算**：役种、符翻、逐席详情与收支、多人荣和、终局排名；下一局重置自动操作状态。
 - **电脑补位**：有预算限制的规则算法，在隔离 worker 中计算，不运行大语言模型，不依赖云端推理服务。
@@ -77,6 +77,20 @@
 麻将服务按需启动，牌局只保存在内存中，服务重启后不恢复。生活记录、账号与照片仍独立持久化。外部连接走网站的 HTTP／Socket.IO 入口，内部麻将端口不直接开放到公网。
 
 杭州麻将、四川麻将尚未实现。当前视觉使用原创或有许可证的素材；目标是接近成熟麻将产品的体验，完整参考音画、真实 Android 和部分网络故障验收仍在推进。详见[麻将进度与未完成项](docs/mahjong-fidelity-progress.md)。
+
+### 牌桌怎么操作
+
+| 操作 | 当前行为 |
+| --- | --- |
+| 桌面出牌 | 悬停预选后点击；也可在「便捷操作」开启二次点击确认 |
+| 手机出牌 | 首次点按抬牌，再次点按确认；也可把牌拖出手牌区 |
+| 吃／碰／杠 | 仅在有合法机会时显示，选项直接呈现组成副露的牌面 |
+| 立直／自摸／荣和 | 根据当前手牌、役和规则显示；没有按钮时代表当前服务端未提供该操作 |
+| 三麻拔北 | 有合法机会时出现，拔出的北牌和数量保留在自己的席位区域 |
+| 横屏 | 点击「全屏横屏」；浏览器不支持锁定方向时，按提示手动旋转手机 |
+| 桌布和声音 | 选择海夜／暮紫／石墨桌布，按需开关声音；偏好保存在当前浏览器 |
+
+开局采用实际起手牌序分批发牌，再完成理牌、庄家末张分隔和宝牌显示。当前上线版本保留真实摸入牌的操作身份；**开局双击桌布选择视觉末张的调整仍在本地验证，尚未发布**。不把正在开发的交互写成线上行为。
 
 ## 从另一台设备继续开发
 
@@ -91,7 +105,17 @@ npm ci --cache .local/npm-cache
 cp .env.example .env.local
 ```
 
-先创建自己的空开发数据库和附件目录，再编辑 `.env.local`。若尚未安装 PostgreSQL，可按[接手指南中的 Docker 数据库步骤](docs/development-handoff.md#从空设备开始)准备；`npm run pg:start` 依赖旧开发机的本地二进制，不是跨设备安装入口。
+先创建自己的空开发数据库和附件目录，再编辑 `.env.local`。已有 PostgreSQL 时使用自己的空数据库；使用 Docker 时可先运行以下命令：
+
+```sh
+cp .env.compose.example .env
+# 编辑 .env，设置独立开发用 POSTGRES_PASSWORD（建议随机十六进制）。
+docker run -d --name yougui-dev-db --env-file .env -e POSTGRES_USER=couple_home -e POSTGRES_DB=couple_home -p 127.0.0.1:55432:5432 -v yougui_dev_pg:/var/lib/postgresql postgres:18
+docker exec yougui-dev-db pg_isready -U couple_home -d couple_home
+mkdir -p .local/attachments
+```
+
+等待就绪检查成功后，将 `.env.local` 的 `DATABASE_URL` 设置为 `postgresql://couple_home:你的开发密码@127.0.0.1:55432/couple_home`，将 `ATTACHMENTS_DIR` 设置为刚创建目录的绝对路径。Windows 可使用 `C:/yougui-data/attachments` 并自行创建目录；终端语法见[接手指南](docs/development-handoff.md#从空设备开始)。`npm run pg:start` 依赖旧开发机的本地二进制，不是跨设备安装入口。
 
 编辑 `.env.local`：
 
@@ -117,7 +141,7 @@ npm run init-admin -- --email developer@example.com --display-name 开发成员
 npm run dev
 ```
 
-按终端提示输入密码，打开 `http://127.0.0.1:3000` 登录并创建空间。`init-admin` 是历史命名，创建的是首位普通成员；第二人通过邀请加入。独立管理员和手机号测试账号的配置方式见[接手指南](docs/development-handoff.md)。密码、环境文件和真实用户资料不进入代码仓库。
+按终端提示输入 12–128 字符的密码，打开 `http://127.0.0.1:3000` 登录并创建空间。`init-admin` 是历史命名，创建的是首位普通成员；第二人通过邀请加入。独立管理员和手机号测试账号的配置方式见[接手指南](docs/development-handoff.md)。密码、环境文件和真实用户资料不进入代码仓库。
 
 ### 账号初始化怎么选
 
@@ -168,6 +192,18 @@ docker compose up -d --build
 docker compose exec app npm run init-admin -- --email developer@example.com --display-name 首位成员
 ```
 
+浏览器请求由 Caddy 转发到 Next.js，账号和生活记录保存在 PostgreSQL，照片保存在附件卷；需要打牌时，应用启动内部麻将子进程并管理电脑 worker。网站启动不要求麻将服务常驻。
+
+```mermaid
+flowchart LR
+  browser[手机 / 电脑浏览器] --> caddy[Caddy HTTPS]
+  caddy --> app[Next.js 网站]
+  app --> db[(PostgreSQL)]
+  app --> photos[(照片附件卷)]
+  app --> mahjong[按需麻将进程]
+  mahjong --> bots[电脑算法 worker]
+```
+
 数据库与附件使用独立持久化卷。当前个人实例采用上海 ECS 和 IP HTTPS，配置入口为 `deploy/compose.ip.yml`、`deploy/Caddyfile.ip`；它与通用域名部署有差异，不能只换地址照搬。
 
 [运维手册](docs/operations.md)记录部署和维护能力，[ECS 发布记录](docs/ecs-deployment.md)记录实际环境。**当前自用实例已按用户要求关闭备份**，以 [AGENTS.md](AGENTS.md) 和[禁备份约定](docs/2026-10-07-backups-disabled.md)为准；旧文档的备份记录属于历史，不表示应重新开启。
@@ -176,7 +212,7 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 
 | 方向 | 当前状态 |
 | --- | --- |
-| 开局发牌与理牌 | 真实 13 张起手顺序及理牌已发布；庄家完整 14 张视觉排序及视觉末张分隔也已发布，真实摸牌操作身份保留 |
+| 开局发牌与理牌 | 真实起手顺序、完整 14 张理牌、视觉末张分隔和 200 ms 材质入场已发布；双击桌布选视觉末张仍是未发布改动 |
 | 麻将视觉与交互 | 已有实体牌、副露、牌桌、宣告与结算；200 ms 线性入场材质与相对高度已发布，完整视觉与真机体验仍继续对齐 |
 | 设备与网络 | Chromium／WebKit 场景已有验证；真实 Android 与生产认证 WSS 故障场景仍待验收 |
 | 更多麻将规则 | 杭州、四川麻将尚未实现 |
@@ -184,6 +220,8 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 具体剩余项与版本证据以[麻将进度](docs/mahjong-fidelity-progress.md)为准。接手时从 `main` 建自己的开发分支，按本次变更范围复跑检查。
 
 ## 验证状态
+
+以下记录对应**已发布版本**，不混入本地未提交改动的测试数量。
 
 截至 2026-10-10，最新运行代码 `d4aac3d` 已完成以下实际检查；之后的 README 与交接文档提交不改变网站运行代码。
 
