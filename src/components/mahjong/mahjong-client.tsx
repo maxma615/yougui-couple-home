@@ -32,7 +32,7 @@ import { MahjongRules } from "./mahjong-rules";
 import { TileFace, tileKey, tileName, tileMatchKey, indicatorBonus, visibleDoraFamilies } from "./mahjong-tile";
 import { MahjongRiver as River } from "./mahjong-river";
 import { MahjongMeld as MeldView } from "./mahjong-meld";
-import { useTableAudio } from "./use-table-audio";
+import { useTableAudio, type TableAudioControls } from "./use-table-audio";
 import { useTableScreen } from "./use-table-screen";
 import { useTableFeedback } from "./use-table-feedback";
 import { MahjongAbortAnnouncements } from "./mahjong-abort-announcements";
@@ -119,6 +119,8 @@ function MahjongRoot() {
   const [socketEpoch, setSocketEpoch] = useState(0);
   const room = response?.room || null;
   const isMember = session?.user.role === "member";
+  const soundRootRef=useRef<HTMLDivElement>(null);
+  const tableAudio=useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:soundRootRef});
 
   const applyResponse = useCallback((next: MahjongResponse, expectedRevision?: number, motion: { canAnimate: boolean; intent?: DiscardMotionIntent | null } = { canAnimate: false }) => {
     if (expectedRevision !== undefined && expectedRevision !== responseRevision.current) return false;
@@ -303,7 +305,7 @@ function MahjongRoot() {
   const host = Boolean(room && session && room.hostUserId === session.user.id);
 
   return <main className="mahjong-page">
-    <div className="mahjong-shell">
+    <div className="mahjong-shell" ref={soundRootRef}>
       <header className="mahjong-header">
         <Link href="/home" className="mahjong-brand" aria-label="返回情侣空间"><span className="mahjong-brand__mark"><Dices size={17}/></span><span>有归 <i>/</i> 麻将室</span></Link>
         <button type="button" className="mahjong-rules-trigger" onClick={() => setShowRules(true)}><CircleHelp size={14}/>查看规则</button>
@@ -337,6 +339,7 @@ function MahjongRoot() {
         onLeave={() => void send({ action: "leave" })}
         onFinish={() => setConfirmFinish(true)}
       /> : <GameRoom
+        tableAudio={tableAudio}
         room={room}
         busy={busy}
         host={host}
@@ -444,7 +447,8 @@ function SeatCard({ member, seat, isMe, waiting = false, player, active = false,
   </article>;
 }
 
-export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimate = connected, openingIntent = null, motionIntent = null, choiceRecoveryEpoch = 0, onChoice, onFinish, onRematch, onLeave }: {
+export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, motionCanAnimate = connected, openingIntent = null, motionIntent = null, choiceRecoveryEpoch = 0, onChoice, onFinish, onRematch, onLeave }: {
+  tableAudio?: TableAudioControls;
   room: RoomView; busy: boolean; host: boolean; ownSeat: number; connected: boolean;
   motionCanAnimate?: boolean; openingIntent?: string|null; motionIntent?: DiscardMotionIntent | null; choiceRecoveryEpoch?: number;
   onChoice: (choice: Choice, intent?: DiscardMotionIntent | null) => void; onFinish: () => void; onRematch: () => void; onLeave: () => void;
@@ -473,7 +477,7 @@ export function GameRoom({ room, busy, host, ownSeat, connected, motionCanAnimat
   const audioRootRef = useRef<HTMLElement>(null);
   useMahjongActionPlacement(audioRootRef,Boolean(game)&&room.status!=="finished",`${room.id}:${room.variant}:${ownSeat}:${game?.decisionId}:${room.version}:${riichiMode}:${pendingCallType}`);
 
-  const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef});
+  const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef,shared:tableAudio});
   const dealtSound=useRef<string|null>(null);
   useEffect(()=>{
     if(opening.age===null||opening.age>=1200)return;

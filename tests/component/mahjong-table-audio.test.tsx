@@ -40,3 +40,37 @@ it.each(['pass','ron','disconnect','refresh','mute'] as const)('handles pending 
  if(mode==='disconnect'){r.rerender(<Harness room={pending} connected={false}/>);r.rerender(<Harness room={pending}/>);}if(mode==='refresh')r.rerender(<Harness room={pending} canAnimate={false}/>);if(mode==='mute'){fireEvent.click(screen.getByRole('button',{name:'关闭音效'}));fireEvent.click(screen.getByRole('button',{name:'开启音效'}));}
  const w=game.view(2),choice=w.choices.find(c=>c.type===(mode==='ron'?'ron':'pass'))!;game.respond(2,w.decisionId,choice.id);r.rerender(<Harness room={view(3)}/>);frame();frame();if(mode==='pass'){expect(audio.play.mock.calls.map(c=>c[0].kind)).toEqual(['call','draw']);}else expect(audio.play).not.toHaveBeenCalled();
 });
+
+function SharedLobbyAudio({room,playing}:{room:RoomView;playing:boolean}){
+ const ref=useRef<HTMLDivElement>(null),audio=useTableAudio({room,connected:true,canAnimate:true,rootRef:ref});
+ return <div ref={ref}>{playing?<GameRoom tableAudio={audio} room={room} ownSeat={0} host={false} connected busy={false} motionCanAnimate={false} onChoice={()=>{}} onFinish={()=>{}} onLeave={()=>{}} onRematch={()=>{}}/>:<button onClick={audio.toggle}>{audio.enabled?'大厅静音':'大厅开声'}</button>}</div>;
+}
+it('keeps one audio owner across the lobby-to-table transition and disposes it once',()=>{
+ const {before}=pair(),r=render(<SharedLobbyAudio room={before} playing={false}/>);
+ r.rerender(<SharedLobbyAudio room={before} playing/>);expect(audio.dispose).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'关闭音效'}));expect(audio.setEnabled).toHaveBeenLastCalledWith(false);
+ r.rerender(<SharedLobbyAudio room={before} playing={false}/>);expect(screen.getByRole('button',{name:'大厅开声'})).toBeTruthy();expect(audio.dispose).not.toHaveBeenCalled();
+ r.unmount();expect(audio.dispose).toHaveBeenCalledOnce();
+});
+it('keeps the remembered mute when the lobby hands its audio owner to GameRoom',()=>{
+ window.localStorage.setItem('yougui.mahjong.sound','off');const {before}=pair(),r=render(<SharedLobbyAudio room={before} playing={false}/>);
+ expect(screen.getByRole('button',{name:'大厅开声'})).toBeTruthy();r.rerender(<SharedLobbyAudio room={before} playing/>);
+ expect(screen.getByRole('button',{name:'开启音效'})).toBeTruthy();expect(audio.unlock).not.toHaveBeenCalled();r.unmount();expect(audio.dispose).toHaveBeenCalledOnce();
+});
+
+function OpeningAudioHarness(){
+ const ref=useRef<HTMLElement>(null),sound=useTableAudio({room:null,connected:true,canAnimate:true,rootRef:ref});
+ return <main ref={ref}><button onClick={()=>sound.dealWave('opening',0)}>发牌</button><button onClick={sound.invalidate}>取消</button><button onClick={sound.toggle}>静音</button></main>;
+}
+it.each(['ready','expired','cancel','mute','unmount'] as const)('bounds the pending real gesture resume for an opening cue: %s',async mode=>{
+ const listener=vi.spyOn(document,'addEventListener');let resolve!:(value:boolean)=>void;
+ audio.unlock.mockImplementationOnce(()=>new Promise<boolean>(r=>{resolve=r;}));const view=render(<OpeningAudioHarness/>);
+ const callback=listener.mock.calls.filter(([name])=>name==='pointerdown').at(-1)![1] as EventListener;
+ callback({isTrusted:true,target:screen.getByRole('button',{name:'发牌'})} as unknown as Event);
+ fireEvent.click(screen.getByRole('button',{name:'发牌'}));expect(audio.play).not.toHaveBeenCalled();
+ if(mode==='expired')act(()=>vi.advanceTimersByTime(100));
+ if(mode==='cancel')fireEvent.click(screen.getByRole('button',{name:'取消'}));
+ if(mode==='mute')fireEvent.click(screen.getByRole('button',{name:'静音'}));
+ if(mode==='unmount')view.unmount();
+ await act(async()=>resolve(true));expect(audio.play).toHaveBeenCalledTimes(mode==='ready'?1:0);listener.mockRestore();
+});

@@ -9,18 +9,18 @@ import {RoomStore,parseMahjongCommand} from '../../src/modules/mahjong/rooms';
 import {randomUUID} from 'node:crypto';
 import {physicalEngine} from '../fixtures/mahjong-settlement-game';
 import type {MahjongResponse} from '../../src/modules/mahjong/types';
-const out='.local/audit/round-opening-network-'+Date.now();mkdirSync(out);
+const out='.local/audit/round-opening-network-'+Date.now();mkdirSync(out,{recursive:true});
 const sha=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');
 const cssFiles=[...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import \"\.\/(mahjong[^\"\n]*\.css)\";/g)].map(m=>'src/app/mahjong/'+m[1]);
-const files=['tests/browser/mahjong-round-opening-network.tsx','src/components/mahjong/use-round-opening.ts','src/modules/mahjong/round-opening.ts','src/modules/mahjong/rooms.ts','src/modules/mahjong/settlement-sequence.ts','src/components/mahjong/use-table-audio.ts','src/components/mahjong/mahjong-standing-tile.tsx','src/modules/mahjong/bot-runner.ts','tests/fixtures/mahjong-round-opening-reference.json','tests/fixtures/mahjong-automatic-round-reference.json','tests/fixtures/mahjong-settlement-game.ts','src/components/mahjong/use-automatic-play.ts','src/components/mahjong/automatic-choice.ts','src/components/mahjong/mahjong-client.tsx','src/hooks/use-session.tsx','src/components/api-client.ts','src/modules/mahjong/engine.ts','src/modules/mahjong/sanma.ts',...cssFiles];
+const files=['tests/browser/mahjong-round-opening-network.tsx','src/components/mahjong/use-round-opening.ts','src/modules/mahjong/round-opening.ts','src/modules/mahjong/rooms.ts','src/modules/mahjong/settlement-sequence.ts','src/components/mahjong/use-table-audio.ts','src/components/mahjong/table-audio.ts','src/components/mahjong/mahjong-standing-tile.tsx','src/modules/mahjong/bot-runner.ts','tests/fixtures/mahjong-round-opening-reference.json','tests/fixtures/mahjong-automatic-round-reference.json','tests/fixtures/mahjong-settlement-game.ts','src/components/mahjong/use-automatic-play.ts','src/components/mahjong/automatic-choice.ts','src/components/mahjong/mahjong-client.tsx','src/hooks/use-session.tsx','src/components/api-client.ts','src/modules/mahjong/engine.ts','src/modules/mahjong/sanma.ts',...cssFiles];
 const sources=Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))]));
 const bundle=(await build({stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import{MahjongClient}from'./src/components/mahjong/mahjong-client';createRoot(document.getElementById('root')).render(React.createElement(React.StrictMode,null,React.createElement(MahjongClient)));`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',define:{'process.env.NODE_ENV':'"development"'},plugins:[{name:'local-next-navigation',setup(b){b.onResolve({filter:/^next\/navigation$/},()=>({path:'navigation',namespace:'local-navigation'}));b.onLoad({filter:/.*/,namespace:'local-navigation'},()=>({contents:`const router={replace:url=>{window.navigationRequests??=[];window.navigationRequests.push(url)}};export const useRouter=()=>router;export const usePathname=()=>'/mahjong';`,loader:'js'}));}}]})).outputFiles[0].text;
 const results:unknown[]=[];
 const pause=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 async function poll(f:()=>Promise<boolean>){for(let i=0;i<250;i++){if(await f())return;await pause(20);}throw Error('authoritative native state did not arrive');}
-for(const engine of [chromium,webkit]){
+for(const engine of [chromium,webkit].filter(e=>!process.env.MAHJONG_NATIVE_ENGINE||e.name()===process.env.MAHJONG_NATIVE_ENGINE)){
  const browser=await engine.launch();
- try{for(const variant of ['sanma','yonma'] as const)for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const transport of ['websocket','polling'] as const)for(const order of ['socket-before-http','http-before-socket'] as const){
+ try{for(const variant of ['sanma','yonma'] as const)for(const viewport of [{width:667,height:375},{width:1440,height:810}])for(const transport of ['websocket','polling'] as const)for(const order of ['socket-before-http','http-before-socket'] as const)for(const soundEnabled of [true,false]){
   const players=Array.from({length:variant==='sanma'?3:4},(_,seat)=>({userId:randomUUID(),displayName:'玩家'+seat}));
   const rooms=new RoomStore({gameFactory:()=>physicalEngine(variant,{0:'p123456789s123z2'},'z2')});
   const cmd=(body:object)=>parseMahjongCommand({...body,nonce:randomUUID()});const room=rooms.execute(players[0],cmd({action:'create',variant,mode:'east'}))!;
@@ -46,7 +46,19 @@ for(const engine of [chromium,webkit]){
   }catch(e){serverErrors.push(String(e));res.writeHead(500);res.end();}});
   const io=new Server(http,{path:'/mahjong/socket.io',addTrailingSlash:false,transports:[transport]});io.on('connection',s=>{rooms.connection(players[0].userId,1);live=s;s.emit('mahjong:state',response());});
   await new Promise<void>(r=>http.listen(0,'127.0.0.1',r));const port=(http.address() as import('node:net').AddressInfo).port;
-  const context=await browser.newContext({viewport}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+  const context=await browser.newContext({viewport});
+  await context.addInitScript(()=>{
+   const samples:{state:string;duration:number}[]=[];(window as any).__openingAudio=samples;
+   const contexts:AudioContext[]=[];(window as any).__audioContexts=contexts;
+   const RealContext=window.AudioContext;
+   window.AudioContext=class extends RealContext{constructor(...args:ConstructorParameters<typeof AudioContext>){super(...args);contexts.push(this);}};
+   const prototype=AudioBufferSourceNode.prototype,original=prototype.start;
+   prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){
+    samples.push({state:this.context.state,duration:this.buffer?.duration??0});return original.apply(this,args);
+   };
+  });
+  if(!soundEnabled)await context.addInitScript(()=>localStorage.setItem('yougui.mahjong.sound','off'));
+  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.goto('http://127.0.0.1:'+port+'/');await page.locator('.mahjong-link-state.is-connected').waitFor();assert.equal(live!.conn.transport.name,transport);
    await page.clock.install({time:0});await page.clock.pauseAt(10000);await page.getByRole('button',{name:/开始对局/}).click();
@@ -60,11 +72,12 @@ for(const engine of [chromium,webkit]){
      return{shown:hand.filter(t=>getComputedStyle(t).visibility!=='hidden').length,disabled:hand.every(t=>t.hasAttribute('disabled')),dora:document.querySelectorAll('.mahjong-table__dora .mahjong-tile').length,operations:!!document.querySelector('.mahjong-action-dock'),opponents,drawnMargin:getComputedStyle(document.querySelector('.mahjong-hand .is-drawn')!).marginLeft};
     });assert.equal(state.shown,expected);assert.equal(state.dora,dora);assert.equal(state.operations,operations);assert.equal(state.disabled,!operations);for(const p of state.opponents)assert.equal(p.shown,Math.min(expected,p.total));assert.equal(posts.length,1,'no operation submitted during presentation');stages.push(state);
    };
-   await sample(4,0,false);for(const [ms,count]of [[299,4],[1,8],[300,12],[300,14],[299,14]] as const){await page.clock.runFor(ms);await sample(count,0,false);}
+   await sample(4,0,false);if(soundEnabled)await poll(()=>page.evaluate(()=>(window as any).__openingAudio.length===1));for(const [ms,count]of [[299,4],[1,8],[300,12],[300,14],[299,14]] as const){await page.clock.runFor(ms);await sample(count,0,false);}
+   const openingAudio=await page.evaluate(()=>(window as any).__openingAudio);assert.equal(openingAudio.length,soundEnabled?4:0);assert(openingAudio.every((x:any)=>x.state==='running'&&x.duration>0));
    await page.clock.runFor(1);await poll(()=>page.evaluate(()=>document.querySelector('.mahjong-game')?.getAttribute('data-opening-sorted')==='true'));await sample(14,1,false);await page.clock.runFor(299);await sample(14,1,false);await page.clock.runFor(1);await poll(()=>page.evaluate(()=>!document.querySelector('.mahjong-game')?.hasAttribute('data-round-opening')));await sample(14,1,true);
    await page.clock.runFor(200);await page.getByRole('button',{name:'自摸',exact:true}).click();await poll(async()=>posts.length===2);assert.equal(rooms.view(players[0].userId)!.game!.settlement?.winMethod,'tsumo');
-   assert.deepEqual(errors,[]);assert.deepEqual(serverErrors,[]);await page.screenshot({path:out+`/${engine.name()}-${variant}-${viewport.width}-${transport}-${order}.png`});results.push({engine:engine.name(),variant,viewport,transport,order,stages,posts});console.log('PASS',engine.name(),variant,viewport.width,transport,order);
-  }catch(e){writeFileSync(out+'/failure.json',JSON.stringify({error:String(e),errors,serverErrors,posts,room:response().room},null,2));await page.screenshot({path:out+'/failure.png'});throw e;}finally{for(const t of timers)clearTimeout(t);await context.close();await new Promise<void>(r=>io.close(()=>r()));}
+   assert.deepEqual(errors,[]);assert.deepEqual(serverErrors,[]);await page.screenshot({path:out+`/${engine.name()}-${variant}-${viewport.width}-${transport}-${order}-${soundEnabled}.png`});results.push({engine:engine.name(),variant,viewport,transport,order,soundEnabled,stages,posts,openingAudio});console.log('PASS',engine.name(),variant,viewport.width,transport,order,soundEnabled);
+  }catch(e){writeFileSync(out+'/failure.json',JSON.stringify({error:String(e),errors,serverErrors,posts,audio:await page.evaluate(()=>({sources:(window as any).__openingAudio,states:(window as any).__audioContexts.map((x:AudioContext)=>x.state)})),room:response().room},null,2));await page.screenshot({path:out+'/failure.png'});throw e;}finally{for(const t of timers)clearTimeout(t);await context.close();await new Promise<void>(r=>io.close(()=>r()));}
  }}finally{await browser.close();}
 }
-assert.equal(results.length,32);assert.deepEqual(Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))])),sources);writeFileSync(out+'/proof.json',JSON.stringify({sources,bundleSha256:sha(bundle),results},null,2));console.log('PASS32 real RoomStore HTTP Socket opening',out);
+assert.equal(results.length,process.env.MAHJONG_NATIVE_ENGINE?32:64);assert.deepEqual(Object.fromEntries(files.map(f=>[f,sha(readFileSync(f))])),sources);writeFileSync(out+'/proof.json',JSON.stringify({sources,bundleSha256:sha(bundle),results},null,2));console.log('PASS'+results.length+' real RoomStore HTTP Socket opening with real audio',out);

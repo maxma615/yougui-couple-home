@@ -13,7 +13,11 @@ type Pending={action?:{decision:string;kind:string;end:number};cue:TableSoundEve
 const storageKey='yougui.mahjong.sound';
 const scope=(r:RoomView)=>JSON.stringify([r.id,r.variant,r.mySeat,r.game?.gameInstanceId,r.game?.handId]);
 
-export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView;connected:boolean;canAnimate:boolean;rootRef:RefObject<HTMLElement|null>}){
+export type TableAudioControls={enabled:boolean;toggle:()=>void;land:(id:string)=>void;invalidate:()=>void;dealWave:(id:string,seat:number)=>void};
+
+export function useTableAudio({room,connected,canAnimate,rootRef,shared}:{room:RoomView|null;connected:boolean;canAnimate:boolean;rootRef:RefObject<HTMLElement|null>;shared?:TableAudioControls}):TableAudioControls{
+ const managed=!shared;
+ const unlocking=useRef<Promise<boolean>|null>(null);
  const [enabled,setEnabled]=useState(true),enabledRef=useRef(true);
  const player=useRef<TableAudioPlayer|null>(null),previous=useRef<{room:RoomView;connected:boolean}|null>(null);
  const pending=useRef(new Map<string,Pending>()),frames=useRef(new Set<number>()),epoch=useRef(0);
@@ -109,6 +113,7 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
  },[rootRef,land]);
  scheduleRef.current=schedule;
  useEffect(()=>{
+  if(!managed)return;
   const instance=new TableAudioPlayer(()=>{
    const Constructor=window.AudioContext??(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
    if(!Constructor)throw Error('WebAudio unavailable');return new Constructor();
@@ -118,7 +123,9 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
   enabledRef.current=stored;setEnabled(stored);instance.setEnabled(stored);
   const gesture=(event:Event)=>{
    if(event.isTrusted&&enabledRef.current&&document.visibilityState!=='hidden'
-    &&event.target instanceof Node&&rootRef.current?.contains(event.target))void instance.unlock();
+    &&event.target instanceof Node&&rootRef.current?.contains(event.target)){
+    const task=instance.unlock();unlocking.current=task;void task.finally(()=>{if(unlocking.current===task)unlocking.current=null;});
+   }
   };
   const visibility=()=>{clear();previous.current=null;if(document.visibilityState==='hidden')instance.pause();};
   const geometry=()=>{clear();previous.current=null;instance.cancel();};
@@ -130,15 +137,17 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    events.forEach(name=>window.removeEventListener(name,geometry));
    document.removeEventListener('pointerdown',gesture,true);document.removeEventListener('keydown',gesture,true);document.removeEventListener('visibilitychange',visibility);
   };
- },[rootRef,clear]);
+ },[rootRef,clear,managed]);
  const toggle=useCallback(()=>{
   const next=!enabledRef.current;enabledRef.current=next;setEnabled(next);clear();player.current?.setEnabled(next);
   try{window.localStorage.setItem(storageKey,next?'on':'off');}catch{/* Muting still works without persistent settings. */}
   if(next&&document.visibilityState!=='hidden')void player.current?.unlock();
  },[clear]);
  useEffect(()=>{
+  if(!managed)return;
+  if(!room){clear();previous.current=null;player.current?.pause();return;}
   const old=previous.current;previous.current={room,connected};
-  if(old&&scope(old.room)!==scope(room)){clear();player.current?.cancel();}
+  if(old&&old.room.game&&scope(old.room)!==scope(room)){clear();player.current?.cancel();}
   if(!connected||document.visibilityState==='hidden'){clear();player.current?.pause();return;}
   if(!canAnimate){clear();player.current?.cancel();return;}
   if(!old?.connected||!canAnimate||!enabledRef.current||scope(old.room)!==scope(room)){pendingKan.current=null;return;}
@@ -167,7 +176,18 @@ export function useTableAudio({room,connected,canAnimate,rootRef}:{room:RoomView
    pending.current.set(cue.id,{cue,parent,epoch:epoch.current});
    if(!parent)schedule(cue.id);
   }
- },[room,connected,canAnimate,clear,schedule]);
- const dealWave=useCallback((id:string,seat:number)=>{if(enabledRef.current&&document.visibilityState!=='hidden')player.current?.play({id,kind:'draw',seat});},[]);
- return {enabled,toggle,land,invalidate,dealWave};
+ },[room,connected,canAnimate,clear,schedule,managed]);
+ const dealWave=useCallback((id:string,seat:number)=>{
+  if(!enabledRef.current||document.visibilityState==='hidden')return;
+  const instance=player.current,task=unlocking.current;
+  if(!task){instance?.play({id,kind:'draw',seat});return;}
+  // The start gesture may still be resuming WebKit's context when the first
+  // batch commits. Only that in-flight gesture may release this short cue.
+  const started=performance.now(),generation=epoch.current;
+  void task.then(ready=>{
+   if(ready&&performance.now()-started<100&&epoch.current===generation&&player.current===instance
+    &&enabledRef.current&&document.visibilityState!=='hidden')instance?.play({id,kind:'draw',seat});
+  });
+ },[]);
+ return shared??{enabled,toggle,land,invalidate,dealWave};
 }
