@@ -45,14 +45,14 @@
 .mahjong-automatic button span{color:#8998a5}
 .mahjong-automatic button[aria-pressed="true"]{background:#ac8b3633;color:#ffe7a2}
 .mahjong-automatic button[aria-pressed="true"] span{color:#ffe7a2}
-@media(max-height:500px){.mahjong-automatic summary{padding:10px 8px;font-size:11px}}
+@media(max-height:500px), (max-width: 500px) and (orientation: portrait) and (pointer: coarse){.mahjong-automatic summary{padding:10px 8px;font-size:11px}}
 
 
 /* Meld alternatives expand on the table, without a modal backdrop. */
 .mahjong-game > .mahjong-call-dialog {
  position: absolute; z-index: 10; left: 50%; right: auto; transform: translateX(-50%);
- bottom: calc(18dvh + 10px); width: max-content; max-width: calc(100% - 24px);
- max-height: min(50dvh, 280px); overflow: auto; margin: 0; padding: 8px 12px 12px;
+ bottom: calc(calc(18 * var(--mahjong-dvh, 1dvh)) + 10px); width: max-content; max-width: calc(100% - 24px);
+ max-height: min(calc(50 * var(--mahjong-dvh, 1dvh)), 280px); overflow: auto; margin: 0; padding: 8px 12px 12px;
  border: 1px solid #b9a175; border-radius: 5px; color: #f5e9cf;
  background: linear-gradient(135deg, #20333cf2, #111e2af5);
  box-shadow: 0 4px 16px #07111988;

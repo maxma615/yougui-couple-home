@@ -11,16 +11,16 @@ const css=[...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import "
  .map(match=>readFileSync('src/app/mahjong/'+match[1],'utf8')).join('\n');
 const sha=(s:string|Buffer)=>createHash('sha256').update(s).digest('hex');
 const cssFiles=[...readFileSync('src/app/mahjong/page.tsx','utf8').matchAll(/import \"\.\/([^\"]+\.css)\";/g)].map(m=>'src/app/mahjong/'+m[1]);
-const tracked=['tests/browser/mahjong-action-touch.tsx','src/components/mahjong/mahjong-client.tsx','src/components/mahjong/table-space.ts','src/components/mahjong/use-table-screen.ts','src/components/mahjong/use-action-placement.ts','src/components/mahjong/use-blank-table-double-tap.ts',...cssFiles];
+const tracked=['tests/browser/mahjong-portrait-action-touch.tsx','src/components/mahjong/mahjong-client.tsx','src/components/mahjong/table-space.ts','src/components/mahjong/use-table-screen.ts','src/components/mahjong/use-action-placement.ts','src/components/mahjong/use-blank-table-double-tap.ts',...cssFiles];
 const sources=Object.fromEntries(tracked.map(f=>[f,sha(readFileSync(f))]));
 const harness=`import React from 'react';import{createRoot}from'react-dom/client';import{flushSync}from'react-dom';import{GameRoom}from'./src/components/mahjong/mahjong-client';const root=createRoot(document.getElementById('root'));window.choices=[];window.renderRoom=room=>flushSync(()=>root.render(React.createElement('main',{className:'mahjong-page'},React.createElement('div',{className:'mahjong-shell'},React.createElement(GameRoom,{room,ownSeat:room.mySeat,host:true,busy:false,connected:true,motionCanAnimate:false,onChoice:choice=>window.choices.push(choice),onFinish:()=>{},onLeave:()=>{},onRematch:()=>{}})))));`;
 const bundle=(await build({stdin:{contents:harness,resolveDir:process.cwd(),loader:'tsx'},bundle:true,platform:'browser',format:'iife',write:false,jsx:'automatic',define:{'process.env.NODE_ENV':'"development"'}})).outputFiles[0].text;
-const output=`.local/audit/action-touch-${Date.now()}`;mkdirSync(output,{recursive:true});
+const output=`.local/audit/portrait-action-touch-${Date.now()}`;mkdirSync(output,{recursive:true});
 const results:unknown[]=[],failures:string[]=[];
 for(const engine of [chromium,webkit]){
  const browser=await engine.launch({headless:true});
  try{
-  for(const hasTouch of [true,false])for(const viewport of [{width:667,height:375},{width:844,height:390},{width:1440,height:810}]){
+  for(const hasTouch of [true])for(const viewport of [{width:375,height:667},{width:390,height:844},{width:412,height:915}]){
    const context=await browser.newContext({viewport,hasTouch});const page=await context.newPage();
    await page.route('https://mahjong.local/fonts/**',route=>route.fulfill({status:200,contentType:'font/woff2',body:readFileSync('public'+new URL(route.request().url()).pathname)}));
    await page.route('https://mahjong.local/images/**',async route=>{
@@ -85,7 +85,7 @@ for(const engine of [chromium,webkit]){
       const r=el.getBoundingClientRect();
       return {tag:el.tagName,modal:el.getAttribute('aria-modal'),x:r.x,y:r.y,width:r.width,height:r.height,inViewport:r.x>=0&&r.y>=0&&r.right<=innerWidth&&r.bottom<=innerHeight,focus:el.contains(document.activeElement),options:[...el.querySelectorAll<HTMLElement>('[data-choice-id]')].map(n=>{const b=n.getBoundingClientRect();return{width:b.width,height:b.height,hit:document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)?.closest('[data-choice-id]')?.getAttribute('data-choice-id'),id:n.dataset.choiceId};})};
      });
-     assert.equal(detail.tag,'SECTION');assert.equal(detail.modal,'false');assert(detail.inViewport);assert(detail.focus);assert(Math.abs(detail.x+detail.width/2-viewport.width/2)<=1,'detail centered on table');
+     assert.equal(detail.tag,'SECTION');assert.equal(detail.modal,'false');assert(detail.inViewport);assert(detail.focus);assert(Math.abs(detail.y+detail.height/2-viewport.height/2)<=1,'detail centered on logical table width');
      for(const o of detail.options){assert(o.width>=44&&o.height>=44);assert.equal(o.hit,o.id);}
      assert.equal(await page.locator('dialog:modal').count(),0);
      await page.screenshot({path:output+'/'+label.replace(/[^a-z0-9-]/gi,'-')+'-inline-call.png'});
@@ -105,6 +105,6 @@ for(const engine of [chromium,webkit]){
   }
  }finally{await browser.close();}
 }
-writeFileSync(output+'/proof.json',JSON.stringify({sources,cssSha256:createHash('sha256').update(css).digest('hex'),testSha256:createHash('sha256').update(readFileSync('tests/browser/mahjong-action-touch.tsx')).digest('hex'),results,failures},null,2)+'\n');
+writeFileSync(output+'/proof.json',JSON.stringify({sources,cssSha256:createHash('sha256').update(css).digest('hex'),testSha256:createHash('sha256').update(readFileSync('tests/browser/mahjong-portrait-action-touch.tsx')).digest('hex'),results,failures},null,2)+'\n');
 console.log(`ARTIFACT ${output} scenes=${results.length} failures=${failures.length}`);
 assert.deepEqual(failures,[]);assert.deepEqual(Object.fromEntries(tracked.map(f=>[f,sha(readFileSync(f))])),sources);

@@ -10,6 +10,7 @@ import {TableclothPicker, useTablecloth} from "./tablecloth";
 import {useDoraSheenClock} from "./use-dora-sheen-clock";
 import {useBlankTableDoubleTap} from "./use-blank-table-double-tap";
 import {useAutomaticPlay} from "./use-automatic-play";
+import {tableSpace, tablePoint, tableDelta, tableRect, type TableSpace} from "./table-space";
 import {useMahjongActionPlacement} from "./use-action-placement";
 import {WaitPeekButton} from "./wait-peek-button";
 import {currentWaits,discardWaits,singleDiscardWaits} from "./discard-waits";
@@ -463,7 +464,7 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
   const lastDiscardValue=lastRackTile?lastRackTile.value+(lastRackTile.logicalDraw?"_":""):undefined;
   const openingRack=useOpeningSort(opening.age,JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.handId,game?.decisionId]),connected);
   useDoraSheenClock(connected && room.status === "playing" && Boolean(game));
-  const tableScreen = useTableScreen();
+  const tableScreen = useTableScreen(Boolean(game));
   const tablecloth = useTablecloth();
   const feedback = useTableFeedback(game, room.members, ownSeat, room.id, {connected, canAnimate: motionCanAnimate});
   const [inspectedSeat, setInspectedSeat] = useState<number | null>(null);
@@ -482,7 +483,7 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
   const [choiceSubmitted, setChoiceSubmitted] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const audioRootRef = useRef<HTMLElement>(null);
-  useMahjongActionPlacement(audioRootRef,Boolean(game)&&room.status!=="finished",`${room.id}:${room.variant}:${ownSeat}:${game?.decisionId}:${room.version}:${riichiMode}:${pendingCallType}`);
+  useMahjongActionPlacement(audioRootRef,Boolean(game)&&room.status!=="finished",`${room.id}:${room.variant}:${ownSeat}:${game?.decisionId}:${room.version}:${riichiMode}:${pendingCallType}:${tableScreen.rotated}`);
 
   const audio = useTableAudio({room,connected,canAnimate:motionCanAnimate,rootRef:audioRootRef,shared:tableAudio});
   const dealtSound=useRef<string|null>(null);
@@ -502,7 +503,7 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
     }
     onChoice(choice);
   }});
-  const tableShortcut = useBlankTableDoubleTap({recoveryEpoch:choiceRecoveryEpoch,scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId]),disabled:opening.holding||busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
+  const tableShortcut = useBlankTableDoubleTap({recoveryEpoch:choiceRecoveryEpoch,scope:JSON.stringify([room.id,ownSeat,game?.gameInstanceId,game?.decisionId,tableScreen.rotated]),disabled:opening.holding||busy||!connected||room.status!=="playing"||!game||Boolean(game.settlement)||nukiMotion.heldDecisionId===game?.decisionId||drawArrival.arriving,onDoubleTap:()=>{
     if (!game || submittedChoiceRef.current) return false;
     const action=blankTableAction(game,ownSeat,riichiMode,Boolean(pendingCallType),lastDiscardValue);
     if (!action) return false;
@@ -541,7 +542,7 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
     return () => observer.disconnect();
   }, [drawArrival.cancel, audio.invalidate, room.status]);
   const selectedHandTileRef = useRef<{ tileId: string; choiceId: string } | null>(null);
-  const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; rackTop: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
+  const activeTilePointerRef = useRef<{ pointerId: number; tileId: string; choice: Choice; startX: number; startY: number; space: TableSpace | null; rackTop: number; dragged: boolean; element: HTMLButtonElement } | null>(null);
   const pressedHandChoiceRef = useRef<{tileId:string;choiceId:string;confirmed:boolean}|null>(null);
   const submittedChoiceRef = useRef(false);
   const suppressPointerClickRef = useRef(false);
@@ -676,10 +677,12 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
     pressedHandChoiceRef.current = {tileId,choiceId:choice.id,confirmed:selected?.tileId===tileId && selected.choiceId===choice.id};
     drawArrival.cancel();
     suppressPointerClickRef.current = false;
+    const space = audioRootRef.current ? tableSpace(audioRootRef.current) : null;
+    const rackBounds = event.currentTarget.closest(".mahjong-hand")?.getBoundingClientRect();
     activeTilePointerRef.current = {
       pointerId: event.pointerId ?? 0, tileId, choice,
       startX: event.clientX, startY: event.clientY,
-      rackTop: event.currentTarget.closest(".mahjong-hand")?.getBoundingClientRect().top ?? Number.NaN,
+      space, rackTop: rackBounds ? (space ? tableRect(space, rackBounds).y : rackBounds.top) : Number.NaN,
       dragged: false, element: event.currentTarget,
     };
     try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* Pointer capture is unavailable in some embedded browsers. */ }
@@ -692,8 +695,9 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
   // Native hit testing follows the actual projected felt, rather than the
   // surface's axis-aligned bounding box. Freeze the rack boundary on press:
   // lifting or dragging its last tile must not move the release threshold.
-  const isPlayableDiscardRelease = (rackTop: number, clientX: number, clientY: number) => {
-    if (![rackTop, clientX, clientY].every(Number.isFinite) || clientY >= rackTop) return false;
+  const isPlayableDiscardRelease = (active: NonNullable<typeof activeTilePointerRef.current>, clientX: number, clientY: number) => {
+    const localY = active.space ? tablePoint(active.space, clientX, clientY).y : clientY;
+    if (![active.rackTop, clientX, clientY, localY].every(Number.isFinite) || localY >= active.rackTop) return false;
     const surface = tableRef.current?.querySelector(".mahjong-table__surface");
     const target = document.elementFromPoint?.(clientX, clientY);
     return Boolean(surface && target && surface.contains(target)
@@ -705,8 +709,9 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
     const dx = event.clientX - active.startX, dy = event.clientY - active.startY;
     if (!active.dragged && dx * dx + dy * dy > 400) active.dragged = true;
     if (active.dragged) {
-      setDragPreview({ tileId, x: dx, y: dy });
-      setOverDiscardTarget(isPlayableDiscardRelease(active.rackTop, event.clientX, event.clientY));
+      const delta = active.space ? tableDelta(active.space, dx, dy) : {x: dx, y: dy};
+      setDragPreview({ tileId, ...delta });
+      setOverDiscardTarget(isPlayableDiscardRelease(active, event.clientX, event.clientY));
     }
   };
   const endHandPointer = (tileId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -714,7 +719,7 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
     if (!active || active.tileId !== tileId || active.pointerId !== (event.pointerId ?? 0)) return;
     const dx = event.clientX - active.startX, dy = event.clientY - active.startY;
     const dragged = active.dragged || dx * dx + dy * dy > 400;
-    const landedInTable = isPlayableDiscardRelease(active.rackTop, event.clientX, event.clientY);
+    const landedInTable = isPlayableDiscardRelease(active, event.clientX, event.clientY);
     activeTilePointerRef.current = null;
     setDragPreview(null);
     setOverDiscardTarget(false);
@@ -785,11 +790,11 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
       if (inside && escape) menu.querySelector<HTMLElement>("summary")?.focus();
     }
   };
-  return <section data-opening-full-sort={fullOpeningSorted?"true":undefined} data-opening-sorted={opening.age!==null&&opening.age>=1200?"true":undefined} data-round-opening={opening.age===null?undefined:Math.floor(opening.age)} data-tablecloth={tablecloth.cloth} ref={audioRootRef} onFocusCapture={closeAutomaticMenu} onPointerDownCapture={event=>{closeAutomaticMenu(event);tableShortcut.down(event);cancelNukiInput(event);}} onPointerUp={tableShortcut.up} onPointerCancel={tableShortcut.reset} onClickCapture={cancelNukiInput} onKeyDownCapture={event=>{closeAutomaticMenu(event,event.key === "Escape");tableShortcut.reset();cancelNukiInput(event);}} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
+  return <section data-table-rotated={tableScreen.rotated?"true":undefined} data-opening-full-sort={fullOpeningSorted?"true":undefined} data-opening-sorted={opening.age!==null&&opening.age>=1200?"true":undefined} data-round-opening={opening.age===null?undefined:Math.floor(opening.age)} data-tablecloth={tablecloth.cloth} ref={audioRootRef} onFocusCapture={closeAutomaticMenu} onPointerDownCapture={event=>{closeAutomaticMenu(event);tableShortcut.down(event);cancelNukiInput(event);}} onPointerUp={tableShortcut.up} onPointerCancel={tableShortcut.reset} onClickCapture={cancelNukiInput} onKeyDownCapture={event=>{closeAutomaticMenu(event,event.key === "Escape");tableShortcut.reset();cancelNukiInput(event);}} className={`mahjong-game${room.variant === "sanma" ? " is-sanma" : ""}${isFinished ? " is-finished" : ""}`}>
     <header className="mahjong-game__topline"><div className="mahjong-game__round"><span className="mahjong-game__round-seal">{windNames[game.roundWind] || "東"}</span><div><strong>{roundTitle(game)}</strong><span>{room.mode === "east" ? "東風戰" : "半莊戰"} <i>·</i> 本場 {game.honba}</span></div></div><div className="mahjong-game__tempo"><span>{game.remainingTiles}<small>剩余</small></span><span className="mahjong-game__tempo-divider"/><span>{game.riichiSticks}<small>立直棒</small></span><span className="mahjong-game__phase"><i className={connected ? "is-live" : ""}/>{phaseTitle(game)}</span></div><div className="mahjong-game__screen-actions"><TableclothPicker cloth={tablecloth.cloth} onChoose={tablecloth.choose} onOpen={clearHandSelection}/>{canPreview && peekWaits.length > 0 ? <WaitPeekButton held={showCurrentWaits} onHold={setShowCurrentWaits}/> : null}{!isFinished ? <details className="mahjong-automatic"><summary onClick={event=>event.currentTarget.focus()}>便捷操作</summary><div role="group" aria-label="自动操作">{([['win','自动和牌'],['noCalls','不鸣牌'],['drawnDiscard','自动摸切'],...(room.variant==='sanma' ? [['north','自动拔北']] : [])] as [keyof typeof automatic.options,string][]).map(([key,label])=><button type="button" key={key} aria-pressed={automatic.options[key]} onClick={()=>automatic.toggle(key)}>{label}<span>{automatic.options[key] ? '开' : '关'}</span></button>)}<button type="button" aria-pressed={handHover.twoClicks} title="关闭时鼠标悬停预选后单击出牌；触屏始终两次点按" onClick={()=>{clearHandSelection();handHover.toggle();}}>桌面二次点击出牌<span>{handHover.twoClicks ? "开" : "关"}</span></button><button type="button" aria-pressed={tableShortcut.enabled} title="双击桌布过牌或切出最后一张牌；选牌时先返回" onClick={tableShortcut.toggle}>双击过牌／摸切<span>{tableShortcut.enabled ? "开" : "关"}</span></button></div></details> : null}<button className="mahjong-screen-button mahjong-audio-toggle" type="button" onClick={audio.toggle} aria-label={audio.enabled ? "关闭音效" : "开启音效"} aria-pressed={!audio.enabled} title={audio.enabled ? "关闭音效" : "开启音效"}>{audio.enabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</button><button className="mahjong-screen-button" type="button" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()} aria-label="全屏横屏"><Expand size={16}/><span>全屏横屏</span></button>{host ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="结束并解散牌桌" onClick={onFinish}><DoorOpen size={17}/></button> : room.status === "finished" ? <button className="mahjong-icon-button mahjong-game__exit" type="button" aria-label="离开已结束牌桌" onClick={onLeave}><DoorOpen size={17}/></button> : null}</div></header>
 
-    {tableScreen.hint ? <div className="mahjong-screen-hint" role="status" aria-label="屏幕方向提示" title={tableScreen.hint}>请旋转手机</div> : null}
-    <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside>
+    {tableScreen.hint && !tableScreen.rotated ? <div className="mahjong-screen-hint" role="status" aria-label="屏幕方向提示" title={tableScreen.hint}>请旋转手机</div> : null}
+    {!tableScreen.rotated ? <aside className="mahjong-portrait-gate" aria-label="请横屏打牌"><Smartphone size={44}/><p className="mahjong-kicker">LANDSCAPE TABLE</p><h2>把手机横过来，坐上牌桌。</h2><p>横屏看清整桌、手牌与宝牌指示。</p><button type="button" className="mahjong-button mahjong-button--gold" disabled={tableScreen.pending} onClick={() => void tableScreen.enter()}><Expand size={17}/>进入横屏牌桌</button>{tableScreen.hint ? <p>{tableScreen.hint}</p> : <small>若浏览器不支持自动横屏，请旋转手机。</small>}{host ? <button type="button" className="mahjong-button mahjong-button--quiet" onClick={onFinish}>解散本桌</button> : null}</aside> : null}
     {!connected ? <div className="mahjong-reconnect" role="status" aria-label="连接状态"><WifiOff size={15}/>正在重连…</div> : null}
 
     {isFinished && game.ranking ? <MahjongFinalRanking ranking={game.ranking} flow={game.rankingFlow} members={room.members} ownSeat={ownSeat} host={host} connected={connected} busy={busy} onRematch={onRematch} onFinish={onFinish}/> : null}

@@ -1,0 +1,42 @@
+/* Rotate the outer viewport, keeping the shared felt camera and tile volumes
+   intact. Viewport units below describe the logical landscape, including HUDs. */
+.mahjong-page .mahjong-game[data-table-rotated="true"] {
+  --mahjong-dvh: 1dvw;
+  --mahjong-dvw: 1dvh;
+  --mahjong-vh: 1vw;
+  --mahjong-vw: 1vh;
+  --mahjong-safe-top: env(safe-area-inset-right);
+  --mahjong-safe-right: env(safe-area-inset-bottom);
+  --mahjong-safe-bottom: env(safe-area-inset-left);
+  --mahjong-safe-left: env(safe-area-inset-top);
+  position: fixed;
+  z-index: 20;
+  inset: 0 auto auto 0;
+  width: 100dvh;
+  height: 100dvw;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  transform-origin: 0 0;
+  transform: translateX(100dvw) rotate(90deg);
+}
+.mahjong-game[data-table-rotated="true"].is-finished { overflow: auto; }
+.mahjong-game[data-table-rotated="true"] .mahjong-table { height: 100%; }
+.mahjong-game[data-table-rotated="true"] .mahjong-portrait-gate { display: none; }
+/* Top-layer dialogs escape ancestor transforms; rotate them around their own
+   center while sizing against the same logical viewport. */
+.mahjong-game[data-table-rotated="true"] dialog {
+  inset: 50% auto auto 50%;
+  margin: 0;
+  transform: translate(-50%, -50%) rotate(90deg);
+  max-width: calc(100dvh - 28px);
+  max-height: calc(100dvw - 28px);
+}
+.mahjong-page:has(.mahjong-game[data-table-rotated="true"]) .mahjong-notice {
+  left: calc(100dvw - max(4px, env(safe-area-inset-right)));
+  top: 50%;
+  width: max-content;
+  max-width: min(56dvh, 650px);
+  transform-origin: 0 0;
+  transform: rotate(90deg) translateX(-50%);
+}

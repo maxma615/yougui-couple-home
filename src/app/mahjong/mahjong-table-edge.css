@@ -117,7 +117,7 @@
 
 /* Keep contextual choices just above the viewer's hand, clear of side racks. */
 .mahjong-page .mahjong-game:not(.is-finished) .mahjong-action-dock {
-  bottom: calc(14dvh + 10px);
+  bottom: calc(calc(14 * var(--mahjong-dvh, 1dvh)) + 10px);
 }
 
 /* Side backs use a compact perspective so a full rack clears both HUD regions. */
@@ -147,7 +147,7 @@
 
 /* Extra kan tiles lengthen the rotated rack. Reserve one back-tile depth
    beneath the upper-left indicators on short landscape tables. */
-@media (max-height: 600px) and (orientation: landscape) {
+@media (max-height: 600px) and (orientation: landscape), (max-width: 600px) and (orientation: portrait) and (pointer: coarse) {
   .mahjong-page .mahjong-game .mahjong-table__position--west .mahjong-opponent-rack {
     top: calc(50% + min(1.4cqw, 2.9cqh, 22px));
   }

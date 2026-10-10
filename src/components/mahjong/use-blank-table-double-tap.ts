@@ -11,9 +11,11 @@ export function useBlankTableDoubleTap({scope,disabled,onDoubleTap,recoveryEpoch
  useEffect(()=>{reset();consumed.current=null;},[scope,enabled,recoveryEpoch,reset]);
  useEffect(()=>{if(disabled)reset();},[disabled,reset]);
  useEffect(()=>{
-  window.addEventListener('blur',reset);window.addEventListener('pagehide',reset);
+  const events=['blur','pagehide','resize','orientationchange','fullscreenchange','webkitfullscreenchange'];
+  for(const event of events)window.addEventListener(event,reset);
+  window.visualViewport?.addEventListener('resize',reset);
   document.addEventListener('visibilitychange',reset);
-  return()=>{reset();window.removeEventListener('blur',reset);window.removeEventListener('pagehide',reset);document.removeEventListener('visibilitychange',reset);};
+  return()=>{reset();for(const event of events)window.removeEventListener(event,reset);window.visualViewport?.removeEventListener('resize',reset);document.removeEventListener('visibilitychange',reset);};
  },[reset]);
  const toggle=()=>{reset();setEnabled(old=>{const next=!old;try{localStorage.setItem(blankTablePreference,next?'1':'0');}catch{/* Keep this session usable. */}return next;});};
  const down=(event:PointerEvent<HTMLElement>)=>{

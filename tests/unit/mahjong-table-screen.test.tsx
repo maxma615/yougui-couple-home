@@ -10,7 +10,8 @@ const rotate=(landscape:boolean)=>{Object.defineProperty(media,'matches',{value:
 beforeEach(()=>{
  fullscreen=null;
  media=Object.assign(new EventTarget(),{matches:false,media:'(orientation: landscape)'}) as MediaQueryList;
- vi.stubGlobal('matchMedia',vi.fn(()=>media));
+ vi.stubGlobal('matchMedia',vi.fn((query:string)=>query==='(pointer: coarse)'?{matches:true}:media));
+ vi.stubGlobal('innerWidth',375);vi.stubGlobal('innerHeight',844);
  lock=vi.fn(async()=>{});unlock=vi.fn();
  vi.stubGlobal('screen',{orientation:Object.assign(new EventTarget(),{lock,unlock})});
  Object.defineProperty(document,'fullscreenElement',{configurable:true,get:()=>fullscreen});
@@ -21,6 +22,21 @@ beforeEach(()=>{
 });
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();delete (document as any).fullscreenElement;delete (document as any).exitFullscreen;delete (document.documentElement as any).requestFullscreen;});
 describe('table fullscreen and orientation ownership',()=>{
+ it('automatically supplies a portrait touch fallback before fullscreen is requested',()=>{
+  const {result}=renderHook(useTableScreen);
+  expect(result.current.rotated).toBe(true);expect(request).not.toHaveBeenCalled();
+ });
+ it('restores natural landscape coordinates and can rotate back without another request',()=>{
+  const {result}=renderHook(useTableScreen);
+  act(()=>{vi.stubGlobal('innerWidth',844);vi.stubGlobal('innerHeight',375);rotate(true);});expect(result.current.rotated).toBe(false);
+  act(()=>{vi.stubGlobal('innerWidth',375);vi.stubGlobal('innerHeight',844);rotate(false);});expect(result.current.rotated).toBe(true);
+ });
+ it('does not rotate desktop portrait or a disabled game',()=>{
+  vi.stubGlobal('matchMedia',vi.fn((query:string)=>query==='(pointer: coarse)'?{matches:false}:media));
+  const {result}=renderHook(useTableScreen);expect(result.current.rotated).toBe(false);
+  const disabled=renderHook(()=>useTableScreen(false));expect(disabled.result.current.rotated).toBe(false);
+ });
+
  it('clears the failed automatic rotation hint after manual landscape rotation',async()=>{
   lock.mockRejectedValue(new Error('unsupported'));const {result}=renderHook(useTableScreen);
   await act(async()=>{await result.current.enter();});expect(result.current.hint).toContain('旋转手机');

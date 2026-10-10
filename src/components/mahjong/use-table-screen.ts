@@ -1,35 +1,45 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 type LockableOrientation = ScreenOrientation & { lock?: (orientation: "landscape") => Promise<void> };
 
 const landscape = () => window.matchMedia ? window.matchMedia("(orientation: landscape)").matches : window.innerWidth >= window.innerHeight;
 const rotationHint = "当前浏览器无法自动横屏，请旋转手机后继续。";
 
-export function useTableScreen() {
+export function useTableScreen(enabled = true) {
+  const [rotated, setRotated] = useState(false);
   const [hint, setHint] = useState("");
   const [pending, setPending] = useState(false);
   const lifecycle = useRef({ mounted: true, fullscreen: false, orientation: false, orientationSession: null as Element | null, pending: false });
-  useEffect(() => {
+  useLayoutEffect(() => {
     const state = lifecycle.current;
     state.mounted = true;
     const media = window.matchMedia?.("(orientation: landscape)");
-    const rotated = () => { if (landscape()) setHint(""); };
+    const touch = window.matchMedia?.("(pointer: coarse)");
+    const refresh = () => {
+      setRotated(Boolean(touch?.matches && window.innerWidth <= 1024 && window.innerHeight > window.innerWidth));
+      if (landscape()) setHint("");
+    };
+    refresh();
     const fullscreenChanged = () => {
       if (state.fullscreen && document.fullscreenElement !== document.documentElement) state.fullscreen = false;
       // An Escape/browser exit ends our ownership. Do not later exit a new
       // fullscreen session started by another part of the page.
       if (state.orientation && document.fullscreenElement !== state.orientationSession) { window.screen.orientation?.unlock?.(); state.orientation = false; state.orientationSession = null; }
     };
-    media?.addEventListener?.("change", rotated);
-    window.addEventListener("resize", rotated);
-    window.addEventListener("orientationchange", rotated);
+    media?.addEventListener?.("change", refresh);
+    window.addEventListener("resize", refresh);
+    window.addEventListener("orientationchange", refresh);
+    touch?.addEventListener?.("change", refresh);
+    window.visualViewport?.addEventListener("resize", refresh);
     document.addEventListener("fullscreenchange", fullscreenChanged);
     return () => {
-      media?.removeEventListener?.("change", rotated);
-      window.removeEventListener("resize", rotated);
-      window.removeEventListener("orientationchange", rotated);
+      media?.removeEventListener?.("change", refresh);
+      window.removeEventListener("resize", refresh);
+      window.removeEventListener("orientationchange", refresh);
+      touch?.removeEventListener?.("change", refresh);
+      window.visualViewport?.removeEventListener("resize", refresh);
       document.removeEventListener("fullscreenchange", fullscreenChanged);
       state.mounted = false;
       if (state.orientation) { window.screen.orientation?.unlock?.(); state.orientation = false; state.orientationSession = null; }
@@ -76,5 +86,5 @@ export function useTableScreen() {
       if (state.mounted) setPending(false);
     }
   }
-  return { enter, hint, pending };
+  return { enter, hint, pending, rotated: enabled && rotated };
 }

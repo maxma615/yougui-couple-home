@@ -1,5 +1,6 @@
 'use client';
 import {useLayoutEffect,type RefObject} from 'react';
+import {tableSpace,tableRect} from './table-space';
 import {placeMahjongActions,type PlacementRect} from './action-placement';
 export const actionPlacementProtectedSelector='.mahjong-notice,.mahjong-reconnect,.mahjong-screen-hint,.mahjong-game__topline,.mahjong-table__dora,.mahjong-table__center,.mahjong-player__head,.mahjong-river__tile,.mahjong-opponent-rack .mahjong-standing-tile,.mahjong-table__surface [data-meld-volume],.mahjong-table__surface [data-meld-surface="cap"],[data-nuki-index] .mahjong-discard-flight__face-up-cap,.mahjong-nuki-tray > small,.mahjong-hand [data-tile-face]';
 const properties=['position','left','right','top','bottom','width','height','transform','transition-property','pointer-events'];
@@ -12,16 +13,18 @@ export function useMahjongActionPlacement(root:RefObject<HTMLElement|null>,enabl
   const original=new Map<HTMLElement,Map<string,string>>();let frame=0,stopped=false;
   const restore=()=>{for(const [button,values]of original)for(const [name,value]of values)value?button.style.setProperty(name,value):button.style.removeProperty(name);game.querySelector('.mahjong-action-dock')?.removeAttribute('data-action-layout');};
   const layout=()=>{
-   if(stopped||!game.isConnected||(window.matchMedia&&!window.matchMedia('(orientation: landscape)').matches))return;
+   if(stopped||!game.isConnected||(game.dataset.tableRotated!=='true'&&window.matchMedia&&!window.matchMedia('(orientation: landscape)').matches))return;
    const dock=game.querySelector<HTMLElement>('.mahjong-action-dock');if(!dock)return;
    const buttons=[...dock.querySelectorAll<HTMLElement>(':scope > button')];if(!buttons.length)return;
    restore();
-   const actions=buttons.map((button,i)=>({id:String(i),...rect(button)})).filter(a=>a.w>0&&a.h>0);
-   const obstacles=[...shell.querySelectorAll(actionPlacementProtectedSelector)].filter(el=>!el.closest('.mahjong-action-dock')).map(rect).filter(r=>r.w>0&&r.h>0);
+   const space=tableSpace(game);
+   const localRect=(el:Element)=>space.rotated?tableRect(space,el.getBoundingClientRect()):rect(el);
+   const actions=buttons.map((button,i)=>({id:String(i),...localRect(button)})).filter(a=>a.w>0&&a.h>0);
+   const obstacles=[...shell.querySelectorAll(actionPlacementProtectedSelector)].filter(el=>!el.closest('.mahjong-action-dock')).map(localRect).filter(r=>r.w>0&&r.h>0);
    const style=getComputedStyle(game),inset=(name:string)=>Math.max(8,parseFloat(style.getPropertyValue(name))||0);
    const left=inset('--action-safe-left'),top=inset('--action-safe-top'),right=inset('--action-safe-right'),bottom=inset('--action-safe-bottom');
    game.dataset.actionLayoutRuns=String((Number(game.dataset.actionLayoutRuns)||0)+1);
-   const before=performance.now(),placed=placeMahjongActions(actions,obstacles,{x:left,y:top,w:innerWidth-left-right,h:innerHeight-top-bottom});
+   const before=performance.now(),placed=placeMahjongActions(actions,obstacles,{x:left,y:top,w:(space.rotated?space.width:innerWidth)-left-right,h:(space.rotated?space.height:innerHeight)-top-bottom});
    game.dataset.actionLayoutMs=String(performance.now()-before);
    game.dataset.actionLayoutState=placed?'ready':'unplaced';
    if(!placed)return; // Preserve every original action if no clear packing exists.

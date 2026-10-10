@@ -244,7 +244,7 @@ it("submits a tile only after a real drag clears the distance threshold and land
   const board = screen.getByTestId("mahjong-board");
   Object.defineProperty(board, "getBoundingClientRect", { configurable: true, value: () => ({ x: 0, y: 0, left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, toJSON: () => ({}) }) });
   const rack = screen.getByTestId("mahjong-hand");
-  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => DOMRect.fromRect({ x: 0, y: 320, width: 600, height: 80 }) });
   const center = board.querySelector(".mahjong-table__center")!;
   Object.defineProperty(document, "elementFromPoint", { configurable: true, value: (x: number, y: number) => x >= 250 && x <= 350 && y >= 140 && y <= 220 ? center : document.body });
 
@@ -279,7 +279,7 @@ it("cancels a drag without submitting even when the operating system cancels ove
   const tile = screen.getByRole("button", { name: "切出 一筒" });
   const board = screen.getByTestId("mahjong-board");
   const rack = screen.getByTestId("mahjong-hand");
-  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => DOMRect.fromRect({ x: 0, y: 320, width: 600, height: 80 }) });
   const center = board.querySelector(".mahjong-table__center")!;
   Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => center });
 
@@ -400,7 +400,7 @@ it("uses playable felt above the original rack for both drag preview and one leg
   const tile = document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
   const board = screen.getByTestId("mahjong-board");
   const rack = screen.getByTestId("mahjong-hand");
-  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => DOMRect.fromRect({ x: 0, y: 320, width: 600, height: 80 }) });
   const felt = screen.getByTestId("mahjong-table-surface");
   Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => felt });
   fireEvent.pointerDown(tile, { pointerId: 12, isPrimary: true, button: 0, clientX: 80, clientY: 350 });
@@ -417,7 +417,7 @@ it("losing capture cancels a selected drag and suppresses the subsequent pointer
   const onChoice = show(view);
   const tile = document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
   const rack = screen.getByTestId("mahjong-hand");
-  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => ({ top: 320 }) });
+  Object.defineProperty(rack, "getBoundingClientRect", { configurable: true, value: () => DOMRect.fromRect({ x: 0, y: 320, width: 600, height: 80 }) });
   Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => screen.getByTestId("mahjong-table-surface") });
   fireEvent.click(tile);
   fireEvent.pointerDown(tile, { pointerId: 14, isPrimary: true, button: 0, clientX: 80, clientY: 350 });
@@ -450,7 +450,7 @@ for(const event of ['blur','pagehide','visibilitychange'])it(`cancels an in-flig
   if(event==='visibilitychange')Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});
   const view=fixtureGame().view(0),discard=view.choices.find(c=>c.type==='discard'&&!c.value?.endsWith('_'))!,onChoice=show(view);
   const tile=document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!,rack=screen.getByTestId('mahjong-hand');
-  Object.defineProperty(rack,'getBoundingClientRect',{configurable:true,value:()=>({top:320})});
+  Object.defineProperty(rack,'getBoundingClientRect',{configurable:true,value:()=>DOMRect.fromRect({ x: 0, y: 320, width: 600, height: 80 })});
   Object.defineProperty(document,'elementFromPoint',{configurable:true,value:()=>screen.getByTestId('mahjong-table-surface')});
   fireEvent.click(tile);fireEvent.pointerDown(tile,{pointerId:28,isPrimary:true,button:0,clientX:80,clientY:350});fireEvent.pointerMove(tile,{pointerId:28,clientX:80,clientY:240});
   expect(tile.classList.contains('is-dragging')).toBe(true);
@@ -538,7 +538,7 @@ for (const [dx,dy,dragged] of [[0,-12,false],[0,-19,false],[0,-20,false],[12,-16
   vi.stubGlobal('PointerEvent',MouseEvent);
   const view=fixtureGame().view(0),discard=view.choices.find(c=>c.type==='discard'&&!c.value?.endsWith('_'))!;
   const onChoice=show(view),tile=document.querySelector<HTMLButtonElement>(`[data-choice-id="${discard.id}"]`)!;
-  Object.defineProperty(screen.getByTestId('mahjong-hand'),'getBoundingClientRect',{configurable:true,value:()=>({top:320})});
+  Object.defineProperty(screen.getByTestId('mahjong-hand'),'getBoundingClientRect',{configurable:true,value:()=>DOMRect.fromRect({ x: 0, y: 320, width: 600, height: 80 })});
   Object.defineProperty(document,'elementFromPoint',{configurable:true,value:()=>screen.getByTestId('mahjong-table-surface')});
   fireEvent.pointerDown(tile,{isPrimary:true,button:0,pointerType:'touch',clientX:80,clientY:330});
   if(!releaseOnly){fireEvent.pointerMove(tile,{clientX:80+dx,clientY:330+dy});expect(tile.classList.contains('is-dragging')).toBe(dragged);}

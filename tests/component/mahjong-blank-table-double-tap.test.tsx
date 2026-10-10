@@ -23,7 +23,7 @@ it('does not count 300ms, drags, right clicks, nonprimary pointers or controls a
  }
  t.result.current.reset();tap(t);now+=100;act(()=>t.result.current.down(event()));act(()=>t.result.current.up(event(surface,{clientX:109})));expect(t.onDoubleTap).not.toHaveBeenCalled();
 });
-for(const interruption of ['blur','pagehide','visibilitychange','cancel','disabled','scope','key'] as const)it('clears the first tap on '+interruption,()=>{
+for(const interruption of ['blur','pagehide','visibilitychange','resize','orientationchange','fullscreenchange','webkitfullscreenchange','cancel','disabled','scope','key'] as const)it('clears the first tap on '+interruption,()=>{
  const t=setup();act(()=>t.result.current.toggle());tap(t);now+=100;
  if(interruption==='disabled'){t.rerender({...t.initial,disabled:true});t.rerender(t.initial);}
  else if(interruption==='scope')t.rerender({...t.initial,scope:'decision-2'});
