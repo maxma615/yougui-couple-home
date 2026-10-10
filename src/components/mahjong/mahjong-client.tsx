@@ -1,5 +1,6 @@
 "use client";
-import {acceptedRoundOpening,openingTileCount} from "@/modules/mahjong/round-opening";
+import {acceptedRoundOpening,openingTileCount,openingHand} from "@/modules/mahjong/round-opening";
+import {useOpeningSort} from "./use-opening-sort";
 import {useRoundOpening} from "./use-round-opening";
 
 import {blankTableAction} from "./blank-table-action";
@@ -455,6 +456,7 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
 }) {
   const game = room.game;
   const opening=useRoundOpening({room,ownSeat,connected,intent:openingIntent});
+  const openingRack=useOpeningSort(opening.age,JSON.stringify([room.id,game?.gameInstanceId,game?.handId,game?.decisionId]),connected);
   useDoraSheenClock(connected && room.status === "playing" && Boolean(game));
   const tableScreen = useTableScreen();
   const tablecloth = useTablecloth();
@@ -736,7 +738,7 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
   const relativeSeat = (seat: number) => (seat - ownSeat + capacity) % capacity;
   const byRelative = (offset: number) => game.players.find((player) => relativeSeat(player.seat) === offset);
   const ownPlayer = game.players.find((player) => player.seat === ownSeat);
-  const hand = game.drawnTile && game.hand.at(-1) === game.drawnTile ? game.hand.slice(0, -1) : game.hand;
+  const hand = openingHand(game, opening.age);
   const discardChoices = game.choices.filter((choice) => choice.type === "discard");
   const riichiChoices = game.choices.filter((choice) => choice.type === "riichi");
   const otherChoices = game.choices.filter((choice) => !["discard", "riichi"].includes(choice.type));
@@ -817,12 +819,12 @@ export function GameRoom({ tableAudio, room, busy, host, ownSeat, connected, mot
       })}
       <div className="mahjong-table__dora" role="group" aria-label="宝牌指示牌" data-testid="mahjong-dora"><span>宝牌指示牌</span><div>{(opening.doraVisible?game.doraIndicators:[]).map((tile, index) => <TileFace key={`${tile}-${index}`} value={tile}/>)}{Array.from({length: Math.max(0, 5 - (opening.doraVisible?game.doraIndicators.length:0))}, (_, index) => <i className="mahjong-indicator-back" aria-hidden="true" key={`back-${index}`}/>)}</div><small>宝牌 <b>{(opening.doraVisible?game.doraIndicators:[]).map(tile => tileName(indicatorBonus(tile, room.variant))).join(" · ")}</b></small><div className="mahjong-table__counters" role="group" aria-label="场况计数"><span className="mahjong-table__counter" aria-label={`本场 ${game.honba}`}><small>本场</small><b>{game.honba}</b></span><span className="mahjong-table__counter" aria-label={`立直棒 ${game.riichiSticks}`}><i className="mahjong-table__stick" aria-hidden="true"/><small>立直棒</small><b>{game.riichiSticks}</b></span></div></div>
       <div className="mahjong-table__own"><PlayerIdentity player={ownPlayer} member={ownMember} ownSeat={ownSeat} active={game.turnSeat === ownSeat} offset={0} capacity={capacity} onInspect={() => ownPlayer && setInspectedSeat(ownPlayer.seat)}/>
-        <div className="mahjong-hand-block">{selectedWaits.length ? <aside className="mahjong-wait-preview" role="status" aria-label="待牌预览"><span>待牌</span><div>{selectedWaits.map(wait=><span className="mahjong-wait-preview__item" key={wait.tile}><TileFace value={wait.tile}/><small>{wait.ronYaku ? `${wait.remaining} 张` : null}</small>{wait.furiten ? <b>振听</b> : null}{!wait.ronYaku ? <b>无役</b> : null}</span>)}</div></aside> : null}<div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
+        <div className="mahjong-hand-block">{selectedWaits.length ? <aside className="mahjong-wait-preview" role="status" aria-label="待牌预览"><span>待牌</span><div>{selectedWaits.map(wait=><span className="mahjong-wait-preview__item" key={wait.tile}><TileFace value={wait.tile}/><small>{wait.ronYaku ? `${wait.remaining} 张` : null}</small>{wait.furiten ? <b>振听</b> : null}{!wait.ronYaku ? <b>无役</b> : null}</span>)}</div></aside> : null}<div className="mahjong-hand-label"><span>你的手牌</span><small>{game.hand.length} 張{game.drawnTile ? " · 摸牌" : ""}</small></div><div className="mahjong-hand-line"><div ref={openingRack} className="mahjong-hand" data-testid="mahjong-hand" aria-label="你的手牌">
           {hand.map((tile, index) => {
             const tileId = `hand:${index}:${tile}`;
             const choices = allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(tile) && !choice.value.endsWith("_"));
             const choice = choices[0];
-            return <HandActionTile key={tileId} tileId={tileId} value={tile} dealVisible={index<openingTileCount(opening.age,game.hand.length)} dealWave={opening.age===null?undefined:Math.floor(index/4)} choices={choices} disabled={opening.holding || busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onHover={hoverHandTile} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
+            return <HandActionTile key={`${tile}:${hand.slice(0,index).filter(value=>value===tile).length}`} tileId={tileId} value={tile} dealVisible={index<openingTileCount(opening.age,game.hand.length)} dealWave={opening.age===null?undefined:Math.floor(index/4)} choices={choices} disabled={opening.holding || busy || !connected || choiceSubmitted} selected={Boolean(choice && selectedHandTile?.tileId === tileId && selectedHandTile.choiceId === choice.id)} drag={dragPreview?.tileId === tileId ? dragPreview : null} onHover={hoverHandTile} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/>;
           })}
           {game.drawnTile ? <span className={`mahjong-drawn-wrap${nukiMotion.heldDecisionId === game.decisionId ? " is-nuki-held" : ""}`}><i>摸</i><HandActionTile key={game.decisionId} tileId={`drawn:${game.decisionId}:${game.drawnTile}`} value={game.drawnTile} dealVisible={hand.length<openingTileCount(opening.age,game.hand.length)} dealWave={opening.age===null?undefined:Math.floor(hand.length/4)} choices={allowedChoices.filter((choice) => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))} disabled={opening.holding || busy || !connected || choiceSubmitted} drawn arriving={drawArrival.arriving} selected={Boolean(selectedHandTile?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` && selectedHandTile.choiceId === allowedChoices.find(choice => choice.value && tileKey(choice.value) === tileKey(game.drawnTile!) && choice.value.endsWith("_"))?.id)} drag={dragPreview?.tileId === `drawn:${game.decisionId}:${game.drawnTile}` ? dragPreview : null} onHover={hoverHandTile} onActivate={activateHandTile} onPointerStart={startHandPointer} onPointerMove={moveHandPointer} onPointerEnd={endHandPointer} onPointerCancel={cancelHandPointer}/></span> : null}
         </div></div></div>

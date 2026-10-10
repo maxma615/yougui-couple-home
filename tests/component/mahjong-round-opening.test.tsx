@@ -39,3 +39,16 @@ it('emits four original deal cues once, never replaying on duplicate snapshots',
 it('muting suppresses a wave and unmuting never replays the missed cue',()=>{const play=vi.spyOn(TableAudioPlayer.prototype,'play');show();act(()=>vi.advanceTimersByTime(200));fireEvent.click(screen.getByRole('button',{name:'关闭音效'}));act(()=>vi.advanceTimersByTime(300));fireEvent.click(screen.getByRole('button',{name:'开启音效'}));act(()=>vi.advanceTimersByTime(100));act(()=>vi.advanceTimersByTime(300));expect(play.mock.calls.filter(([e])=>e.kind==='draw').map(([e])=>JSON.parse(e.id)[1])).toEqual([0,2,3]);});
 
 it('preserves the original deadline through React Strict Mode effect cleanup and setup',()=>{const onChoice=vi.fn();render(<StrictMode><GameRoom room={room} ownSeat={0} connected motionCanAnimate openingIntent={key(room)} busy={false} host={false} onChoice={onChoice} onFinish={()=>{}} onLeave={()=>{}} onRematch={()=>{}}/></StrictMode>);expect(shown()).toBe(4);act(()=>vi.advanceTimersByTime(300));expect(shown()).toBe(8);act(()=>vi.advanceTimersByTime(900));expect(document.querySelectorAll('.mahjong-table__dora .mahjong-tile')).toHaveLength(1);act(()=>vi.advanceTimersByTime(300));fireEvent.click(screen.getByRole('button',{name:'自摸'}));expect(onChoice).toHaveBeenCalledOnce();});
+
+for(const variant of ['sanma','yonma'] as const)it('shows real opening order then normalized choice-bound tiles at 1200 '+variant,()=>{
+ room={...room,variant,game:physicalEngine(variant,{0:'p987654321s321z2'},'z2').view(0)};
+ const t=show();const values=()=>hand().map(n=>n.getAttribute('data-hand-instance-id')!.split(':').at(-1));
+ expect(values().slice(0,13)).toEqual(room.game!.initialDeal);
+ const physicalNodes=hand().slice(0,13);
+ act(()=>vi.advanceTimersByTime(1199));expect(values().slice(0,13)).toEqual(room.game!.initialDeal);
+ act(()=>vi.advanceTimersByTime(1));expect(values()).toEqual(room.game!.hand);
+ expect(hand().slice(0,13).every(node=>physicalNodes.includes(node))).toBe(true);
+ act(()=>vi.advanceTimersByTime(300));const draw=hand().at(-1)!;
+ expect(draw.getAttribute('data-choice-id')).toBe(room.game!.choices.find(c=>c.type==='discard'&&c.value?.endsWith('_'))!.id);
+ expect(t.onChoice).not.toHaveBeenCalled();
+});

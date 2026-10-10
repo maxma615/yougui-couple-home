@@ -43,6 +43,7 @@ const direction = (from: number, to: number) => (from - to + 3) % 3 === 1 ? "+" 
 export class SanmaGame {
   private readonly id = randomUUID();
   private handId = 0;
+  private initialHands: string[][] | null = null;
   private step = 0;
   private readonly initialDealer: number;
   private readonly wallFactory: () => SanmaWall;
@@ -103,9 +104,13 @@ export class SanmaGame {
       riichiFuriten: false,
       kans: 0
     }));
-    for (let wind = 0; wind < 3; wind++) this.players[(this.dealer + wind) % 3].hand = new Majiang.Shoupai(Array.from({
-      length: 13
-    }, () => this.wall.draw()));
+    this.initialHands = [];
+    for (let wind = 0; wind < 3; wind++) {
+      const seat = (this.dealer + wind) % 3;
+      const dealt = Array.from({ length: 13 }, () => this.wall.draw());
+      this.initialHands[seat] = dealt;
+      this.players[seat].hand = new Majiang.Shoupai(dealt);
+    }
     this.turn = this.dealer;
     this.draw("zimo");
   }
@@ -404,6 +409,7 @@ export class SanmaGame {
     const options = this.pending.get(seat),
       choice = options?.find(c => c.id === choiceId);
     if (!choice) throw new AppError(409, "illegal_choice", "当前不能执行这个操作");
+    this.initialHands = null;
     this.pending.delete(seat);
     this.replies.set(seat, choice);
     if (this.phase === "hule" || this.phase === "pingju") {
@@ -486,6 +492,7 @@ export class SanmaGame {
       ronBlocked: this.players[seat].temporaryFuriten || this.players[seat].riichiFuriten,
       ownRiichi: { han: this.players[seat].riichi, declarationHan: (this.pending.get(seat) ?? []).some(c => c.type === "riichi") ? (this.uninterrupted && this.players[seat].discards.length === 0 ? 2 : 1) : 0 },
       hand: concealedTiles(hand.toString()),
+      ...(this.initialHands ? { initialDeal: this.initialHands[seat].slice() } : {}),
       drawnTile: hand._zimo?.length === 2 ? hand._zimo : null,
       players: this.players.map((p, s) => ({
         seat: s,

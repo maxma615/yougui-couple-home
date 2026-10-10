@@ -36,6 +36,7 @@ function secureWall(rule: NonNullable<Rule>) {
 export class RiichiGame extends Majiang.Game {
   private readonly gameId = randomUUID();
   private handId = 0;
+  private initialHands: string[][] | null = null;
   private step = 0;
   private pending = new Map<number, Choice[]>();
   private settlement: Settlement | null = null;
@@ -51,7 +52,25 @@ export class RiichiGame extends Majiang.Game {
     this.advance();
   }
 
-  override qipai() { super.qipai(this.wallFactory(this._rule)); }
+  override qipai() {
+    const wall = this.wallFactory(this._rule), dealt: string[] = [];
+    const original = wall.zimo, descriptor = Object.getOwnPropertyDescriptor(wall, "zimo");
+    // Observe the actual 52 draws before Shoupai normalizes their order. Restore
+    // the wall method even on failure; no extra draws or RNG calls are made.
+    Object.defineProperty(wall, "zimo", { configurable: true, value: () => {
+      const tile = original.call(wall); dealt.push(tile); return tile;
+    } });
+    this.initialHands = null;
+    try { super.qipai(wall); }
+    finally {
+      if (descriptor) Object.defineProperty(wall, "zimo", descriptor);
+      else Reflect.deleteProperty(wall, "zimo");
+    }
+    this.initialHands = [];
+    this._model.player_id.forEach((seat, wind) => {
+      this.initialHands![seat] = dealt.slice(wind * 13, wind * 13 + 13);
+    });
+  }
   override delay(callback: () => void) { callback(); }
   override notify_players() { /* DTOs are built explicitly; no raw engine messages. */ }
 
@@ -150,6 +169,7 @@ export class RiichiGame extends Majiang.Game {
     if (decisionId !== `${this.gameId}:${this.step}`) throw new AppError(409, "stale_decision", "牌局已更新，请按当前牌面操作");
     const choice = this.pending.get(seat)?.find(c => c.id === choiceId);
     if (!choice) throw new AppError(409, "illegal_choice", "当前不能执行这个操作");
+    this.initialHands = null;
     const response = choice.type === "discard" ? { dapai: choice.value }
       : choice.type === "riichi" ? { dapai: choice.value + "*" }
       : choice.type === "tsumo" || choice.type === "ron" ? { hule: true }
@@ -176,6 +196,7 @@ export class RiichiGame extends Majiang.Game {
       ronBlocked: !this._neng_rong[wind],
       ownRiichi: { han: this._lizhi[wind] ?? 0, declarationHan: (this.pending.get(seat) ?? []).some(c => c.type === "riichi") ? (this._diyizimo ? 2 : 1) : 0 },
       hand: concealedTiles(hand.toString()), drawnTile: drawn,
+      ...(this.initialHands ? { initialDeal: this.initialHands[seat].slice() } : {}),
       players: model.player_id.map((id, l) => ({ seat: id, wind: l, score: model.defen[id], handCount: concealedTiles(model.shoupai[l].toString()).length, hasDrawnTile: !!model.shoupai[l]._zimo && model.shoupai[l]._zimo.length === 2, discards: model.he[l]._pai.slice(), melds: model.shoupai[l]._fulou.slice(), riichi: !!model.shoupai[l].lizhi })),
       choices: (this.pending.get(seat) ?? []).map(c => ({ ...c })),
       settlement: this.settlement ? structuredClone(this.settlement) : null,

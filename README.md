@@ -57,7 +57,7 @@
 
 - **牌桌呈现**：共享透视相机、实体牌与副露、牌河、拔出的北牌和计数、宝牌指示、可切换的三款原创织物桌布。
 - **出牌与操作**：点选／双击、拖牌出牌、键盘操作；吃、碰、杠、拔北、立直、自摸、荣和与跳过按当前合法选择显示，鸣牌选项包含对应牌面。
-- **动作反馈**：开局分批发牌、摸牌和弃牌动效、鸣牌与和牌宣告、书法字体、原创提示音与固定日语语音、静音控制。
+- **动作反馈**：真实起手牌序、开局分批发牌与线性理牌、摸牌和弃牌动效、鸣牌与和牌宣告、书法字体、原创提示音与固定日语语音、静音控制。
 - **结算**：役种、符翻、逐席详情与收支、多人荣和、终局排名；下一局重置自动操作状态。
 - **电脑补位**：有预算限制的规则算法，在隔离 worker 中计算，不运行大语言模型，不依赖云端推理服务。
 
@@ -146,6 +146,8 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 
 这些结果有各自的测试环境与范围，不能替代真实 Android、所有 Windows 开发流程或生产认证 WSS 故障验收。详见[首局音频验收与发布](docs/mahjong-lobby-audio-acceptance.md)及[交接复核](docs/development-handoff.md)。
 
+当前分支另有真实起手牌序与理牌位移的本地实现，1206 项／104 文件完整检查与 64 个原生开局场景通过；部署结果以[该轮验收记录](docs/mahjong-initial-deal-acceptance.md)为准。
+
 常用检查：
 
 ```sh
@@ -167,6 +169,7 @@ npm run test:e2e
 - [管理员相册](docs/admin-albums-acceptance.md)
 - [麻将功能进度与待办](docs/mahjong-fidelity-progress.md)
 - [首局音频验收与上线](docs/mahjong-lobby-audio-acceptance.md)
+- [真实起手牌序与理牌位移](docs/mahjong-initial-deal-acceptance.md)
 - [分批发牌与开局呈现](docs/mahjong-round-opening-acceptance.md)
 - [部署运维](docs/operations.md)
 

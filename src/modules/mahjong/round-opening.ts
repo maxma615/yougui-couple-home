@@ -16,3 +16,13 @@ export function acceptedRoundOpening(before:RoomView|null,after:RoomView,live:bo
  return before.game&&before.status==='playing'&&openingKey(before)!==openingKey(after)?openingKey(after):null;
 }
 export const openingTileCount=(age:number|null,total:number)=>age===null?total:Math.min(total,ROUND_OPENING.tilesPerWave*(Math.floor(age/300)+1));
+/** The normalized hand remains authoritative for choices. Only a live opening
+ * may show the owner's recorded wall order, after exact physical-tile validation
+ * (red fives are not interchangeable with ordinary fives). */
+export function openingHand(game: GameView, age: number | null): string[] {
+ const sorted = game.drawnTile && game.hand.at(-1) === game.drawnTile ? game.hand.slice(0,-1) : game.hand;
+ if(age===null || age>=ROUND_OPENING.doraAndSortMs || !game.initialDeal || game.initialDeal.length!==13 || sorted.length!==13)return sorted;
+ const physical = sorted.slice();
+ for(const tile of game.initialDeal){const index=physical.indexOf(tile);if(index<0)return sorted;physical.splice(index,1);}
+ return game.initialDeal.slice();
+}
