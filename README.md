@@ -6,7 +6,7 @@
 
 深色电影感的自托管生活空间，包含照片、日历、纪念日、共同待办，以及日本麻将联机。
 
-[如何使用](#使用入口) · [开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
+[功能一览](#现在的有归) · [如何使用](#使用入口) · [本地启动](#从另一台设备继续开发) · [开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
 
 ![Node.js](https://img.shields.io/badge/Node.js-24%2B-43853D?logo=node.js&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-111111?logo=next.js)
@@ -18,6 +18,8 @@
 <sub>截图来自隔离测试环境，使用合成账号和内容；界面预览记录于 2026-10-05，后续功能持续迭代。</sub>
 
 </div>
+
+> 更新于 **2026-10-10**。生活空间、独立管理员、三／四人日本麻将与电脑补位均已上线。当前线上运行代码为 `be7564e`，此 README 的更新不改变服务器运行版本。
 
 ## 现在的有归
 
@@ -36,6 +38,17 @@
 
 管理员不占双人空间名额。普通成员不能访问其他空间的生活内容；管理员相册能力是独立的只读入口。
 
+## 界面预览
+
+<table>
+  <tr>
+    <td width="65%"><img src="docs/screenshots/cinematic-home-chromium.png" alt="情侣空间桌面首页" width="100%" /></td>
+    <td width="35%"><img src="docs/screenshots/cinematic-home-webkit-mobile.png" alt="情侣空间手机尺寸首页" width="100%" /></td>
+  </tr>
+</table>
+
+首页截图记录于 2026-10-05，使用合成内容。麻将牌桌后续持续改版，旧截图不作为当前牌桌效果或真实手机验收依据。
+
 ## 使用入口
 
 | 想做什么 | 从哪里开始 |
@@ -49,7 +62,7 @@
 
 网站没有公共注册入口。已配置账号直接登录；受邀成员通过邀请加入。每个生活空间最多两人，增加另一对情侣应创建另一个空间。
 
-麻将房主把 **8 位房间码**分享给朋友，朋友登录后输入房间码加入；人数不足时可选择「电脑补齐空位」。真人准备后，由房主开始牌局。电脑不需要另建账号。本机 `127.0.0.1` 的预览和邀请只能在当前电脑使用，跨设备需要共同可访问的部署地址。
+麻将房主把 **8 位房间码**分享给朋友，朋友登录后输入房间码加入；人数不足时可选择「电脑补齐空位」。真人准备后，由房主开始牌局。电脑不需要另建账号。三麻拔北后，北牌会公开显示在席位区域，并保留拔北数量；各类操作按钮只在当前可以执行时出现。本机 `127.0.0.1` 的预览和邀请只能在当前电脑使用，跨设备需要共同可访问的部署地址。
 
 ## 麻将室
 
@@ -69,7 +82,7 @@
 
 完整的[开发接手指南](docs/development-handoff.md)包含数据库准备、账号初始化、代码地图、测试入口、生产环境约定和后续待办。
 
-需要 **Node.js 24+、npm、Git、PostgreSQL 18**。备份恢复工具还需要同主版本的 `pg_dump` 与 `pg_restore`。不要复制另一台电脑的 `node_modules`。
+克隆后的仓库根目录就是应用目录，**无需再进入 `couple-home/`**。需要 **Node.js 24+、npm、Git、PostgreSQL 18**。备份恢复工具还需要同主版本的 `pg_dump` 与 `pg_restore`。不要复制另一台电脑的 `node_modules`。
 
 ```sh
 git clone https://github.com/maxma615/yougui-couple-home.git
@@ -77,6 +90,8 @@ cd yougui-couple-home
 npm ci --cache .local/npm-cache
 cp .env.example .env.local
 ```
+
+先创建自己的空开发数据库和附件目录，再编辑 `.env.local`。若尚未安装 PostgreSQL，可按[接手指南中的 Docker 数据库步骤](docs/development-handoff.md#从空设备开始)准备；`npm run pg:start` 依赖旧开发机的本地二进制，不是跨设备安装入口。
 
 编辑 `.env.local`：
 
@@ -88,6 +103,12 @@ cp .env.example .env.local
 | `ATTACHMENTS_DIR` | 已创建的本机绝对附件目录 |
 | `MAHJONG_PORT` | 默认内部端口 `3100`，冲突时换空闲端口 |
 
+随机密钥可在本机生成，再填入 `.env.local`：
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
+```
+
 然后初始化并启动：
 
 ```sh
@@ -97,6 +118,26 @@ npm run dev
 ```
 
 按终端提示输入密码，打开 `http://127.0.0.1:3000` 登录并创建空间。`init-admin` 是历史命名，创建的是首位普通成员；第二人通过邀请加入。独立管理员和手机号测试账号的配置方式见[接手指南](docs/development-handoff.md)。密码、环境文件和真实用户资料不进入代码仓库。
+
+### 账号初始化怎么选
+
+| 场景 | 操作 |
+| --- | --- |
+| 只想先运行网站 | `init-admin` 创建首位普通成员，登录后创建空间，通过邀请加入第二人 |
+| 需要独立管理员和手机号登录 | 先完成首位成员建空间，再按[账号配置说明](docs/development-handoff.md#从空设备开始)用 `provision-accounts` 的标准输入配置；该命令会绑定两位成员并创建管理员 |
+| 已有管理员，增加另一对情侣 | 在 `/admin` 创建成员，由首位成员建新空间，再邀请或绑定第二位成员 |
+
+独立管理员和普通成员是不同身份。README 不提供生产密码或通用默认账号。
+
+### 开发时常见问题
+
+| 问题 | 检查 |
+| --- | --- |
+| 启动时报数据库连接错误 | 数据库是否运行、连接串是否正确、开发账号是否有建库及迁移权限 |
+| 照片上传失败 | `ATTACHMENTS_DIR` 是否为本机绝对路径且可写；默认单文件上限 10 MiB，接受 JPEG／PNG／WebP |
+| 找不到注册页面 | 网站采用受控账号与邀请加入，首次账号通过终端初始化 |
+| 另一台手机打不开本地地址 | 默认开发服务监听 `127.0.0.1`；跨设备使用部署地址，邀请地址由 `APP_ORIGIN` 决定 |
+| 麻将服务启动失败 | 检查内部 `MAHJONG_PORT` 是否占用；不要直接把它开放到公网 |
 
 ## 项目结构
 
@@ -130,6 +171,17 @@ docker compose exec app npm run init-admin -- --email developer@example.com --di
 数据库与附件使用独立持久化卷。当前个人实例采用上海 ECS 和 IP HTTPS，配置入口为 `deploy/compose.ip.yml`、`deploy/Caddyfile.ip`；它与通用域名部署有差异，不能只换地址照搬。
 
 [运维手册](docs/operations.md)记录部署和维护能力，[ECS 发布记录](docs/ecs-deployment.md)记录实际环境。**当前自用实例已按用户要求关闭备份**，以 [AGENTS.md](AGENTS.md) 和[禁备份约定](docs/2026-10-07-backups-disabled.md)为准；旧文档的备份记录属于历史，不表示应重新开启。
+
+## 后续开发
+
+| 方向 | 当前状态 |
+| --- | --- |
+| 开局发牌与理牌 | 真实 13 张起手顺序及理牌已发布；庄家完整 14 张视觉排序继续开发，尚未作为上线结果验收 |
+| 麻将视觉与交互 | 已有实体牌、副露、牌桌、宣告与结算；完整入场曲线及参考体验仍继续对齐 |
+| 设备与网络 | Chromium／WebKit 场景已有验证；真实 Android 与生产认证 WSS 故障场景仍待验收 |
+| 更多麻将规则 | 杭州、四川麻将尚未实现 |
+
+具体剩余项与版本证据以[麻将进度](docs/mahjong-fidelity-progress.md)为准。接手时从 `main` 建自己的开发分支，按本次变更范围复跑检查。
 
 ## 验证状态
 
