@@ -7,8 +7,9 @@ export function MahjongRules({ variant, onClose }: { variant: GameVariant; onClo
   const sanma = variant === "sanma";
   useEffect(() => {
     const node = dialog.current;
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (node && !node.open) node.showModal();
-    return () => { if (node?.open) node.close(); };
+    return () => { if (node?.open) node.close(); if (trigger?.isConnected) trigger.focus({ preventScroll: true }); };
   }, []);
   return <dialog ref={dialog} className="mahjong-confirm mahjong-rules" aria-labelledby="mahjong-rules-title" onCancel={event => { event.preventDefault(); onClose(); }}>
     <button type="button" className="mahjong-icon-button mahjong-rules__close" aria-label="关闭规则" onClick={onClose}><X size={18}/></button>
