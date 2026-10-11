@@ -315,3 +315,9 @@ npm run test:e2e
 ## License
 
 项目源码采用 [MIT](LICENSE)。第三方依赖、字体、牌面和音频模型相关内容按各自许可证使用，声明保留在 `public/licenses/`。公开代码不包含私人照片、业务数据库、账号密码或生产环境密钥。
+
+## 日麻应用已独立
+
+线下记分、符番速查、算符、月度统计，以及三／四人联机和电脑补位，现由独立仓库[riichi-score](https://github.com/maxma615/riichi-score)维护。入口为`/riichi/`，联机为`/riichi/online/`；身份、SQLite卷、Node服务与构建均独立，不读取有归的登录或PostgreSQL。
+
+生产网关已将`/mahjong`引导至独立牌桌，并停用旧`/api/mahjong`和Socket.IO代理。迁移时有归应用容器未重启、私人资料未移动。此仓库保留旧联机源码作为历史实现，继续开发请在独立仓库进行，勿重新接回旧接口。

@@ -1,9 +1,12 @@
 {$APP_DOMAIN} {
   encode zstd gzip
-  # Independent offline scoring; keep this route during website upgrades.
+  # Independent mahjong app; keep this route during website upgrades.
   @riichi_score path /riichi /riichi/*
   reverse_proxy @riichi_score yougui-riichi-score:3200
-  reverse_proxy /mahjong/socket.io* app:3100
+  redir /mahjong /riichi/online/ 302
+  redir /mahjong/ /riichi/online/ 302
+  @retired_mahjong path /api/mahjong /mahjong/socket.io*
+  respond @retired_mahjong "联机麻将已迁移至 /riichi/online/" 410
   reverse_proxy app:3000 {
     header_up X-Yougui-Client-IP {remote_host}
     flush_interval -1
