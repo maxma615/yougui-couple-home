@@ -8,7 +8,7 @@
 
 可自托管的完整网站，采用深色电影感界面，手机和电脑通过浏览器访问。
 
-[功能一览](#现在的有归) · [如何使用](#使用入口) · [麻将操作](#牌桌怎么操作) · [本地启动](#从另一台设备继续开发) · [开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
+[功能一览](#现在的有归) · [如何使用](#使用入口) · [麻将操作](#牌桌怎么操作) · [独立日麻记分](#独立日麻记分) · [本地启动](#从另一台设备继续开发) · [开发接手](docs/development-handoff.md) · [麻将进度](docs/mahjong-fidelity-progress.md) · [部署运维](docs/operations.md) · [MIT License](LICENSE)
 
 ![Node.js](https://img.shields.io/badge/Node.js-24%2B-43853D?logo=node.js&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-111111?logo=next.js)
@@ -21,7 +21,7 @@
 
 </div>
 
-> 更新于 **2026-10-10**。当前自用地址：[有归](https://8.133.186.15) · [麻将室](https://8.133.186.15/mahjong)。需要已配置的账号登录。线上运行代码为 `2904c46`，源码提交与服务器发布分别记录。
+> 更新于 **2026-10-11**。当前自用地址：[有归](https://8.133.186.15) · [麻将室](https://8.133.186.15/mahjong)。需要已配置的账号登录。线上运行代码为 `2904c46`，源码提交与服务器发布分别记录。
 
 ## 从这里开始
 
@@ -30,6 +30,7 @@
 | 先看有哪些功能、怎么配对和打牌 | [功能一览](#现在的有归)、[使用入口](#使用入口)、[麻将操作](#牌桌怎么操作) |
 | 换一台设备继续开发 | [本地启动](#从另一台设备继续开发)、[开发交接](docs/development-handoff.md) |
 | 部署自己的实例 | [自托管部署](#自托管部署)、[运维手册](docs/operations.md) |
+| 使用或开发线下日麻记分 | [独立日麻记分](#独立日麻记分)、[独立应用 README](mahjong-room/README.md) |
 | 接着完善麻将 | [当前进度与待办](docs/mahjong-fidelity-progress.md)、[最新上线验收](docs/mahjong-fitted-frame-acceptance.md) |
 
 ### 最近的变化
@@ -41,7 +42,7 @@
 | 实体牌桌与动态反馈 | 牌河、副露、拔北展示、宝牌指示、书法宣告、声音与逐席结算 |
 | 手机竖屏横向展示 | 触屏竖屏时自动旋转牌桌，拖牌、操作按钮和弹窗使用对应坐标 |
 
-真实 Android 操作仍待验收；居中 16:9 画幅已[上线](docs/mahjong-fitted-frame-acceptance.md)；完整参考体验继续开发。杭州和四川麻将尚未实现。版本证据见[最新上线验收](docs/mahjong-portrait-fallback-acceptance.md)。
+真实 Android 操作仍待验收；居中 16:9 画幅已[上线](docs/mahjong-fitted-frame-acceptance.md)；完整参考体验继续开发。杭州和四川麻将尚未实现。版本证据见[最新上线验收](docs/mahjong-fitted-frame-acceptance.md)。
 
 ## 现在的有归
 
@@ -116,6 +117,24 @@
 | 桌布和声音 | 选择海夜／暮紫／石墨桌布，按需开关声音；偏好保存在当前浏览器 |
 
 开局按实际起手顺序分批发牌并理牌。自动摸切与桌布双击快捷操作使用视觉末张，有和牌或特殊自操作机会时保留原优先级。规则细节和参考差异见[麻将进度](docs/mahjong-fidelity-progress.md)。
+
+## 独立日麻记分
+
+2026-10-11 新增独立的 **日麻记分** 手机网页，用于线下日本麻将，采用原创水墨牌谱的中国风界面。它有自己的进程、端口、SQLite 数据库和扫码成员身份，不使用情侣空间的账号或资料。源码目前位于 `mahjong-room/`，可以单独启动和部署，无需运行有归主应用。
+
+- **符翻速查**：庄家／闲家、荣和／自摸、符翻表、本场、满贯至多倍役满。
+- **线下记分**：三／四人桌、立直供托、连庄与换庄、流局听牌罚符、多人荣和、逐局记录、每圈和整场收支。
+- **扫码入桌**：填写昵称与选择座位；桌主提交和撤回，成员查看。记录在服务重启后保留。
+
+```sh
+cd mahjong-room
+npm ci --cache .local/npm-cache
+cp .env.example .env
+npm start
+# 浏览器打开 http://127.0.0.1:3200/
+```
+
+独立应用的安装、规则、限制和验收见 [README](mahjong-room/README.md)。本轮仅交付线下记分，现有联机牌桌以后迁移；当前 ECS 的 `/mahjong` 仍是既有联机入口。独立记分应用尚未发布到 ECS，正式微信小程序需在域名备案、AppID 与微信登录准备完成后实现，不把网页二维码当作小程序码。
 
 ## 从另一台设备继续开发
 
@@ -206,6 +225,7 @@ npm run dev
 ## 项目结构
 
 ```text
+mahjong-room/            独立线下日麻记分，自己的 package、服务和数据库
 src/app/                 页面与 HTTP API
 src/components/          界面组件，含麻将牌桌
 src/modules/             账号、空间、生活记录、照片与麻将领域逻辑
@@ -290,6 +310,7 @@ npm run test:e2e
 
 | 文档 | 内容 |
 | --- | --- |
+| [独立日麻记分](mahjong-room/README.md) | 符翻速查、扫码入桌、逐局收支及独立启动 |
 | [开发接手](docs/development-handoff.md) | 空设备配置、账号初始化、代码地图和跨平台说明 |
 | [麻将进度](docs/mahjong-fidelity-progress.md) | 功能状态、参考差异、未完成项和历次验收入口 |
 | [最新牌桌发布](docs/mahjong-fitted-frame-acceptance.md) | 居中 16:9、坐标与留边、弹窗及开局音频验证 |
