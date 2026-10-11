@@ -312,7 +312,7 @@ npm run test:e2e
 
 | 文档 | 内容 |
 | --- | --- |
-| [独立日麻记分](mahjong-room/README.md) | 符翻速查、扫码入桌、逐局收支及独立启动 |
+| [独立日麻记分](mahjong-room/README.md) | [手机访问](https://8.133.186.15/riichi/)、符番速查、扫码入桌、逐局收支及独立启动 |
 | [开发接手](docs/development-handoff.md) | 空设备配置、账号初始化、代码地图和跨平台说明 |
 | [麻将进度](docs/mahjong-fidelity-progress.md) | 功能状态、参考差异、未完成项和历次验收入口 |
 | [最新牌桌发布](docs/mahjong-fitted-frame-acceptance.md) | 居中 16:9、坐标与留边、弹窗及开局音频验证 |

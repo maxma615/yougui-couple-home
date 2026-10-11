@@ -12,6 +12,9 @@
   }
 
   encode zstd gzip
+  # Independent offline scoring; keep this route during website upgrades.
+  @riichi_score path /riichi /riichi/*
+  reverse_proxy @riichi_score yougui-riichi-score:3200
   reverse_proxy /mahjong/socket.io* app:3100
   reverse_proxy app:3000 {
     header_up X-Yougui-Client-IP {remote_host}
