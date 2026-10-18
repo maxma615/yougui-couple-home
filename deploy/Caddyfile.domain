@@ -1,0 +1,48 @@
+{
+  default_sni 8.133.186.15
+}
+
+8.133.186.15 {
+  tls {
+    issuer acme {
+      dir https://acme-v02.api.letsencrypt.org/directory
+      profile shortlived
+    }
+  }
+  encode zstd gzip
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+  }
+  @legacy_mahjong path /mahjong /mahjong/
+  handle @legacy_mahjong {
+    redir /riichi/online/ 302
+  }
+  @retired_mahjong path /api/mahjong /mahjong/socket.io*
+  handle @retired_mahjong {
+    respond "联机麻将已迁移至 /riichi/online/" 410
+  }
+  @riichi_score path /riichi /riichi/*
+  handle @riichi_score {
+    reverse_proxy yougui-riichi-score:3200
+  }
+  handle {
+    redir https://yougui.online{uri} 308
+  }
+}
+
+www.yougui.online {
+  redir https://yougui.online{uri} 308
+}
+
+yougui.online {
+  encode zstd gzip
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+  }
+  reverse_proxy app:3000 {
+    header_up X-Yougui-Client-IP {remote_host}
+    flush_interval -1
+  }
+}
