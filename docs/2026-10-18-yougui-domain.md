@@ -13,7 +13,7 @@
 
 正式配置为 deploy/Caddyfile.domain，旧 Caddyfile.domain.pending 不应再用于上线。将正式配置写入当前实际挂载的 Caddyfile，并 reload；不要仅修改 current 符号链接指向的新目录。此次运行容器仍挂载旧发布目录 ccfe04c9d5a4/deploy/Caddyfile.ip，需要通过 inode 与容器中实际内容核对，当前发布目录内的文件也已同步。
 
-发布前核对 docker inspect 的 Compose 文件、镜像和环境配置来源，仅更新有归 app；不要重建数据库或麻将容器。新版本沿用已有 Linux 运行镜像中的依赖，在受限构建容器中生成 Next 产物；不把 .env、账号资料或附件打包到源码中。
+发布前核对 docker inspect 的 Compose 文件、镜像和环境配置来源，仅更新有归 app；不要重建数据库或麻将容器。新版本沿用已有 Linux 运行镜像中的依赖；本次最终使用本机 Next 构建产物，经 Linux 运行验证后发布。不把 .env、账号资料或附件打包到源码中。
 
 遵守 backups-disabled 标记，不创建备份或下载真实用户资料。
 
@@ -43,3 +43,13 @@
 相对路径重定向已修正并重新加载。IP 的 /mahjong、/mahjong/ 返回 302，Location 为独立麻将入口；旧 API、Socket.IO 返回 410。正式域名 /mahjong 同样跳转独立应用，/riichi 路径跳到原 IP，避免把两个应用混到有归登录域。主域名与 www 的证书均通过系统校验。
 
 备案页脚采用本机已通过 Next 生产构建及 TypeScript 检查的 JavaScript/静态产物，再使用原 Linux 镜像依赖做运行验证；构建归档 SHA-256 为 29d90de20df52ca3cc15143d63d2b91a46ad71c8404a8db51fb62110e6758aff。最终发布结果另行记录。
+
+## 最终发布完成
+
+候选源代码为 8418c07c7a400a63f97eb9b7850f7611b00c05ec，本机 npm run typecheck 与 npm run build 均通过。将不含缓存的 .next JavaScript/静态产物打包到原 Linux 依赖镜像中，以独立容器验证 /login 的备案号和 /api/health 返回 200，随后移除测试容器。没有跳过本机类型检查，也没有把服务器失败的类型检查记为成功。
+
+发布镜像为 yougui-app:8418c07-ecs，current 已切换 /srv/yougui/releases/8418c07。镜像来源标签指向 8418c07；网关路由为随后提交的正式域名配置。仅重建有归 app，沿用数据库和附件卷；完成发布时麻将与 Caddy 容器身份保持不变（它们已在此前获授权的 ECS 重启时重新启动）。
+
+发布任务返回 EXIT 0 和 PUBLISHED 8418c07 HEALTH_OK ICP_FOOTER_OK RIICHI_UNCHANGED CADDY_UNCHANGED。Google Chrome 已打开 https://yougui.online/login，DOM 显示链接“浙ICP备2026086028号-1”，指向工信部备案查询。
+
+以后将 Next/TypeScript 编译放到本机或 CI，服务器仅安装经过验证的产物并执行运行检查。服务器上原始失败日志与独立运行验证日志分别保留，不把失败证据覆盖为成功。
