@@ -16,7 +16,7 @@
   }
   @legacy_mahjong path /mahjong /mahjong/
   handle @legacy_mahjong {
-    redir /riichi/online/ 302
+    redir * /riichi/online/ 302
   }
   @retired_mahjong path /api/mahjong /mahjong/socket.io*
   handle @retired_mahjong {
@@ -41,8 +41,22 @@ yougui.online {
     X-Content-Type-Options nosniff
     Referrer-Policy strict-origin-when-cross-origin
   }
-  reverse_proxy app:3000 {
-    header_up X-Yougui-Client-IP {remote_host}
-    flush_interval -1
+  @legacy_mahjong path /mahjong /mahjong/
+  handle @legacy_mahjong {
+    redir https://8.133.186.15/riichi/online/ 302
+  }
+  @riichi_score path /riichi /riichi/*
+  handle @riichi_score {
+    redir https://8.133.186.15{uri} 302
+  }
+  @retired_mahjong path /api/mahjong /mahjong/socket.io*
+  handle @retired_mahjong {
+    respond "联机麻将已迁移至 https://8.133.186.15/riichi/online/" 410
+  }
+  handle {
+    reverse_proxy app:3000 {
+      header_up X-Yougui-Client-IP {remote_host}
+      flush_interval -1
+    }
   }
 }
